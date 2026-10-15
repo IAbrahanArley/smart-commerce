@@ -1,6 +1,6 @@
 # SC-001 — Registro de validação
 
-Data: 2026-10-15. Estado: **validação encerrada com pendências; aceite integral não concedido**.
+Data: 2026-10-15. Estado: **validação técnica local/remota reconhecida pelo usuário; SEC-003 aberta, sem aceite de risco**.
 
 Este documento distingue verificações executadas, revisão estática e testes ainda não concluídos. Não certifica o isolamento de dados de negócio: SC-001 não cria usuários, tenants, catálogo, estoque ou pagamentos.
 
@@ -63,7 +63,7 @@ Consulta atualizada de segurança em 2026-10-15, 16:24–16:27 America/Sao_Paulo
 | Verificação | Estado atual |
 | --- | --- |
 | Dependência de desenvolvimento com advisory alto | SEC-003 aberta; sem correção ou exceção aprovada. |
-| Aceite humano da SC-001 | Pendente; CI verde não aceita o risco de SEC-003 nem autoriza SC-002. |
+| Decisão humana sobre risco | O usuário reconheceu a validação técnica local/remota da SC-001. SEC-003 continua sem correção ou exceção; esse reconhecimento não autoriza implementação da SC-002. |
 
 CI remota foi comprovada no SHA `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`, conforme seção abaixo. CI-001 está resolvida operacionalmente nessa execução após correção do seletor Corretto. A publicação autorizada ocorreu no repositório privado; nenhuma dessas ações encerra SEC-003.
 
@@ -115,7 +115,26 @@ A correção `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b` mudou apenas o seletor d
 
 QA conferiu os metadados locais `.tools/github-run-38797904235.json`, `github-run-38797904235-jobs.json` e logs dos dois jobs capturados pelo coordenador, sem requisições de rede paralelas. CI-001 fica resolvida operacionalmente nessa execução. A CI não inclui gate de auditoria npm: permanece válida a consulta de segurança das 16:24–16:27 BRT, com cinco altas de desenvolvimento e zero alertas de produção; não houve nova auditoria nem aceitação de risco.
 
-Esta evidência cobre o SHA citado; posteriores commits somente de documentação devem ter seu próprio resultado vinculado, sem presumir aprovação antecipada. Evento `pull_request`, proteção de branch e aceite humano não foram comprovados por este run de push. SC-002 não foi iniciada.
+Esta evidência cobre o SHA citado; posteriores commits somente de documentação devem ter seu próprio resultado vinculado, sem presumir aprovação antecipada. Esse run de push não comprovou evento `pull_request` nem proteção de branch; ambos foram verificados na etapa posterior abaixo. A implementação da SC-002 não foi iniciada.
+
+## Proteção de main e PR documental
+
+O coordenador aplicou a proteção de `main` com resposta HTTP 200 e conferiu a configuração por GET. QA leu `.tools/main-protection-current.json`: checks obrigatórios `backend` e `admin` vinculados ao GitHub Actions (app ID 15368), `strict=true` para exigir base atualizada, enforcement para administradores, force push e exclusão desabilitados e conversas resolvidas antes de merge. Pull request é obrigatório; a contagem de aprovações exigidas é zero, para não bloquear o único proprietário. Portanto, não há garantia de aprovação independente obrigatória. Nenhum plano pago foi contratado.
+
+[PR #1](https://github.com/IAbrahanArley/smart-commerce/pull/1) documental, aberto de `docs/sc-001-governance` para `main`, sem merge automático. Evidência consultada em `.tools/governance-pr-current.json`: head `dcff5cc413034699a8852e47130eed86a9527976`, base `83794ff95feb8847957d9d5fb2afe064c32b279e`, merge sintético `c01658d14419f0368bb72c02f066a375584f5f4e`. Esse merge sintético serve à validação de CI e não significa que o PR foi integrado.
+
+[Run 38804591777](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38804591777), evento `pull_request`, tentativa 1: completed/success. Criado em 2026-10-15 às 17:46:01 BRT (20:46:01 UTC), atualizado às 17:46:56 BRT (20:46:56 UTC). A API associa o run ao head `dcff5cc413034699a8852e47130eed86a9527976`; o log de checkout confirma execução sobre `refs/pull/1/merge`, SHA sintético `c01658d14419f0368bb72c02f066a375584f5f4e`.
+
+| Job do PR | Evidência conferida |
+| --- | --- |
+| [Backend 116662036552](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38804591777/job/116662036552) | Success às 17:46:54 BRT (20:46:54 UTC). Surefire 3 + Failsafe 3, zero falhas/erros/ignorados; BUILD SUCCESS às 17:46:52 BRT (20:46:52 UTC). Runner 2.337.0/Ubuntu 24.04.5, Java 21.0.12.1, Maven 3.10.0. |
+| [Admin 116662037148](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38804591777/job/116662037148) | Success às 17:46:47 BRT (20:46:47 UTC). Instalação limpa, lint, tipos, Next.js 16.4.1 build e smoke aprovados; home 200/HTML pt-BR/conteúdo esperado/404. Node 24.12.0 e npm 11.6.2. |
+
+QA conferiu JSONs locais do run/jobs e logs dos dois jobs capturados pelo coordenador; não executou chamadas de rede nem alterações remotas. `.tools/governance-pr-checks.json` também confirma `backend`/`admin` success associados ao head `dcff5cc413034699a8852e47130eed86a9527976`, app ID 15368, com URLs dos jobs PR acima; os checks do run de push 38804288050 aparecem separadamente e não foram confundidos com o evento PR. Esses resultados provam funcionamento do evento PR no head/merge citados, sem simular bypass ou tentativa destrutiva contra a proteção. Novos commits documentais neste PR exigem checks próprios; não se presume que resultados anteriores cubram alterações posteriores.
+
+Nenhuma auditoria npm foi repetida nesta etapa: permanece a consulta identificada das 16:24–16:27 BRT e SEC-003 aberta. O [plano de testes da SC-002](SC-002-TEST-PLAN.md) é proposta documental pendente de aprovação e implementação; nenhum teste ou código de autenticação foi criado/executado nesta atividade.
+
+Na consolidação documental, o coordenador executou actionlint 1.7.12 (saída 0; integrações opcionais shellcheck/pyflakes indisponíveis e desabilitadas), `git diff --check` (saída 0), conferência dos links relativos dos seis novos/relacionados documentos (nenhum destino ausente), preflight dos 68 arquivos candidatos contra caminhos sensíveis e dois valores secretos locais em memória (zero achados) e Gitleaks 8.30.1 no snapshot documental e histórico de quatro commits existente (zero vazamentos). Esses checks locais complementam a CI; não substituem auditoria de dependências nem testes de autenticação. O histórico escaneado antecede o commit de consolidação.
 
 ## Cobertura futura por escopo
 

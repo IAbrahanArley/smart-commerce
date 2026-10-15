@@ -1,11 +1,11 @@
 # SC-001 — Preparação para GitHub e aprovação final
 
-Data: 2026-10-15. Estado: publicação autorizada concluída em `https://github.com/IAbrahanArley/smart-commerce.git`, com visibilidade privada confirmada antes do push. CI remota aprovada no commit de correção `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`. Aceite humano final da SC-001 continua pendente; SEC-003 permanece aberta, sem risco formalmente aceito. SC-002 não foi iniciada.
+Data: 2026-10-15. Estado: publicação autorizada concluída em `https://github.com/IAbrahanArley/smart-commerce.git`, com visibilidade privada confirmada antes do push. CI remota aprovada no commit de correção `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`. O usuário reconheceu a validação técnica local e remota da SC-001. A etapa adicional de governança e PR está registrada em [SC-001-GOVERNANCE.md](SC-001-GOVERNANCE.md) e [SC-001-VALIDATION.md](SC-001-VALIDATION.md). SEC-003 permanece aberta, sem risco formalmente aceito. SC-002 está somente em planejamento proposto, sem implementação autorizada.
 
 ## Pendências atuais
 
 1. **SEC-003 aberta:** nova consulta do agente de segurança confirmou cinco alertas altos derivados de uma única cadeia de desenvolvimento; auditoria de produção com zero alertas. Não foi identificada versão estável corrigida de `braces`. Nenhum pacote, lockfile, versão do Wrapper ou POM foi alterado nesta rodada. Não há exceção aprovada.
-2. **Aceite humano final pendente:** a CI remota já foi comprovada, mas o usuário reservou a revisão do aceite para depois dessa execução. CI verde não concede exceção à SEC-003 nem autorização para SC-002.
+2. **Revisão adicional de governança:** validação técnica da SC-001 reconhecida pelo usuário; main protegida e PR documental preparado para revisão. CI verde não concede exceção à SEC-003 nem autorização para implementar SC-002.
 3. **CI-001 — migração validada remotamente:** as actions Node 24 foram aprovadas após corrigir o seletor Corretto de `21.0.9` para `21`; a distribuição aceita apenas major. O primeiro run falho permanece no histórico. Fontes históricas da migração: [aviso do runtime](https://github.blog/changelog/2026-09-23-node-20-is-no-longer-available-in-github-actions/), [action Java anterior](https://raw.githubusercontent.com/actions/setup-java/cf277c60eb25467037889841efdb72551f06f6c3/action.yml).
 
 ## Publicação e CI executadas

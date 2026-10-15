@@ -47,7 +47,9 @@ Referências oficiais: [proteção de branches](https://docs.github.com/en/repos
 
 ## PR de documentação
 
-Branch: `docs/sc-001-governance`. O PR será aberto contra `main`, sem alterar aplicação, dependências ou workflow, para comprovar o evento `pull_request` nos dois jobs. Não será mesclado automaticamente; ficará disponível para revisão humana.
+Branch: `docs/sc-001-governance`. [PR #1](https://github.com/IAbrahanArley/smart-commerce/pull/1) aberto contra `main`, sem alterar aplicação, dependências ou workflow, para comprovar o evento `pull_request` nos dois jobs. Não será mesclado automaticamente; ficará disponível para revisão humana. Também contém o planejamento da SC-002 explicitamente proposto, sem implementação.
+
+Primeira validação: [run 38804591777](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38804591777), evento `pull_request`, concluído com sucesso em 2026-10-15T20:46:56Z. Head `dcff5cc413034699a8852e47130eed86a9527976`, base `83794ff95feb8847957d9d5fb2afe064c32b279e`, merge de teste `c01658d14419f0368bb72c02f066a375584f5f4e`. Jobs backend `116662036552` e admin `116662037148` aprovados. A API retornou PR aberto, mergeable e estado clean após os checks. Esse merge SHA é o merge de teste da CI; não houve merge em main. Atualizações documentais posteriores exigem nova execução, sem atribuir a elas antecipadamente este resultado.
 
 Critérios verificáveis:
 
