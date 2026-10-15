@@ -107,7 +107,7 @@ Comandos npm/Compose são equivalentes nos demais sistemas. O helper documentado
 
 Compose publica PostgreSQL somente em loopback. Na primeira inicialização de um volume vazio, cria uma conta de aplicação sem privilégios de superusuário, criação de bancos ou roles. A conta administrativa é separada. O usuário local é proprietário do banco para permitir Flyway; separar usuários de migração e runtime fica para a configuração futura de produção.
 
-V1 cria `app_metadata` e registra `bootstrap=SC-001`. Essa tabela global guarda metadados técnicos, sem dados de lojistas/compradores. `flyway_schema_history` controla migrações. Não há tabelas de domínio ou geração de schema por ORM.
+V1 cria `app_metadata` e registra `bootstrap=SC-001`. Essa tabela global guarda metadados técnicos. A SC-002 Etapa 1 adiciona V2 com `identity_user` e `identity_local_credential`, sem outras entidades, autenticação funcional ou geração de schema por ORM. `flyway_schema_history` controla ambas; V1 não foi reescrita. Contrato: [fundação de identidade](docs/architecture/IDENTITY_FOUNDATION.md).
 
 Alterar senhas no `.env` não altera usuários de um volume já inicializado. Não apague volumes para corrigir isso; trate a mudança de credenciais deliberadamente. Remoção de dados exige aprovação humana e não integra os comandos normais do projeto.
 
@@ -137,8 +137,10 @@ Smoke inicia o build de produção em `127.0.0.1:3100`, verifica página inicial
 
 GitHub Actions executa backend e admin em push/PR. Actions são fixadas por commit, com permissões de leitura e sem deploy ou segredos de produção. Backend usa Testcontainers no runner, sem serviço PostgreSQL duplicado. Admin executa lint explicitamente, tipos, build e smoke.
 
-Origin confirmado: `https://github.com/IAbrahanArley/smart-commerce.git`, repositório privado, branch `main`. O commit inicial `4e3daaa` e a correção `b647573` foram publicados; os dois jobs da CI aprovaram a correção. As evidências são registradas em documentação posterior, sem mudar código ou dependências. Proteção de branch/checks obrigatórios ainda é uma configuração futura, não realizada automaticamente. O aceite humano final da SC-001 permanece pendente, mantendo SEC-003 aberta até decisão própria.
+Origin confirmado: `https://github.com/IAbrahanArley/smart-commerce.git`, repositório privado, branch `main`. A etapa documental UI/UX foi publicada no SHA `c1014ed38fc13d56ed00c64acb34674baf60c17a`, com CI backend/admin aprovada. Main possui proteção e exige os checks backend/admin. Essa evidência anterior não comprova a implementação local da SC-002 Etapa 1, que ainda não tem commit/push autorizado. SEC-003 continua aberta, sem aceite de risco.
 
 ## Próxima tarefa
 
-SC-002 depende de nova aprovação e ADR da estratégia de autenticação. O tenant deverá derivar de identidade autenticada e vínculo autorizado; parâmetros, headers ou slug enviados pelo frontend não bastam. Não avançar para SC-002 automaticamente.
+Somente a SC-002 Etapa 1 foi autorizada: persistência, política de e-mail/senha, encoder, testes e benchmark. [Contrato](docs/architecture/IDENTITY_FOUNDATION.md) e [evidências de validação](docs/quality/SC-002-STAGE-01-VALIDATION.md) descrevem o estado local. Não existem endpoints de identidade, ativação, sessão, tokens, envio, recuperação ou UI nesta etapa. Aceite, commit/push e Etapas 2–6 exigem nova autorização.
+
+O tenant futuro deverá derivar de identidade autenticada e vínculo autorizado; parâmetros, headers ou slug enviados pelo frontend não bastam. Nenhuma empresa, loja, membership ou role foi criada.

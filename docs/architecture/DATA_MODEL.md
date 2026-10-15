@@ -18,3 +18,9 @@
 - AuditEvent(id, tenant_id, actor_id, action, resource_id, occurred_at)
 
 Decisões pendentes: chaves, constraints, índices, normalização, política de exclusão e retenção. Não usar este documento como migração pronta.
+
+## Subconjunto implementado na SC-002 Etapa 1
+
+V2 cria somente `identity_user` e `identity_local_credential`, conforme [IDENTITY_FOUNDATION.md](IDENTITY_FOUNDATION.md). Usuário global: UUID, e-mail original/chave única sensível à caixa local, status, auth_version e datas; credencial separada: PK/FK user_id, hash versionado e datas. Não há auth_subject externo ou tabelas tenant/store/membership/role na implementação atual; a lista acima continua preliminar para tarefas futuras.
+
+Conta pendente não recebe credencial pelo repositório; não existe ativação funcional. V1 permanece intacta. Modelo global não constitui garantia de autorização empresarial ou isolamento A/B. Contrato de comparação e limites IDNA/Unicode constam no documento específico, sem aplicar políticas futuras de retenção nesta etapa.

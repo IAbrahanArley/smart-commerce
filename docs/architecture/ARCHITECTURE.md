@@ -30,4 +30,8 @@ Guardar fatos auditáveis e separar data da venda, aprovação, liquidação e m
 RBAC, segregação de tenant, tokens cifrados em repouso, secrets fora do Git, auditoria, rate limiting futuro, proteção CSRF conforme estratégia de autenticação, validação de inputs, LGPD.
 
 ## Decisões em aberto
-Provedor de identidade, modelo de assinatura SaaS, expiração de reserva, frete, modelagem de variantes, arquitetura de deploy, RLS, armazenamento de imagens e estratégia de observabilidade. Registrar ADR antes de decisões irreversíveis.
+Modelo de assinatura SaaS, expiração de reserva, frete, modelagem de variantes, arquitetura de deploy, RLS, armazenamento de imagens e estratégia de observabilidade. Registrar ADR antes de decisões irreversíveis.
+
+## Fundação de identidade — SC-002 Etapa 1
+
+O [ADR-0005](adr/0005-identity-authentication.md) registra a direção local Spring Security e aprovação de D1/D2/D3 com autorização exclusiva da fundação. A [implementação mínima](IDENTITY_FOUNDATION.md) acrescenta usuário global/credencial, política/encoder, migração aditiva e testes/benchmark com JDBC existente. Não há API de autenticação, ativação, sessão, tokens ou frontend; Etapas 2–6 dependem de nova autorização. Identidade global não concede tenant, empresa ou papel.
