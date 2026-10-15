@@ -1,0 +1,24 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #172b3a;
+  background: #f6f8fa;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
+.site-header { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1.5rem max(1.25rem, calc((100% - 64rem) / 2)); background: #fff; border-bottom: 1px solid #ccd5dd; }
+.brand { font-weight: 700; }
+main { width: min(100%, 64rem); margin: 0 auto; padding: clamp(2rem, 7vw, 5rem) 1.25rem; flex: 1; }
+section { max-width: 45rem; }
+h1 { font-size: clamp(1.75rem, 4vw, 2.75rem); line-height: 1.2; margin: 1rem 0; overflow-wrap: anywhere; }
+p { line-height: 1.7; }
+.eyebrow { color: #365165; font-size: 0.875rem; font-weight: 700; }
+.notice { border-left: 3px solid #456a83; padding: 0.75rem 1rem; background: #eaf0f5; }
+footer { padding: 1.5rem; color: #365165; font-size: 0.875rem; text-align: center; }
+a { color: #124f82; text-underline-offset: 0.2em; }
+button { font: inherit; font-weight: 700; color: #fff; background: #174e73; border: 0; border-radius: 0.25rem; padding: 0.875rem 1.25rem; min-height: 44px; cursor: pointer; }
+button:hover { background: #113c59; }
+:focus-visible { outline: 3px solid #924b00; outline-offset: 4px; }
+.skip-link { position: absolute; left: 1rem; top: 0; transform: translateY(-150%); padding: 0.75rem 1rem; background: #fff; z-index: 1; }
+.skip-link:focus { transform: translateY(0.5rem); }

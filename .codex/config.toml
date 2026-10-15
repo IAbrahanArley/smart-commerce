@@ -1,0 +1,27 @@
+# Configuração de agentes do projeto (carregada em projetos confiáveis)
+[agents]
+enabled = true
+
+[agents.architect]
+description = "Especialista architect do Smart Commerce; seguir AGENTS.md e docs/agents/ARCHITECT.md"
+config_file = "agents/architect.toml"
+
+[agents.backend]
+description = "Especialista backend do Smart Commerce; seguir AGENTS.md e docs/agents/BACKEND.md"
+config_file = "agents/backend.toml"
+
+[agents.frontend]
+description = "Especialista frontend do Smart Commerce; seguir AGENTS.md e docs/agents/FRONTEND.md"
+config_file = "agents/frontend.toml"
+
+[agents.qa]
+description = "Especialista qa do Smart Commerce; seguir AGENTS.md e docs/agents/QA.md"
+config_file = "agents/qa.toml"
+
+[agents.security]
+description = "Especialista security do Smart Commerce; seguir AGENTS.md e docs/agents/SECURITY.md"
+config_file = "agents/security.toml"
+
+[agents.reviewer]
+description = "Especialista reviewer do Smart Commerce; seguir AGENTS.md e docs/agents/REVIEWER.md"
+config_file = "agents/reviewer.toml"

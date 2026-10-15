@@ -1,0 +1,14 @@
+# Regras de negócio iniciais
+- Uma empresa pode possuir uma loja no MVP; estrutura deve permitir expansão futura sem assumir múltiplas lojas agora.
+- Slug público único e validado; produtos e pedidos sempre pertencem a um tenant.
+- Produto possui preço de venda, custo de aquisição informado e moeda BRL. Custo ausente implica margem indisponível, nunca lucro presumido.
+- Disponível para venda = estoque físico - reservado (sem permitir negativo no MVP).
+- Pedido nasce PENDING_PAYMENT; estoque é reservado com expiração. Pagamento confirmado gera baixa; cancelamento/expiração libera reserva. Definir tempo de reserva antes da implementação.
+- Status de pagamento não deve ser inferido apenas pelo redirect do checkout.
+- Webhook deve ser autenticado, idempotente e confirmado por consulta ao provedor quando aplicável.
+- Pedido registra snapshot de preço, custo, taxa, frete e desconto quando disponíveis; mudanças posteriores no catálogo não alteram histórico.
+- Faturamento, recebíveis, caixa e lucro são conceitos distintos; dashboard deve identificar competência e data de liquidação.
+- Taxas, impostos e devoluções devem aparecer separadamente quando disponíveis; não apresentar lucro líquido definitivo sem dados completos.
+- Reembolso exige permissão e confirmação; eventos devem ser auditáveis.
+- Dados do comprador não são compartilhados entre lojas.
+- A IA consulta apenas dados autorizados do tenant e não altera pedidos, valores ou estoque no MVP.

@@ -1,0 +1,41 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# Java
+backend/target/
+.gradle/
+# JS
+node_modules/
+.next/
+# Local
+.idea/
+.vscode/
+.DS_Store
+# Build and local tools
+.tools/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+# Local credentials, diagnostics and database exports
+.npmrc
+.netrc
+_netrc
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.dump
+*.sql.gz
+*.log
+*.bak
+*.tmp
+Thumbs.db
+.aws/
+.ssh/
+.m2/
+.npm/
+.codex/auth.json
+.codex/sessions/
