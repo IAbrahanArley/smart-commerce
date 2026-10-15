@@ -8,7 +8,7 @@ SC-001 prepara backend Spring Boot, shell administrativo Next.js, PostgreSQL loc
 
 Decisões: [ADR-0004](docs/architecture/adr/0004-project-bootstrap.md). Resultados e limitações: [validação SC-001](docs/quality/SC-001-VALIDATION.md). Isolamento entre empresas depende de SC-003/004 e ainda não foi implementado.
 
-Reteste com Docker restabelecido: Maven `verify` aprovado com seis testes, PostgreSQL do Compose saudável, execução pelo helper, persistência e recuperação do banco verificadas. Nova consulta de segurança confirmou cinco alertas altos na mesma cadeia de desenvolvimento (`braces`, sem correção estável identificada) e zero alertas com `--omit=dev`. ESLint 9 é compatível com os peers atuais, mas está fora de suporte. SEC-003 permanece aberta, sem exceção aprovada. A migração das actions para Node 24 foi aprovada e aplicada após reconfirmação dos SHAs oficiais; a CI remota ainda não foi executada. Detalhes em [validação](docs/quality/SC-001-VALIDATION.md), [segurança](docs/security/SC-001-REVIEW.md) e [preparação para GitHub](docs/quality/SC-001-PUBLICATION.md).
+SC-001 publicada no repositório privado confirmado pelo usuário. A [CI remota](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797904235) aprovou backend e admin no commit `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`: seis testes backend sem falhas/erros/ignorados, lint, tipos, build e smoke HTTP do admin aprovados. A primeira execução falhou no seletor Corretto; foi corrigido para Java `21`, sem alterar dependências da aplicação. SEC-003 permanece aberta, sem exceção aprovada: a última auditoria registrou cinco alertas altos na cadeia de desenvolvimento e zero com `--omit=dev`; ESLint 9 está fora de suporte. CI verde não aceita esse risco nem autoriza SC-002. Detalhes em [validação](docs/quality/SC-001-VALIDATION.md), [segurança](docs/security/SC-001-REVIEW.md) e [publicação](docs/quality/SC-001-PUBLICATION.md).
 
 ## Estrutura
 
@@ -24,10 +24,10 @@ docs/             produto, arquitetura, ADRs, papéis e evidências
 
 ## Ferramentas
 
-- JDK 21. O ambiente de validação utilizou Amazon Corretto 21.0.9. Selecione o JDK no terminal; o Java global pode continuar em outra versão.
+- JDK 21. A validação local utilizou Corretto 21.0.9; a CI aprovou OpenJDK 21.0.12.1 / Corretto 21.0.12.12.1. O adaptador Corretto da action aceita somente a major `21`, selecionando seu patch disponível. Selecione o JDK no terminal; o Java global pode continuar em outra versão.
 - Maven 3.10.0 obtido pelo Maven Wrapper 3.3.4, sem instalação global.
 - Spring Boot 4.1.1; dependências gerenciadas pelo parent/BOM no `backend/pom.xml`.
-- Node.js 24.12.0 e npm 11.21.0; versões exatas das bibliotecas em `admin-web/package.json` e `package-lock.json`.
+- Node.js 24.12.0; npm local 11.21.0 e npm remoto aprovado 11.6.2 (ambos atendem ao engine 11 do projeto). Versões exatas das bibliotecas em `admin-web/package.json` e `package-lock.json`.
 - Docker Desktop/Engine Linux e Compose v2. O CLI instalado sem engine acessível não basta.
 - PostgreSQL 18.6 Bookworm, com digest fixado no Compose e nos testes.
 
@@ -137,7 +137,7 @@ Smoke inicia o build de produção em `127.0.0.1:3100`, verifica página inicial
 
 GitHub Actions executa backend e admin em push/PR. Actions são fixadas por commit, com permissões de leitura e sem deploy ou segredos de produção. Backend usa Testcontainers no runner, sem serviço PostgreSQL duplicado. Admin executa lint explicitamente, tipos, build e smoke.
 
-Git local foi inicializado na branch `main`; este conjunto compõe o primeiro commit local aprovado da SC-001. A visibilidade inicial do repositório GitHub será privada. Nenhum remoto, push ou execução remota da CI foi realizado; o destino precisa ser confirmado antes do envio. Depois da execução remota bem-sucedida, habilite os checks obrigatórios e revise o aceite final da SC-001, mantendo SEC-003 aberta até decisão própria.
+Origin confirmado: `https://github.com/IAbrahanArley/smart-commerce.git`, repositório privado, branch `main`. O commit inicial `4e3daaa` e a correção `b647573` foram publicados; os dois jobs da CI aprovaram a correção. As evidências são registradas em documentação posterior, sem mudar código ou dependências. Proteção de branch/checks obrigatórios ainda é uma configuração futura, não realizada automaticamente. O aceite humano final da SC-001 permanece pendente, mantendo SEC-003 aberta até decisão própria.
 
 ## Próxima tarefa
 

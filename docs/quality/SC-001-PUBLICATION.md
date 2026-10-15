@@ -1,12 +1,22 @@
 # SC-001 — Preparação para GitHub e aprovação final
 
-Data: 2026-10-15. Estado: migração das actions aprovada e aplicada; este conjunto compõe o primeiro commit local da SC-001. O destino GitHub ainda será confirmado e deverá ser privado inicialmente; nenhum push foi autorizado antes dessa confirmação. Aceite integral depende da CI remota e da SEC-003. SC-002 não foi iniciada.
+Data: 2026-10-15. Estado: publicação autorizada concluída em `https://github.com/IAbrahanArley/smart-commerce.git`, com visibilidade privada confirmada antes do push. CI remota aprovada no commit de correção `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`. Aceite humano final da SC-001 continua pendente; SEC-003 permanece aberta, sem risco formalmente aceito. SC-002 não foi iniciada.
 
 ## Pendências atuais
 
 1. **SEC-003 aberta:** nova consulta do agente de segurança confirmou cinco alertas altos derivados de uma única cadeia de desenvolvimento; auditoria de produção com zero alertas. Não foi identificada versão estável corrigida de `braces`. Nenhum pacote, lockfile, versão do Wrapper ou POM foi alterado nesta rodada. Não há exceção aprovada.
-2. **CI remota não executada:** destino privado e remoto ainda serão confirmados. O primeiro commit é preparado somente localmente. A revisão estática e os seis testes locais aprovados não substituem uma execução do GitHub Actions no commit publicado.
-3. **CI-001 — configuração migrada:** as actions anteriores usavam Node 20 e `setup-java` v4 depreciada. A migração aprovada para Node 24 foi aplicada após reconfirmação oficial de todos os SHAs, com actionlint aprovado. A pendência de configuração antiga foi tratada; a compatibilidade operacional ainda exige CI remota. [Aviso oficial do runtime](https://github.blog/changelog/2026-09-23-node-20-is-no-longer-available-in-github-actions/), [metadados históricos da action Java anterior](https://raw.githubusercontent.com/actions/setup-java/cf277c60eb25467037889841efdb72551f06f6c3/action.yml).
+2. **Aceite humano final pendente:** a CI remota já foi comprovada, mas o usuário reservou a revisão do aceite para depois dessa execução. CI verde não concede exceção à SEC-003 nem autorização para SC-002.
+3. **CI-001 — migração validada remotamente:** as actions Node 24 foram aprovadas após corrigir o seletor Corretto de `21.0.9` para `21`; a distribuição aceita apenas major. O primeiro run falho permanece no histórico. Fontes históricas da migração: [aviso do runtime](https://github.blog/changelog/2026-09-23-node-20-is-no-longer-available-in-github-actions/), [action Java anterior](https://raw.githubusercontent.com/actions/setup-java/cf277c60eb25467037889841efdb72551f06f6c3/action.yml).
+
+## Publicação e CI executadas
+
+- O usuário confirmou a URL exata antes de qualquer configuração de origin ou envio. O destino existia como público; foi ajustado para privado conforme a decisão do usuário e confirmado por GET autenticado (`private=true`, `visibility=private`) em 2026-10-15T19:52:34Z, antes do primeiro push. O remoto estava vazio; nenhum histórico existente foi sobrescrito e não houve force push.
+- Commit inicial publicado: `4e3daaab1e63122e4461167c7d4698a71e761dc8`, 62 arquivos previamente conferidos e scan de histórico sem vazamentos. Origin sem credenciais na URL, tracking `main` → `origin/main`.
+- [Primeiro run 38797506400](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797506400): admin aprovado; backend falhou no setup Java com `Only major versions are supported`. Build/testes backend foram ignorados pelo runner em consequência da falha e não foram declarados aprovados.
+- Correção publicada: `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`, somente workflow: `java-version: '21'` e etapa explícita `java -version`/Maven `-v`. A causa foi confirmada no [adaptador Corretto do SHA fixado](https://github.com/actions/setup-java/blob/b843ebf9b913146b38da2eaa7aeddf76074ae1ad/src/distributions/corretto/installer.ts). Major Java 21, dependências e SHAs das actions preservados.
+- [Run aprovado 38797904235](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797904235), evento push, tentativa 1, criado às 19:56:19Z e concluído às 19:57:32Z em 2026-10-15 (16:56:19–16:57:32 America/Sao_Paulo). Backend e admin com conclusão `success`, todas as etapas executadas aprovadas.
+- Runner 2.337.0, Ubuntu 24.04.5. Backend: Corretto 21.0.12.12.1 / Java 21.0.12.1, Maven 3.10.0, Testcontainers 2.0.5 e PostgreSQL real; três testes de segurança e três integrados, zero falhas/erros/ignorados, `BUILD SUCCESS`. Admin: Node 24.12.0, npm 11.6.2, Next 16.4.1; instalação limpa, lint, tipos, build e smoke HTTP 200/404 aprovados.
+- Logs e metadados brutos permanecem apenas em `.tools/`, ignorados; o resumo durável está neste documento e em [SC-001-VALIDATION.md](SC-001-VALIDATION.md). A autenticação utilizou o helper do Git em memória, sem imprimir ou gravar tokens.
 
 ## Nova análise da SEC-003
 
@@ -53,22 +63,22 @@ Releases e commits oficiais reconfirmados pelo agente revisor em 2026-10-15 às 
 
 Fontes oficiais: [checkout v7.0.1](https://github.com/actions/checkout/releases/tag/v7.0.1), [setup-java v6.1.0](https://github.com/actions/setup-java/releases/tag/v6.1.0), [setup-node v7.1.0](https://github.com/actions/setup-node/releases/tag/v7.1.0).
 
-Os inputs utilizados continuam disponíveis. A migração preservou Corretto 21.0.9, Node 24.12.0, cache Maven/npm, caminhos e política de credenciais. Foi aplicado `cache-jdk: false` para não habilitar o novo cache de JDK além do cache de dependências já existente. Todos os alvos usam runtime Node 24, que requer runner mínimo 2.327.1; execução autenticada de Git dentro de container Docker requer 2.329.0 no checkout, cenário não utilizado aqui. Interfaces compatíveis pela documentação e actionlint aprovado não substituem teste remoto das novas majors. As dependências da aplicação não mudaram.
+Os inputs utilizados continuam disponíveis. Java permanece na major 21; após a falha remota comprovada do seletor com patch, foi aplicado `java-version: '21'` para Corretto, resultando em Java 21.0.12.1 no run aprovado. Node 24.12.0, cache Maven/npm, caminhos e política de credenciais foram preservados. `cache-jdk: false` evita habilitar o novo cache de JDK. Todos os alvos usam runtime Node 24; runner remoto 2.337.0 satisfaz os mínimos documentados. A execução remota validou as novas majors após a correção, sem alterar dependências da aplicação.
 
-## Passos para validar a execução remota
+## Procedimento para repetir a validação remota
 
-1. Confirmar proprietário e nome do repositório GitHub; a visibilidade inicial **privada** já foi aprovada. A migração e o primeiro commit local foram autorizados, mas push permanece bloqueado até a confirmação do destino. Publicar o código não equivale a aprovar SEC-003 ou autorizar produção.
-2. Após confirmar o destino, criar um repositório **privado** vazio, sem adicionar README/licença automaticamente, para evitar histórico divergente. Conferir a indicação Private no GitHub antes do envio. Não incluir credenciais em URL, scripts ou arquivos do projeto. Autenticar usando o mecanismo seguro do Git/GitHub.
-3. Na raiz, revisar o commit inicial local, `git status --short` e a lista de arquivos commitados. Os preflights, scans e `git diff --cached --check` são executados antes da criação do commit. A identidade de autoria configurada é utilizada, sem inventar autor ou alterar configuração global. Nenhum remoto é configurado nesta entrega.
+1. O destino confirmado é `IAbrahanArley/smart-commerce`, privado. Antes de novos envios autorizados, confirmar que origin e visibilidade continuam iguais. Publicar código não equivale a aceitar SEC-003 ou autorizar produção.
+2. O repositório e origin já existem; não recriar o destino, não substituir histórico e não executar `remote add` novamente. Usar autenticação segura sem credenciais em URL ou arquivos.
+3. Revisar o commit e os arquivos versionados. Aplicar preflight/scans às mudanças novas e conferir Git antes de enviar. A identidade de autoria configurada é utilizada, sem inventar autor ou alterar configuração global.
 
    ```sh
    git log -1 --oneline
    git status --short
-   git remote add origin https://github.com/OWNER/REPOSITORY.git
+   git remote get-url origin
    git push -u origin main
    ```
 
-   Os comandos de remote/push são instruções para execução somente após confirmação do destino; não foram executados nesta preparação. Substituir OWNER/REPOSITORY pelo destino privado autorizado. O commit inicial local não deve ser criado novamente se já estiver presente.
+   O destino já foi confirmado e os pushes da publicação foram executados. O exemplo serve para mudanças futuras autorizadas; não executar force push. O commit inicial não deve ser criado novamente.
 
 4. Em Settings → Actions, habilitar workflows e as actions oficiais utilizadas. Usar o runner hospedado `ubuntu-24.04`. Não configurar segredos de aplicação ou credenciais do PostgreSQL local: Testcontainers cria seu próprio banco descartável.
 5. Conferir a execução `CI` disparada pelo push, ou usar Actions → CI → Run workflow em `main`. Associar resultados ao SHA exato do commit enviado.
@@ -82,8 +92,8 @@ Upload de relatórios de falha é melhoria opcional ainda não implementada. Se 
 
 ## Aprovações e evidências restantes
 
-- Migração das actions: aprovada e aplicada com SHAs oficiais reconfirmados e actionlint aprovado; validação operacional remota pendente.
+- Migração das actions: aprovada e aplicada com SHAs oficiais reconfirmados; actionlint e validação operacional remota aprovados após corrigir o seletor Corretto.
 - SEC-003: permanece aberta; nenhuma exceção aprovada.
-- Publicação: primeiro commit local com 62 arquivos revisados; visibilidade inicial privada definida, proprietário/nome ainda pendentes. Sem remoto ou push.
-- CI remota: aguardando publicação autorizada e execução com evidência vinculada ao SHA.
-- Testes locais: seis testes backend e fluxo Compose aprovados; frontend aprovado na rodada anterior. Não foram repetidos builds de aplicação nesta rodada, pois as alterações são de documentação e configuração das actions, sem mudanças em código ou dependências da aplicação. Actionlint, preflight, verificações Git e scans são repetidos após a migração, antes do commit.
+- Publicação: concluída no destino confirmado, privado; origin configurado, main publicada e rastreando origin/main. Atualizações posteriores de documentação registram as evidências e são acompanhadas pela CI, sem mudar o código testado.
+- CI remota: comprovada no SHA `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`, run 38797904235, backend e admin aprovados. Proteção de branch e evento pull_request ainda não foram configurados/testados nesta entrega.
+- Testes locais: seis testes backend e fluxo Compose aprovados; frontend aprovado na rodada anterior. Não foram repetidos builds locais nesta rodada; os builds e testes foram repetidos e aprovados na CI remota após a correção do seletor Java. Não houve mudança em código ou dependências da aplicação. Actionlint, preflight, verificações Git e scans são repetidos antes de publicar o registro de evidências.

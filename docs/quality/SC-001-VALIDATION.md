@@ -33,7 +33,7 @@ Este documento distingue verificações executadas, revisão estática e testes 
 | Admin: smoke de produção | Aprovado, executado pelo frontend | `npm run test:smoke`: home HTTP 200, HTML pt-BR, main/h1 esperados e página inexistente HTTP 404. É teste HTTP, sem certificação visual ou de acessibilidade completa. |
 | Whitespace Git | Aprovado na conferência registrada | Após `git add --intent-to-add .`, `git diff --check` retornou 0 com os arquivos novos incluídos. Nova conferência do índice integra o fechamento do commit inicial local. |
 | CI: sintaxe e referências | Aprovado, executado pelo coordenador | Parse de `.github/workflows/ci.yml` com Node/js-yaml; scripts npm existentes e actions fixadas por SHA hexadecimal de 40 caracteres confirmados. Não comprova execução remota nem verificação externa dos commits. |
-| CI: actionlint após migração | Aprovado, executado pelo coordenador | actionlint 1.7.12, checksum oficial verificado, retornou 0 após migração aprovada das actions para runtime Node 24. Execução remota permanece pendente. |
+| CI: actionlint após migração | Aprovado, executado pelo coordenador | actionlint 1.7.12, checksum oficial verificado, retornou 0 após migração aprovada das actions para runtime Node 24 e novamente após correção do seletor Corretto. A execução remota aprovada está registrada abaixo. |
 | Pré-publicação: inventário e segredos locais | Aprovado para o snapshot examinado | Coordenador gerou `.tools/publication-preflight.json`: 61 candidatos, 347.931 bytes, zero achados; comparou dois valores secretos locais em memória sem imprimi-los. QA leu somente metadados e confirmou ausência de caminhos sensíveis no manifesto; não abriu `.env`. Regerar snapshot após alterações finais dos documentos. |
 | Pré-publicação: Gitleaks | Aprovado para o snapshot examinado | Coordenador executou Gitleaks 8.30.1 com checksum oficial validado, modo dir e `--redact`: saída 0, relatório vazio. Como nomes de lockfiles são ignorados por padrão, examinou cópia do lockfile sob nome neutro separadamente, também saída 0/zero achados. QA confirmou hash idêntico dessa cópia ao lockfile real e os relatórios vazios. Não equivale a garantia de ausência de segredos nem scan de histórico Git. |
 
@@ -63,9 +63,9 @@ Consulta atualizada de segurança em 2026-10-15, 16:24–16:27 America/Sao_Paulo
 | Verificação | Estado atual |
 | --- | --- |
 | Dependência de desenvolvimento com advisory alto | SEC-003 aberta; sem correção ou exceção aprovada. |
-| GitHub Actions | Configuração revisada; nenhuma execução remota comprovada. |
-| Compatibilidade remota das actions | CI-001 mitigada localmente por migração aprovada e SHAs oficiais reconfirmados; runtime Node 24 e inputs verificados, actionlint aprovado. A execução no GitHub continua indispensável; não houve falha remota demonstrada. |
-| Publicação | Este conjunto de 62 arquivos compõe o commit inicial local autorizado. Destino/remoto e push aguardam definição; repositório deverá ser privado inicialmente. Scans finais e revisão do índice integram o fechamento; autorização do commit não aceita SEC-003 nem autoriza SC-002. |
+| Aceite humano da SC-001 | Pendente; CI verde não aceita o risco de SEC-003 nem autoriza SC-002. |
+
+CI remota foi comprovada no SHA `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`, conforme seção abaixo. CI-001 está resolvida operacionalmente nessa execução após correção do seletor Corretto. A publicação autorizada ocorreu no repositório privado; nenhuma dessas ações encerra SEC-003.
 
 Histórico da primeira rodada: Docker Desktop 4.55.0 retornava `already running`, mas o named pipe permanecia indisponível; logs indicavam falha do Inference manager/socket `dockerInference`. A integração falhou em `beforeAll`, sem executar seus métodos. O usuário restabeleceu Docker; Engine 29.1.3 foi confirmado e o reteste integrado passou. Não houve reset ou exclusão de dados pelos agentes.
 
@@ -81,15 +81,41 @@ O Testcontainers usa sua própria inicialização PostgreSQL: seus testes não v
 
 O coordenador exportou os 62 arquivos exatos do índice Git, comparou os candidatos com os dois valores secretos locais em memória sem imprimi-los e executou Gitleaks 8.30.1 com redação de achados: nenhum vazamento encontrado, saída 0. O lockfile foi examinado também sob nome neutro para evitar exclusão automática por nome; nenhum achado, saída 0. actionlint 1.7.12 aprovou o workflow preparado. Os binários locais foram obtidos dos releases oficiais e validados contra os checksums publicados.
 
-Após registrar estes resultados, a exportação do índice e os scans são repetidos para incluir os documentos finais. Relatórios brutos, ferramentas, senhas locais, builds e logs ficam ignorados em `.tools/`, `.env` e `target/`. Este conjunto compõe o commit inicial local autorizado; destino e push permanecem pendentes, com visibilidade privada inicial aprovada. A varredura não é garantia absoluta de ausência de segredos desconhecidos; cobre o snapshot e as regras examinadas. Novas alterações exigem nova revisão.
+Na preparação do commit inicial, exportação e scans foram repetidos para incluir os documentos finais. Relatórios brutos, ferramentas, senhas locais, builds e logs ficam ignorados em `.tools/`, `.env` e `target/`. O commit inicial `4e3daaab1e63122e4461167c7d4698a71e761dc8` contém 62 arquivos; foi publicado no destino posteriormente confirmado. A varredura não é garantia absoluta de ausência de segredos desconhecidos; cobre o snapshot e as regras examinadas. Novas alterações exigem nova revisão.
 
-Não houve alteração em manifests, lockfile, POM ou Wrapper nesta rodada; os seis testes backend e checks do frontend mantêm as evidências anteriores, sem repetição. Após aprovação humana, os commits oficiais das actions foram reconfirmados pelo revisor às 16:38 BRT em `.tools/actions-reconfirmation.json`; coordenador conferiu YAML oficial, runtime Node 24 e inputs utilizados, aplicando:
+Na preparação inicial para publicação, não houve alteração em manifests, lockfile, POM ou Wrapper nem repetição dos builds locais; os testes foram posteriormente repetidos na CI remota descrita abaixo. Após aprovação humana, os commits oficiais das actions foram reconfirmados pelo revisor às 16:38 BRT em `.tools/actions-reconfirmation.json`; coordenador conferiu YAML oficial, runtime Node 24 e inputs utilizados, aplicando:
 
 - checkout v7.0.1: `3d3c42e5aac5ba805825da76410c181273ba90b1`, nos dois jobs;
 - setup-java v6.1.0: `b843ebf9b913146b38da2eaa7aeddf76074ae1ad`, com `cache-jdk: false`;
 - setup-node v7.1.0: `949feb2413d6458794dcd2491c4babbbce0c15c1`.
 
-QA releu o workflow aplicado; Corretto 21.0.9, Node 24.12.0, cache Maven/npm e política de credenciais foram preservados. `workflow_dispatch` permanece habilitado. CI-001 fica mitigada localmente; [SC-001-PUBLICATION.md](SC-001-PUBLICATION.md) registra passos e critérios da CI remota. CI verde, quando obtida, não concederá exceção automática à SEC-003.
+Na migração inicial, Corretto 21.0.9, Node 24.12.0, cache Maven/npm e política de credenciais foram preservados. A execução remota revelou a restrição do seletor Corretto; a correção e as versões efetivamente utilizadas estão abaixo. `workflow_dispatch` permanece habilitado. [SC-001-PUBLICATION.md](SC-001-PUBLICATION.md) registra a publicação e os critérios da CI; CI verde não concede exceção à SEC-003.
+
+## Publicação autorizada e CI remota
+
+Destino confirmado pelo usuário: `https://github.com/IAbrahanArley/smart-commerce.git`. O coordenador identificou o repositório inicialmente público, alterou sua visibilidade para privada e confirmou `private=true` antes do primeiro push. QA leu somente os metadados `.tools/github-private-confirmed.json`, com conferência às 16:52:34 BRT (19:52:34 UTC), sem acessar credenciais ou `.env`. `origin` e upstream `origin/main` foram configurados no destino exato; push de `main` autorizado foi concluído. Scan do histórico inicial registrou um commit e zero achados; após a correção CI, dois commits e zero achados, segundo o coordenador.
+
+### Primeira execução — falha de setup, admin aprovado
+
+[Run 38797506400](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797506400), evento push, SHA `4e3daaab1e63122e4461167c7d4698a71e761dc8`, criado em 2026-10-15 às 16:53:18 BRT (19:53:18 UTC): conclusão failure.
+
+- [Backend 116637656355](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797506400/job/116637656355): setup-java recusou `21.0.9` para Corretto com `Only major versions are supported`. Build e testes ficaram skipped; não foram aprovados nessa execução.
+- [Admin 116637655982](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797506400/job/116637655982): success, concluído às 16:54:00 BRT (19:54:00 UTC). Instalação, lint, tipos, build e smoke aprovados.
+
+A correção `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b` mudou apenas o seletor do workflow para `java-version: '21'` e acrescentou impressão das versões da toolchain. Mantém Java major 21; o provedor seleciona seu patch. Nenhuma fonte, dependência, POM ou lockfile da aplicação foi alterado. Actionlint e conferência Git passaram antes do novo push.
+
+### Segunda execução — backend e admin aprovados
+
+[Run 38797904235](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797904235), evento push, tentativa 1, SHA `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`: completed/success. Criado em 2026-10-15 às 16:56:19 BRT (19:56:19 UTC), atualizado às 16:57:32 BRT (19:57:32 UTC). Runner GitHub Actions 2.337.0, Ubuntu 24.04.5 LTS.
+
+| Job | Resultado e versões efetivas | Evidência |
+| --- | --- | --- |
+| [Backend 116639039608](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797904235/job/116639039608) | Success. Corretto 21.0.12.12.1, Java 21.0.12.1+12-LTS; Maven 3.10.0. Setup, formatação, compilação, empacotamento e `verify` aprovados. Surefire: 3; Failsafe: 3; zero falhas, erros ou ignorados em ambas. Testcontainers 2.0.5 iniciou PostgreSQL 18.6 real; Flyway aplicou/validou V1 e a reexecução sem nova migração passou. | Build terminou às 16:57:25 BRT (19:57:25 UTC) com BUILD SUCCESS; job concluído às 16:57:31 BRT (19:57:31 UTC). |
+| [Admin 116639040158](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797904235/job/116639040158) | Success. Node 24.12.0, npm 11.6.2, Next.js 16.4.1. Instalação limpa, lint, tipos, build e smoke aprovados: home 200, HTML pt-BR, main/h1 e 404. npm remoto difere do 11.21.0 usado localmente. | Job concluído às 16:57:03 BRT (19:57:03 UTC); smoke confirmado no log às 16:57:00 BRT (19:57:00 UTC). |
+
+QA conferiu os metadados locais `.tools/github-run-38797904235.json`, `github-run-38797904235-jobs.json` e logs dos dois jobs capturados pelo coordenador, sem requisições de rede paralelas. CI-001 fica resolvida operacionalmente nessa execução. A CI não inclui gate de auditoria npm: permanece válida a consulta de segurança das 16:24–16:27 BRT, com cinco altas de desenvolvimento e zero alertas de produção; não houve nova auditoria nem aceitação de risco.
+
+Esta evidência cobre o SHA citado; posteriores commits somente de documentação devem ter seu próprio resultado vinculado, sem presumir aprovação antecipada. Evento `pull_request`, proteção de branch e aceite humano não foram comprovados por este run de push. SC-002 não foi iniciada.
 
 ## Cobertura futura por escopo
 
