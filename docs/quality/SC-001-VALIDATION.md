@@ -136,6 +136,16 @@ Nenhuma auditoria npm foi repetida nesta etapa: permanece a consulta identificad
 
 Na consolidação documental, o coordenador executou actionlint 1.7.12 (saída 0; integrações opcionais shellcheck/pyflakes indisponíveis e desabilitadas), `git diff --check` (saída 0), conferência dos links relativos dos seis novos/relacionados documentos (nenhum destino ausente), preflight dos 68 arquivos candidatos contra caminhos sensíveis e dois valores secretos locais em memória (zero achados) e Gitleaks 8.30.1 no snapshot documental e histórico de quatro commits existente (zero vazamentos). Esses checks locais complementam a CI; não substituem auditoria de dependências nem testes de autenticação. O histórico escaneado antecede o commit de consolidação.
 
+## Revalidação dos documentos consolidados
+
+O [run 38805174880](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38805174880), evento `pull_request`, passou no head `27526b290db0607bc058ff48b39ee98763ddbadd`, com todos os oito documentos da proposta incluídos. Criado em 2026-10-15T20:50:25Z e concluído em 20:51:20Z (17:51:20 BRT). Merge sintético `41286a77378220828b5a1ada11016671147dc0a3`, base `83794ff95feb8847957d9d5fb2afe064c32b279e`.
+
+- Backend [116664038962](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38805174880/job/116664038962): success; logs confirmam três testes de segurança e três integrados, zero falhas/erros/ignorados e BUILD SUCCESS.
+- Admin [116664039748](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38805174880/job/116664039748): success em instalação limpa, lint, tipos, build e smoke 200/404.
+- Checks confirmados no head pelo GitHub Actions, app ID 15368; PR aberto e estado clean após conclusão. Main continua protegida e sem merge. Gitleaks repetido após commit examinou cinco commits, zero vazamentos.
+
+Esta anotação é documentação posterior ao head testado, não modifica código e terá sua própria execução de CI ao ser publicada. O teste comprova os checks existentes da SC-001; cenários de autenticação continuam somente propostos.
+
 ## Cobertura futura por escopo
 
 - SC-002: autenticação e testes negativos de credenciais e acesso.
