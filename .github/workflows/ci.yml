@@ -26,10 +26,14 @@ jobs:
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: corretto
-          java-version: '21.0.9'
+          java-version: '21'
           cache: maven
           cache-jdk: false
           cache-dependency-path: backend/pom.xml
+      - name: Toolchain versions
+        run: |
+          java -version
+          bash ./mvnw -v
       - name: Build, formatting and tests with PostgreSQL Testcontainers
         run: bash ./mvnw -B -ntp verify
 
