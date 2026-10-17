@@ -65,3 +65,7 @@ Storefront é modelo público de leitura no mesmo backend, com controllers/servi
 ## Evolução autorizada do catálogo
 
 Fotos normalizadas em PostgreSQL, descrição HTML sanitizada e unidades vendáveis por combinação de opções evoluem os módulos catalog/inventory/storefront existentes. FKs compostas e autorização continuam obrigatórias; o estoque legado é preservado na variante padrão. Limites, contratos e decisões: [ADR-0011](adr/0011-catalog-media-description-variants.md).
+
+## Carrinho, reservas e pedidos — proposta
+
+O [ADR-0012](adr/0012-stock-reservation-cart-orders.md), ainda **proposto**, trata expiração de reserva e frete listados em decisões em aberto: carrinho sem estado no servidor, reserva por variante criada junto do pedido `PENDING_PAYMENT`, disponibilidade calculada por reservas não expiradas, frete fixo ou retirada e checkout público idempotente. Nada é implementado antes das aprovações D1–D7; plano em [SPRINT_03.md](../product/SPRINT_03.md).
