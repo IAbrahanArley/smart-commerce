@@ -66,7 +66,7 @@ function VariantForm({ tenantId, product, variant, locked, onSaved, onReload }: 
     <div className="form-field"><label htmlFor={`variant-${id}-cost`}>Custo (R$) — opcional</label><input id={`variant-${id}-cost`} value={cost} inputMode="decimal" autoComplete="off" maxLength={20} disabled={busy || locked || stale} onChange={event => setCost(event.target.value)} /></div>
     {error ? <p ref={feedback} role="alert" tabIndex={-1} className="feedback feedback-error">{error}</p> : null}
     {stale ? <button type="button" disabled={busy || locked} onClick={() => { if (window.confirm("Carregar a versão atual descarta alterações não salvas nas combinações. Continuar?")) onReload(); }}>Carregar versão atual</button> : <button type="submit" disabled={busy || locked}>{busy ? "Salvando combinação…" : variant ? "Salvar combinação" : "Adicionar combinação"}</button>}
-    {variant ? <p><Link className="back-link" href={`/lojas/${encodeURIComponent(tenantId)}/produtos/${encodeURIComponent(product.id)}/estoque?variantId=${encodeURIComponent(variant.id)}`}>Consultar e movimentar estoque desta combinação</Link></p> : null}
+    {variant ? <p><Link className="back-link" href={`/lojas/${encodeURIComponent(tenantId)}/produtos/${encodeURIComponent(product.id)}/estoque?variantId=${encodeURIComponent(variant.id)}`}>Consultar e movimentar estoque de {variantLabel(variant.options)}</Link></p> : null}
   </form>;
 }
 

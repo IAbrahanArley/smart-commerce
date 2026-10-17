@@ -39,7 +39,15 @@ export default function ProductImages({ tenantId, productId, version, locked, on
     submitting.current = true; setBusy(true); setFeedback(null);
     try {
       const response = await operation();
-      if (response.status === 409) { setUncertain(true); setFeedback({ text: "O produto foi alterado. Carregue a versão atual antes de modificar as fotos.", error: true }); return; }
+      if (response.status === 409) {
+        const body: { code?: string } = await response.json().catch(() => ({}));
+        setUncertain(true);
+        setFeedback({ text: body.code === "IMAGE_LIMIT" ? "O produto já possui seis imagens. Carregue a versão atual e remova uma foto antes de enviar outra." : "O produto foi alterado. Carregue a versão atual antes de modificar as fotos.", error: true }); return;
+      }
+      if (response.status === 400) {
+        const body: { message?: unknown } = await response.json().catch(() => ({}));
+        setFeedback({ text: typeof body.message === "string" && body.message.trim() ? body.message : "Não foi possível alterar as fotos. Confira o formato, tamanho e texto alternativo e tente novamente.", error: true }); return;
+      }
       if (!response.ok) { setFeedback({ text: response.status === 413 ? "A foto excede o tamanho permitido. Use JPEG ou PNG de até 5 MiB." : "Não foi possível alterar as fotos. Confira o formato, tamanho e texto alternativo e tente novamente.", error: true }); return; }
       const result: Images = await response.json();
       setData(result); onVersion(result.version); setAlt(""); setFile(null); form.current?.reset();

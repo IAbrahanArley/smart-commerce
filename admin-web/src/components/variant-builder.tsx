@@ -8,7 +8,7 @@ export function variantLabel(options: { name: string; value: string }[]) {
 }
 
 export default function VariantBuilder({ variants, onChange, disabled }: { variants: VariantDraft[]; onChange: (value: VariantDraft[]) => void; disabled: boolean }) {
-  const [options, setOptions] = useState([{ name: "Cor", values: "" }]);
+  const [options, setOptions] = useState([{ name: "", values: "" }]);
   const [error, setError] = useState("");
   function generate() {
     const definitions = options.map(option => ({ name: option.name.trim().normalize("NFC"), values: option.values.split(",").map(value => value.trim().normalize("NFC")) }));
@@ -24,7 +24,7 @@ export default function VariantBuilder({ variants, onChange, disabled }: { varia
   return <div>
     <p>Até 3 tipos de opção e 50 combinações. Cada combinação terá SKU, preço e estoque próprios.</p>
     {options.map((option, index) => <fieldset className="variant-definition" key={index}><legend>Opção {index + 1}</legend>
-      <label htmlFor={`option-name-${index}`}>Nome da opção</label><input id={`option-name-${index}`} value={option.name} maxLength={80} disabled={disabled} autoComplete="off" onChange={event => setOptions(current => current.map((item, position) => position === index ? { ...item, name: event.target.value } : item))} />
+      <label htmlFor={`option-name-${index}`}>Nome da opção</label><input id={`option-name-${index}`} value={option.name} placeholder={["Ex.: Cor", "Ex.: Tamanho", "Ex.: Material"][index]} maxLength={80} disabled={disabled} autoComplete="off" onChange={event => setOptions(current => current.map((item, position) => position === index ? { ...item, name: event.target.value } : item))} />
       <label htmlFor={`option-values-${index}`}>Valores separados por vírgula</label><input id={`option-values-${index}`} value={option.values} maxLength={4000} disabled={disabled} autoComplete="off" onChange={event => setOptions(current => current.map((item, position) => position === index ? { ...item, values: event.target.value } : item))} />
       {options.length > 1 ? <button type="button" disabled={disabled} onClick={() => setOptions(current => current.filter((_, position) => position !== index))}>Remover opção {index + 1}</button> : null}
     </fieldset>)}
