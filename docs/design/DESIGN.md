@@ -166,3 +166,17 @@ Prancha aberta no navegador local; verificação de dimensões em 320 e 1440 CSS
 - [Fonte das Web Interface Guidelines](https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md), a consultar novamente em cada revisão.
 - [Playwright: testes de acessibilidade](https://playwright.dev/docs/accessibility-testing), que combinam automação e avaliação manual.
 - Coleção [awesome-design-md](https://github.com/VoltAgent/awesome-design-md), revisão local fixada em `3b605329240ce735b510037cca322f1831fdd7f8`, referência analisada IBM, consultada em 2026-10-16. Utilizados apenas os princípios de hierarquia, superfícies simples e papéis de cor. Paleta, Arial, raios e assinatura continuam próprios do Smart Commerce; não foram adotados Carbon, IBM Plex, marca, layout promocional ou dependências de terceiros. Trata-se de análise de referência, não especificação oficial da IBM.
+
+## Base visual da vitrine de consulta
+
+A vitrine autorizada em 2026-10-17 usa o fallback profissional existente: Arial, azul profundo, superfícies claras, controles 4px e superfícies 8px. Tokens --store-* ficam no storefront-web e não sobrescrevem --sc-* do admin. Nome da loja aparece como texto real, sem novo logotipo ou tema personalizado. Publicar somente produtos selecionados, com nome, preço e disponibilidade; sem imagens ou conteúdo comercial inventado. A disponibilidade de compra não é simulada.
+
+O refinamento visual autorizado na mesma data aplica essa base ao cabeçalho em superfície branca, abertura em azul profundo, catálogo com preço e disponibilidade em destaque e detalhe dividido entre identificação do produto e resumo de preço. Em telas menores, a composição passa para uma coluna. Nome real da loja e navegação funcional orientam a página; não adicionar categorias, busca, avaliações, fotos ou ações de compra sem dados e funcionalidades correspondentes. O rodapé identifica a plataforma e o caráter de consulta da vitrine. Os componentes locais compartilham estados de disponibilidade e navegação, sem biblioteca adicional, novo logotipo ou mudança dos tokens aprovados.
+
+A skill design-taste-frontend apoia composição e revisão, preservando paleta/tipografia e sem impor imagens, animações ou conteúdo incompatíveis com o catálogo real e o design aprovado. Personalização visual futura e mudanças relevantes permanecem sujeitas à governança acima.
+
+## Conteúdo do produto autorizado
+
+Na evolução do catálogo de 2026-10-17, fotos reais enviadas pelo lojista podem compor capa e galeria sem trocar a identidade da plataforma. Usar dimensões explícitas, proporção consistente com `object-fit: contain` para não cortar o produto, texto alternativo obrigatório e navegação por teclado. Não mostrar fotos de referência como se fossem mercadoria cadastrada. Nenhum cache/otimizador deve manter a foto pública depois de ocultar o produto em novas consultas.
+
+Organizar o formulário em identificação, descrição, preços/variações, imagens e publicação, com instruções e erros associados aos campos. Descrição permite apenas a formatação sanitizada do ADR-0011; nunca executar HTML de entrada bruta no preview. Opções como cor/tamanho devem usar rótulos textuais e controles nativos, sem depender de amostras de cor. Selecionar uma combinação exibe seu preço/disponibilidade real; não sugerir compra ou reserva inexistente. Limites de upload, necessidade de salvar antes de editar fotos e conflitos de versão precisam ser claros sem perder rascunhos.

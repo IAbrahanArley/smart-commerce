@@ -390,6 +390,213 @@ class CatalogIsolationIT {
     }
   }
 
+  @Test
+  void variableSkusHaveIndependentStockSafeHtmlAndPublicSelection() throws Exception {
+    Browser a = login("catalog-a@example.test");
+    var request =
+        Map.of(
+            "name",
+            "Camiseta",
+            "kind",
+            "VARIABLE",
+            "descriptionHtml",
+            "<p onclick='x()'>Algodão <strong>macio</strong><script>alert(1)</script><img src=x></p>",
+            "variants",
+            List.of(variant("SHIRT-P", "19.90", "P"), variant("SHIRT-M", "29.90", "M")));
+    var created = a.post(path(tenantA), request);
+    assertThat(created.statusCode()).isEqualTo(201);
+    var p = JSON.readTree(created.body());
+    String productRoute = path(tenantA) + "/" + p.get("id").asText();
+    assertThat(p.get("descriptionHtml").asText())
+        .isEqualTo("<p>Algodão <strong>macio</strong></p>");
+    assertThat(p.get("kind").asText()).isEqualTo("VARIABLE");
+    assertThat(p.get("variants").size()).isEqualTo(2);
+    var one = p.get("variants").get(0);
+    var two = p.get("variants").get(1);
+    String stock = productRoute + "/variants/" + one.get("id").asText() + "/inventory";
+    var movement =
+        Map.of(
+            "requestId",
+            UUID.randomUUID().toString(),
+            "type",
+            "ENTRY",
+            "delta",
+            5,
+            "reason",
+            "Synthetic variant stock");
+    assertThat(a.post(stock, movement).statusCode()).isEqualTo(201);
+    assertThat(a.post(stock, movement).statusCode()).isEqualTo(200);
+    assertThat(JSON.readTree(a.get(stock).body()).get("quantity").asInt()).isEqualTo(5);
+    assertThat(
+            JSON.readTree(
+                    a.get(productRoute + "/variants/" + two.get("id").asText() + "/inventory")
+                        .body())
+                .get("quantity")
+                .asInt())
+        .isZero();
+    assertThat(a.get(productRoute + "/inventory").statusCode()).isEqualTo(409);
+    assertThat(
+            a.put("/api/tenants/" + tenantA + "/publication", Map.of("published", true))
+                .statusCode())
+        .isEqualTo(200);
+    assertThat(
+            a.put(productRoute + "/publication", Map.of("published", true, "version", 0))
+                .statusCode())
+        .isEqualTo(200);
+    var response =
+        new Browser().get("/api/public/stores/catalog-a/products/" + p.get("id").asText());
+    assertThat(response.statusCode()).isEqualTo(200);
+    var publicProduct = JSON.readTree(response.body()).get("product");
+    assertThat(publicProduct.get("variants").size()).isEqualTo(2);
+    assertThat(publicProduct.get("available").asBoolean()).isTrue();
+    assertThat(publicProduct.get("price").asText()).isEqualTo("19.90");
+    assertThat(response.body())
+        .doesNotContain("sku", "cost", "quantity", "tenantId", "actorId", "onclick", "<script");
+  }
+
+  @Test
+  void variantUpdatesUseOwnVersionAndParentCasWithoutTypeConversion() throws Exception {
+    Browser a = login("catalog-a@example.test");
+    var p =
+        JSON.readTree(
+            a.post(
+                    path(tenantA),
+                    Map.of(
+                        "name",
+                        "Variable",
+                        "kind",
+                        "VARIABLE",
+                        "variants",
+                        List.of(variant("VAR-A", "10", "P"))))
+                .body());
+    String route = path(tenantA) + "/" + p.get("id").asText();
+    String variantRoute = route + "/variants/" + p.get("variants").get(0).get("id").asText();
+    var changed = a.put(variantRoute, Map.of("sku", "VAR-EDIT", "price", "9.95", "version", 0));
+    assertThat(changed.statusCode()).isEqualTo(200);
+    p = JSON.readTree(changed.body());
+    assertThat(p.get("version").asLong()).isEqualTo(1);
+    assertThat(p.get("variants").get(0).get("version").asLong()).isEqualTo(1);
+    assertThat(
+            a.put(variantRoute, Map.of("sku", "VAR-STALE", "price", "2", "version", 0))
+                .statusCode())
+        .isEqualTo(409);
+    var additional = new HashMap<>(variant("VAR-G", "15", "G"));
+    additional.put("version", 1);
+    var added = a.post(route + "/variants", additional);
+    assertThat(added.statusCode()).isEqualTo(200);
+    p = JSON.readTree(added.body());
+    assertThat(p.get("variants").size()).isEqualTo(2);
+    additional.put("version", p.get("version").asLong());
+    assertThat(a.post(route + "/variants", additional).statusCode()).isEqualTo(409);
+    assertThat(a.post(path(tenantA), product("Duplicate", "VAR-EDIT", "1", null)).statusCode())
+        .isEqualTo(409);
+    assertThat(
+            a.put(
+                    route,
+                    Map.of(
+                        "name",
+                        "Conversion",
+                        "kind",
+                        "SIMPLE",
+                        "sku",
+                        "CONVERT",
+                        "price",
+                        "1",
+                        "version",
+                        p.get("version").asLong()))
+                .statusCode())
+        .isEqualTo(409);
+    Browser b = login("catalog-b@example.test");
+    assertThat(
+            b.put(variantRoute, Map.of("sku", "FORGED", "price", "1", "version", 1)).statusCode())
+        .isEqualTo(404);
+    assertThat(
+            b.get(route + "/variants/" + p.get("variants").get(0).get("id").asText() + "/inventory")
+                .statusCode())
+        .isEqualTo(404);
+    var simple =
+        JSON.readTree(
+            a.post(path(tenantA), product("Simple", "SIMPLE-PRESERVED", "12.34", null)).body());
+    assertThat(simple.get("variants").get(0).get("id").asText())
+        .isEqualTo(simple.get("id").asText());
+  }
+
+  @Test
+  void v9AndV10BackfillSimpleVariantWithoutChangingLegacyStockOrLedger() {
+    String schema = "variant_legacy";
+    org.flywaydb.core.Flyway.configure()
+        .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+        .schemas(schema)
+        .defaultSchema(schema)
+        .target("8")
+        .load()
+        .migrate();
+    jdbc.execute("INSERT INTO variant_legacy.identity_user SELECT * FROM public.identity_user");
+    jdbc.execute("INSERT INTO variant_legacy.tenant SELECT * FROM public.tenant");
+    jdbc.execute(
+        "INSERT INTO variant_legacy.tenant_membership SELECT * FROM public.tenant_membership");
+    jdbc.execute("INSERT INTO variant_legacy.store SELECT * FROM public.store");
+    UUID id = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO variant_legacy.catalog_product(id,tenant_id,store_id,name,sku,price,currency,created_at,updated_at) SELECT ?,?,id,'Legacy','LEGACY',12.34,'BRL',now(),now() FROM variant_legacy.store WHERE tenant_id=?",
+        id,
+        tenantA,
+        tenantA);
+    jdbc.update(
+        "INSERT INTO variant_legacy.inventory_balance(product_id,tenant_id,quantity) VALUES(?,?,6)",
+        id,
+        tenantA);
+    jdbc.update(
+        "INSERT INTO variant_legacy.inventory_movement(id,tenant_id,product_id,actor_id,request_id,type,delta,balance_after,reason,created_at) VALUES(?,?,?,?,?,'ENTRY',6,6,'Legacy fixture',now())",
+        UUID.randomUUID(),
+        tenantA,
+        id,
+        ownerA,
+        UUID.randomUUID());
+    var originalMovement =
+        jdbc.queryForMap(
+            "SELECT id,tenant_id,product_id,actor_id,request_id,type,delta,balance_after,reason,created_at FROM variant_legacy.inventory_movement WHERE product_id=?",
+            id);
+    org.flywaydb.core.Flyway.configure()
+        .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+        .schemas(schema)
+        .defaultSchema(schema)
+        .target("10")
+        .load()
+        .migrate();
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT id FROM variant_legacy.catalog_variant WHERE product_id=?", UUID.class, id))
+        .isEqualTo(id);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT quantity FROM variant_legacy.inventory_balance WHERE product_id=?",
+                Integer.class,
+                id))
+        .isEqualTo(6);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM variant_legacy.inventory_movement WHERE product_id=? AND tenant_id=?",
+                Integer.class,
+                id,
+                tenantA))
+        .isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT sku FROM variant_legacy.catalog_variant WHERE id=?", String.class, id))
+        .isEqualTo("LEGACY");
+    assertThat(
+            jdbc.queryForMap(
+                "SELECT id,tenant_id,product_id,actor_id,request_id,type,delta,balance_after,reason,created_at FROM variant_legacy.inventory_movement WHERE product_id=?",
+                id))
+        .isEqualTo(originalMovement);
+  }
+
+  private static Map<String, Object> variant(String sku, String price, String size) {
+    return Map.of(
+        "sku", sku, "price", price, "options", List.of(Map.of("name", "Tamanho", "value", size)));
+  }
+
   private UUID activeIdentity(String email) {
     UUID id = UUID.randomUUID();
     jdbc.update(

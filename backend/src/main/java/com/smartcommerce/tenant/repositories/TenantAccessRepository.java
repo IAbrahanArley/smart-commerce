@@ -37,4 +37,23 @@ public class TenantAccessRepository {
         .stream()
         .findFirst();
   }
+
+  /**
+   * Acquire store write lock immediately; shared-lock upgrades can deadlock concurrent publishers.
+   */
+  public Optional<UUID> lockOwnedStoreForPublication(UUID actor, UUID tenant) {
+    return jdbc
+        .query(
+            """
+      SELECT s.id FROM store s
+      JOIN tenant_membership m ON m.tenant_id=s.tenant_id AND m.user_id=? AND m.role='OWNER'
+      JOIN identity_user u ON u.id=m.user_id AND u.status='ACTIVE' AND u.verified_at IS NOT NULL
+      WHERE s.tenant_id=? FOR UPDATE OF s FOR SHARE OF m,u
+      """,
+            (row, index) -> row.getObject("id", UUID.class),
+            actor,
+            tenant)
+        .stream()
+        .findFirst();
+  }
 }

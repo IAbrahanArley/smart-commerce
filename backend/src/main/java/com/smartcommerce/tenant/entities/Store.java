@@ -40,6 +40,10 @@ public class Store {
     this.createdAt = createdAt;
   }
 
+  public void publish(boolean published) {
+    status = published ? "PUBLISHED" : "DRAFT";
+  }
+
   public UUID id() {
     return id;
   }

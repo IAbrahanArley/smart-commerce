@@ -45,6 +45,28 @@ public class Product {
   @Column(name = "updated_at")
   private Instant updatedAt;
 
+  @Column(name = "published")
+  private boolean published;
+
+  @Column(name = "description_html", columnDefinition = "text")
+  private String descriptionHtml = "";
+
+  @Column(name = "kind")
+  private String kind = "SIMPLE";
+
+  public String descriptionHtml() {
+    return descriptionHtml;
+  }
+
+  public String kind() {
+    return kind;
+  }
+
+  public void initializeDetails(String description, String kind) {
+    this.descriptionHtml = description;
+    this.kind = kind;
+  }
+
   protected Product() {}
 
   public Product(
@@ -70,6 +92,10 @@ public class Product {
     this.version = version;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
+  }
+
+  public boolean published() {
+    return published;
   }
 
   public UUID id() {

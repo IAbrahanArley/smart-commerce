@@ -3,7 +3,7 @@ export async function authRequest(path: string, body?: object): Promise<Response
   return apiRequest(`/api/auth/${path}`, { method: "POST", body });
 }
 
-export async function apiRequest(path: string, options: { method?: "GET" | "POST" | "PUT"; body?: object; signal?: AbortSignal } = {}): Promise<Response> {
+export async function apiRequest(path: string, options: { method?: "GET" | "POST" | "PUT" | "DELETE"; body?: object | FormData; signal?: AbortSignal } = {}): Promise<Response> {
   const method = options.method ?? "GET";
   if (method === "GET") return fetch(path, {
     credentials: "same-origin", cache: "no-store", signal: options.signal,
@@ -13,10 +13,11 @@ export async function apiRequest(path: string, options: { method?: "GET" | "POST
   });
   if (!csrfResponse.ok) throw new Error("Não foi possível conectar. Tente novamente.");
   const csrf: { token: string; headerName: string } = await csrfResponse.json();
+  const multipart = options.body instanceof FormData;
   return fetch(path, {
     method, credentials: "same-origin", cache: "no-store",
-    headers: { "Content-Type": "application/json", [csrf.headerName]: csrf.token },
-    body: options.body ? JSON.stringify(options.body) : undefined, signal: options.signal,
+    headers: multipart ? { [csrf.headerName]: csrf.token } : { "Content-Type": "application/json", [csrf.headerName]: csrf.token },
+    body: multipart ? options.body as FormData : options.body ? JSON.stringify(options.body) : undefined, signal: options.signal,
   });
 }
 

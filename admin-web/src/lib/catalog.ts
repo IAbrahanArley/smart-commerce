@@ -1,3 +1,6 @@
+export type VariantOption = { name: string; value: string };
+export type ProductVariant = { id: string; sku: string; price: string; cost: string | null; currency: "BRL"; version: number; options: VariantOption[] };
+export type VariantDraft = { sku: string; price: string; cost: string; options: VariantOption[] };
 export type Product = {
   id: string;
   name: string;
@@ -6,6 +9,10 @@ export type Product = {
   cost: string | null;
   currency: "BRL";
   version: number;
+  published: boolean;
+  descriptionHtml: string;
+  kind: "SIMPLE" | "VARIABLE";
+  variants: ProductVariant[];
 };
 
 // Decimal text is canonicalized without floating-point conversion or rounding.

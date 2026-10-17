@@ -32,7 +32,7 @@ interface ProductJpaRepository extends Repository<Product, UUID> {
       value =
           """
  UPDATE catalog_product p SET name=:name,sku=:sku,price=:price,cost=:cost,
- version=p.version+1,updated_at=GREATEST(p.updated_at,:now)
+ description_html=COALESCE(:description,p.description_html),version=p.version+1,updated_at=GREATEST(p.updated_at,:now)
  WHERE p.id=:product AND p.tenant_id=:tenant AND p.version=:version
  AND EXISTS (SELECT 1 FROM tenant_membership m
  JOIN identity_user u ON u.id=m.user_id AND u.status='ACTIVE' AND u.verified_at IS NOT NULL
@@ -48,6 +48,28 @@ interface ProductJpaRepository extends Repository<Product, UUID> {
       @Param("sku") String sku,
       @Param("price") BigDecimal price,
       @Param("cost") BigDecimal cost,
+      @Param("version") long version,
+      @Param("now") Instant now,
+      @Param("description") String description);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      value =
+          """
+   UPDATE catalog_product p SET published=:published,version=p.version+1,
+       updated_at=GREATEST(p.updated_at,:now)
+   WHERE p.id=:product AND p.tenant_id=:tenant AND p.version=:version
+     AND EXISTS (SELECT 1 FROM tenant_membership m
+       JOIN identity_user u ON u.id=m.user_id AND u.status='ACTIVE' AND u.verified_at IS NOT NULL
+       JOIN store s ON s.id=p.store_id AND s.tenant_id=m.tenant_id
+       WHERE m.tenant_id=p.tenant_id AND m.user_id=:actor AND m.role='OWNER')
+   """,
+      nativeQuery = true)
+  int publishOwned(
+      @Param("actor") UUID actor,
+      @Param("tenant") UUID tenant,
+      @Param("product") UUID product,
+      @Param("published") boolean published,
       @Param("version") long version,
       @Param("now") Instant now);
 }

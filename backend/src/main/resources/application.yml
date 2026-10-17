@@ -1,6 +1,12 @@
 spring:
   application:
     name: smart-commerce
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+      file-size-threshold: 0B
+      resolve-lazily: true
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}

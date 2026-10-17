@@ -2,6 +2,22 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { decimalInput, formatBRL } from "../src/lib/catalog.ts";
+import { wholeQuantity } from "../src/lib/inventory.ts";
+import { storefrontUrl } from "../src/lib/tenant-api.ts";
+
+const storefrontOrigin = process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN;
+delete process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN;
+assert.equal(storefrontUrl("minha-loja"), "http://localhost:3001/lojas/minha-loja");
+process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN = "javascript:alert(1)";
+assert.equal(storefrontUrl("minha-loja"), null);
+process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN = "https://lojas.example.test/";
+assert.equal(storefrontUrl("minha-loja"), "https://lojas.example.test/lojas/minha-loja");
+if (storefrontOrigin === undefined) delete process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN;
+else process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN = storefrontOrigin;
+
+assert.equal(wholeQuantity("1"), 1);
+assert.equal(wholeQuantity("2147483647"), 2147483647);
+for (const invalid of ["0", "-1", "1.5", "1,5", "1e2", "2.000", "2147483648", "", "NaN"]) assert.equal(wholeQuantity(invalid), null, invalid);
 
 assert.equal(decimalInput("49,90"), "49.90");
 assert.equal(decimalInput("0"), "0.00");
@@ -64,6 +80,7 @@ try {
     ["/lojas/00000000-0000-0000-0000-000000000000", "Minha loja", "Consultando sua loja"],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Consultando catálogo"],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001", "Editar produto", "Consultando catálogo"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001/estoque", "Estoque do produto", "Consultando estoque"],
   ]) {
     const response = await fetch(`${baseUrl}${path}`, { signal: AbortSignal.timeout(5000) });
     assert.equal(response.status, 200, path);
@@ -75,7 +92,7 @@ try {
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /Página não encontrada/);
-  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta, detalhe de loja, catálogo, edição de produto, headers de privacidade e 404. Não substitui teste de browser/API.");
+  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta, detalhe de loja, catálogo, edição, estoque, validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
 } finally {
   server.kill();
 }

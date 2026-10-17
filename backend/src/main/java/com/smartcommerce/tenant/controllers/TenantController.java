@@ -1,5 +1,6 @@
 package com.smartcommerce.tenant.controllers;
 
+import com.smartcommerce.tenant.dto.request.StorePublicationRequest;
 import com.smartcommerce.tenant.dto.request.TenantCreationRequest;
 import com.smartcommerce.tenant.dto.response.TenantView;
 import com.smartcommerce.tenant.services.TenantService;
@@ -13,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,5 +52,14 @@ public final class TenantController {
   @GetMapping("/{tenantId}")
   public TenantView find(@PathVariable UUID tenantId, Authentication actor) {
     return tenants.find(UUID.fromString(actor.getName()), tenantId);
+  }
+
+  @SecurityRequirement(name = "csrf")
+  @PutMapping("/{tenantId}/publication")
+  public TenantView publish(
+      @PathVariable UUID tenantId,
+      @RequestBody StorePublicationRequest request,
+      Authentication actor) {
+    return tenants.publish(UUID.fromString(actor.getName()), tenantId, request.value());
   }
 }

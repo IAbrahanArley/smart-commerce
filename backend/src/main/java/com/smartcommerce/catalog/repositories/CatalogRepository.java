@@ -1,5 +1,6 @@
 package com.smartcommerce.catalog.repositories;
 
+import com.smartcommerce.catalog.domain.ProductDetails;
 import com.smartcommerce.catalog.domain.ProductValues;
 import com.smartcommerce.catalog.entities.Product;
 import com.smartcommerce.catalog.exceptions.CatalogPersistenceException;
@@ -39,6 +40,17 @@ public class CatalogRepository {
 
   public Product create(
       UUID actor, UUID tenant, UUID store, UUID id, ProductValues input, Instant now) {
+    return create(actor, tenant, store, id, input, now, new ProductDetails("", null, null));
+  }
+
+  public Product create(
+      UUID actor,
+      UUID tenant,
+      UUID store,
+      UUID id,
+      ProductValues input,
+      Instant now,
+      ProductDetails details) {
     UUID authorizedStore = requireAccess(actor, tenant);
     if (!authorizedStore.equals(store)) throw new CatalogPersistenceException(Reason.MISSING);
     Product product =
@@ -54,6 +66,9 @@ public class CatalogRepository {
             0,
             now,
             now);
+    product.initializeDetails(
+        details.descriptionHtml() == null ? "" : details.descriptionHtml(),
+        details.kind() == null ? "SIMPLE" : details.kind().name());
     entities.persist(product);
     entities.flush();
     return product;
@@ -61,14 +76,46 @@ public class CatalogRepository {
 
   public Product update(
       UUID actor, UUID tenant, UUID id, ProductValues input, long version, Instant now) {
+    return update(actor, tenant, id, input, version, now, null);
+  }
+
+  public Product update(
+      UUID actor,
+      UUID tenant,
+      UUID id,
+      ProductValues input,
+      long version,
+      Instant now,
+      String description) {
     requireAccess(actor, tenant);
     if (products.updateOwned(
-            actor, tenant, id, input.name(), input.sku(), input.price(), input.cost(), version, now)
+            actor,
+            tenant,
+            id,
+            input.name(),
+            input.sku(),
+            input.price(),
+            input.cost(),
+            version,
+            now,
+            description)
         != 1) {
       if (find(actor, tenant, id).isEmpty()) throw new CatalogPersistenceException(Reason.MISSING);
       throw new CatalogPersistenceException(Reason.VERSION_CONFLICT);
     }
     return find(actor, tenant, id)
+        .orElseThrow(() -> new CatalogPersistenceException(Reason.MISSING));
+  }
+
+  public Product publish(
+      UUID actor, UUID tenant, UUID product, boolean published, long version, Instant now) {
+    requireAccess(actor, tenant);
+    if (products.publishOwned(actor, tenant, product, published, version, now) != 1) {
+      if (find(actor, tenant, product).isEmpty())
+        throw new CatalogPersistenceException(Reason.MISSING);
+      throw new CatalogPersistenceException(Reason.VERSION_CONFLICT);
+    }
+    return find(actor, tenant, product)
         .orElseThrow(() -> new CatalogPersistenceException(Reason.MISSING));
   }
 }

@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.smartcommerce.identity.services.IdentityAuthenticationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.ApplicationContext;
@@ -29,7 +30,10 @@ class BootstrapSecurityTest {
   @MockitoBean IdentityAuthenticationService authentication;
   @Autowired MockMvc mvc;
   @Autowired ApplicationContext context;
-  @Autowired SecurityFilterChain chain;
+
+  @Autowired
+  @Qualifier("bootstrapSecurity")
+  SecurityFilterChain chain;
 
   @Test
   void csrfRemainsEnabledAndThereIsNoGeneratedUser() {

@@ -53,3 +53,15 @@ O módulo tenant implementa criação conjunta de empresa/loja/vínculo OWNER e 
 ## Catálogo básico autorizado
 
 O módulo catalog implementa produto simples e consultas autorizadas por vínculo. A entrega inicial usava JDBC; a revisão do [ADR-0008](adr/0008-layered-persistence-refactoring.md) organiza suas camadas e introduz JPA, preservando autorização transacional, escopo de tenant e SQL especializado para atualização concorrente. Contrato monetário e concorrência: [ADR-0007](adr/0007-basic-catalog.md). Esta entrega foi autorizada posteriormente ao planejamento da Sprint 1; não inclui estoque, variantes ou vitrine.
+
+## Estoque básico autorizado
+
+Inventory mantém saldo físico inteiro e histórico auditável por produto. Serviço usa contrato de autorização do catálogo dentro da transação; repositórios concentram JPA e SQL especializado para inicialização concorrente/locks. Escritas idempotentes e serializadas impedem saldo negativo; leituras usam snapshot consistente e paginação por cursor. Sem reservas/pedidos ou novos serviços. [ADR-0009](adr/0009-basic-inventory.md).
+
+## Vitrine pública autorizada
+
+Storefront é modelo público de leitura no mesmo backend, com controllers/services/repositories e projeções restritas por slug publicado. Nova cadeia GET stateless não usa sessões administrativas. storefront-web é aplicação SSR separada, sem proxy administrativo, credenciais encaminhadas ou cache de catálogo. Publicação explícita da loja/produto e contratos: [ADR-0010](adr/0010-public-storefront.md).
+
+## Evolução autorizada do catálogo
+
+Fotos normalizadas em PostgreSQL, descrição HTML sanitizada e unidades vendáveis por combinação de opções evoluem os módulos catalog/inventory/storefront existentes. FKs compostas e autorização continuam obrigatórias; o estoque legado é preservado na variante padrão. Limites, contratos e decisões: [ADR-0011](adr/0011-catalog-media-description-variants.md).
