@@ -2,6 +2,12 @@
 ## Estilo
 Monólito modular no backend Spring Boot, com interfaces explícitas entre módulos e um PostgreSQL. Admin e vitrine são aplicações Next.js distintas. Deploy inicial simples, sem microserviços.
 
+## Organização da implementação
+
+Backend organizado por funcionalidade dentro do monólito, com camadas explícitas em cada módulo: `controllers`, `services`, `repositories`, `entities`, `domain` e `dto/request`, `dto/response`, conforme a necessidade real. Spring MVC recebe e responde HTTP/JSON; serviços coordenam regras e transações; repositórios concentram persistência. As telas pertencem ao Next.js, que consome a API. Não há templates de views renderizados pelo Spring nem divisão em microserviços.
+
+Tenant e catálogo usam JPA/Spring Data para entidades e persistência de domínio, com operações SQL especializadas encapsuladas em repositórios quando necessárias à autorização e concorrência. Identidade e Spring Session preservam JDBC; SQL não pertence aos controllers nem aos serviços de aplicação. Flyway continua dono do schema, com Hibernate em `validate` e Open Session in View desativado. O [ADR-0008](adr/0008-layered-persistence-refactoring.md) registra a evolução da implementação JDBC inicial; as [convenções de código](CODING_STANDARDS.md) definem responsabilidades e limites.
+
 ## Módulos previstos
 identity, tenant, storefront, catalog, inventory, cart, orders, payments, finance, analytics, ai.
 
@@ -35,3 +41,15 @@ Modelo de assinatura SaaS, expiração de reserva, frete, modelagem de variantes
 ## Fundação de identidade — SC-002 Etapa 1
 
 O [ADR-0005](adr/0005-identity-authentication.md) registra a direção local Spring Security e aprovação de D1/D2/D3 com autorização exclusiva da fundação. A [implementação mínima](IDENTITY_FOUNDATION.md) acrescenta usuário global/credencial, política/encoder, migração aditiva e testes/benchmark com JDBC existente. Não há API de autenticação, ativação, sessão, tokens ou frontend; Etapas 2–6 dependem de nova autorização. Identidade global não concede tenant, empresa ou papel.
+
+## Entrega funcional local de identidade
+
+Após aprovação de D4–D6, a SC-002 acrescenta cadastro por e-mail, prova de posse seguida de definição explícita de senha, login/logout Spring Security e sessão PostgreSQL via Spring Session JDBC. O admin Next.js encaminha `/api` para o backend, mantendo mesma origem; links de prova usam fragmento, e mutações exigem CSRF. Transporte de mensagens restrito ao perfil DEV, sem envio externo. Sessão ociosa de 30 minutos, duração absoluta de oito horas e validação de status/auth_version em cada acesso protegido. Recuperação de senha e vínculos empresariais continuam fora desta entrega.
+
+## SC-003 — Onboarding da loja
+
+O módulo tenant implementa criação conjunta de empresa/loja/vínculo OWNER e leitura escopada pela identidade autenticada. O frontend lista somente vínculos próprios e consulta detalhes com validação backend; nenhum tenant_id informado pelo cliente concede acesso. Uma loja por empresa, criada em configuração, sem vitrine pública. [ADR-0006](adr/0006-tenant-store-onboarding.md).
+
+## Catálogo básico autorizado
+
+O módulo catalog implementa produto simples e consultas autorizadas por vínculo. A entrega inicial usava JDBC; a revisão do [ADR-0008](adr/0008-layered-persistence-refactoring.md) organiza suas camadas e introduz JPA, preservando autorização transacional, escopo de tenant e SQL especializado para atualização concorrente. Contrato monetário e concorrência: [ADR-0007](adr/0007-basic-catalog.md). Esta entrega foi autorizada posteriormente ao planejamento da Sprint 1; não inclui estoque, variantes ou vitrine.

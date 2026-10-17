@@ -1,5 +1,7 @@
 # SC-002 — Prontidão e implementação incremental
 
+Atualização de escopo: D4–D6 aprovadas; entrega funcional local de cadastro, prova, definição de senha, login, identidade autenticada e logout autorizada em backend/frontend. As etapas abaixo preservam a decomposição original; recuperação de senha, D7/ferramentas de browser e domínio empresarial não estão autorizados por esta entrega. Critérios de execução passam a priorizar integrações críticas, sem repetir o benchmark.
+
 Data: 2026-10-15. **D1/D2/D3 e somente Etapa 1 autorizadas pelo responsável.** Fundação implementada para validação local; aceite, commit/push e Etapas 2–6 aguardam autorização. Contrato: [IDENTITY_FOUNDATION.md](../architecture/IDENTITY_FOUNDATION.md); resultados reais: [SC-002-STAGE-01-VALIDATION.md](../quality/SC-002-STAGE-01-VALIDATION.md).
 
 Esta revisão substitui o planejamento anterior da branch `docs/sc-001-governance` para a SC-002, sem mesclar aquela branch ou modificar registros da SC-001. A base preliminar e decisões pendentes estão no [ADR-0005](../architecture/adr/0005-identity-authentication.md). Interfaces seguem [DESIGN.md](../design/DESIGN.md); a matriz verificável está em [SC-002-TEST-PLAN.md](../quality/SC-002-TEST-PLAN.md).

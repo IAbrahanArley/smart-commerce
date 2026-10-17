@@ -3,6 +3,8 @@ package com.smartcommerce.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
+import com.smartcommerce.identity.domain.PasswordHash;
+import com.smartcommerce.identity.security.IdentityPasswordEncoder;
 import org.junit.jupiter.api.Test;
 
 class PasswordHashTest {

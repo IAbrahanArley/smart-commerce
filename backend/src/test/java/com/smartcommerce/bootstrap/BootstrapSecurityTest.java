@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.smartcommerce.identity.services.IdentityAuthenticationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
@@ -15,6 +16,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
     excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class)
 @Import({BootstrapSecurityConfiguration.class, BootstrapSecurityTest.ProbeController.class})
 class BootstrapSecurityTest {
+  @MockitoBean IdentityAuthenticationService authentication;
   @Autowired MockMvc mvc;
   @Autowired ApplicationContext context;
   @Autowired SecurityFilterChain chain;
@@ -46,10 +49,10 @@ class BootstrapSecurityTest {
 
   @Test
   void allOtherRoutesAndHealthSubpathsAreDenied() throws Exception {
-    for (String path :
-        new String[] {"/api/tenants", "/login", "/actuator/env", "/actuator/health/db"}) {
+    for (String path : new String[] {"/login", "/actuator/env", "/actuator/health/db"}) {
       mvc.perform(get(path)).andExpect(status().isForbidden());
     }
+    mvc.perform(get("/api/tenants")).andExpect(status().isUnauthorized());
     mvc.perform(post("/actuator/health")).andExpect(status().isForbidden());
     mvc.perform(post("/actuator/health").with(csrf())).andExpect(status().isForbidden());
   }

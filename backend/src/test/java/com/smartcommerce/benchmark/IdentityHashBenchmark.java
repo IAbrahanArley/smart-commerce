@@ -1,6 +1,6 @@
 package com.smartcommerce.benchmark;
 
-import com.smartcommerce.identity.IdentityPasswordEncoder;
+import com.smartcommerce.identity.security.IdentityPasswordEncoder;
 import com.sun.management.OperatingSystemMXBean;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
