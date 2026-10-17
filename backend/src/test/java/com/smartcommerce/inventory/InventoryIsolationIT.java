@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.smartcommerce.identity.security.IdentityPasswordEncoder;
+import com.smartcommerce.inventory.domain.ReservationLine;
+import com.smartcommerce.inventory.services.InventoryReservationService;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.URI;
@@ -49,6 +51,7 @@ class InventoryIsolationIT {
   private static final JsonMapper JSON = JsonMapper.builder().build();
   @LocalServerPort int port;
   @Autowired JdbcTemplate jdbc;
+  @Autowired InventoryReservationService reservations;
   UUID ownerA;
   UUID ownerB;
   UUID tenantA;
@@ -202,6 +205,42 @@ class InventoryIsolationIT {
     var state = JSON.readTree(a.get(route).body());
     assertThat(state.get("quantity").asInt()).isEqualTo(1);
     assertThat(state.get("movements").size()).isEqualTo(2);
+  }
+
+  @Test
+  void negativeAdjustmentBelowReservedReturnsReservedStockAndAdminShowsAllLevels()
+      throws Exception {
+    Browser a = login("catalog-a@example.test");
+    UUID product = createProduct(a, tenantA, "RESERVED");
+    String route = inventory(tenantA, product);
+    assertThat(a.post(route, movement("ENTRY", 5, "Entrada")).statusCode()).isEqualTo(201);
+    UUID order = UUID.randomUUID();
+    reservations.reserve(tenantA, order, List.of(new ReservationLine(product, 3)));
+    JsonNode state = JSON.readTree(a.get(route).body());
+    assertThat(state.get("quantity").asInt()).isEqualTo(5);
+    assertThat(state.get("reserved").asLong()).isEqualTo(3);
+    assertThat(state.get("available").asInt()).isEqualTo(2);
+    var blocked = a.post(route, movement("ADJUSTMENT", -3, "Contagem física"));
+    assertThat(blocked.statusCode()).isEqualTo(409);
+    JsonNode error = JSON.readTree(blocked.body());
+    assertThat(error.get("code").asText()).isEqualTo("RESERVED_STOCK");
+    assertThat(error.get("reserved").asLong()).isEqualTo(3);
+    var insufficient = a.post(route, movement("ADJUSTMENT", -6, "Contagem física"));
+    assertThat(JSON.readTree(insufficient.body()).get("code").asText())
+        .isEqualTo("INSUFFICIENT_STOCK");
+    assertThat(a.post(route, movement("ADJUSTMENT", -2, "Contagem física")).statusCode())
+        .isEqualTo(201);
+    assertThat(a.post(route, movement("ADJUSTMENT", 1, "Ajuste positivo")).statusCode())
+        .isEqualTo(201);
+    Browser b = login("catalog-b@example.test");
+    assertThat(b.get(inventory(tenantB, product)).statusCode()).isEqualTo(404);
+    assertThat(b.get(route).body()).doesNotContain("reserved");
+    assertThat(reservations.release(tenantA, order)).isEqualTo(1);
+    state = JSON.readTree(a.get(route).body());
+    assertThat(state.get("quantity").asInt()).isEqualTo(4);
+    assertThat(state.get("reserved").asLong()).isZero();
+    assertThat(state.get("available").asInt()).isEqualTo(4);
+    assertThat(state.get("movements").size()).isEqualTo(3);
   }
 
   @Test

@@ -1,10 +1,12 @@
 package com.smartcommerce.inventory.repositories;
 
 import com.smartcommerce.inventory.domain.InventoryException;
+import com.smartcommerce.inventory.domain.StockLevel;
 import com.smartcommerce.inventory.entities.InventoryBalance;
 import com.smartcommerce.inventory.entities.InventoryMovement;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import java.time.Instant;
 import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -48,16 +50,57 @@ public class InventoryRepository {
         .orElseThrow(() -> new InventoryException(InventoryException.Reason.MISSING));
   }
 
-  public int quantity(UUID tenant, UUID product) {
-    return entities
-        .createQuery(
-            "select b.quantity from InventoryBalance b where b.tenantId=:tenant and b.productId=:product",
-            Integer.class)
-        .setParameter("tenant", tenant)
-        .setParameter("product", product)
-        .getResultStream()
+  /**
+   * The single availability read: physical units, ACTIVE reservations whose {@code expires_at} is
+   * after {@code now}, and available = max(0, physical - reserved), via the V11 SQL functions that
+   * the storefront also uses. Only variants of {@code tenant} are returned, ordered by id.
+   */
+  public List<StockLevel> levels(UUID tenant, Collection<UUID> variants, Instant now) {
+    var at = InventoryReservationRepository.utc(now);
+    return jdbc.query(
+        """
+        SELECT v.id, COALESCE(b.quantity,0),
+         inventory_reserved_quantity(v.tenant_id,v.id,?), inventory_available_quantity(v.tenant_id,v.id,?)
+        FROM catalog_variant v
+        LEFT JOIN inventory_balance b ON b.product_id=v.id AND b.tenant_id=v.tenant_id
+        WHERE v.tenant_id=? AND v.id=ANY(CAST(? AS uuid[])) ORDER BY v.id
+        """,
+        (row, index) ->
+            new StockLevel(
+                row.getObject(1, UUID.class), row.getInt(2), row.getLong(3), row.getInt(4)),
+        at,
+        at,
+        tenant,
+        array(variants));
+  }
+
+  public StockLevel level(UUID tenant, UUID variant, Instant now) {
+    return levels(tenant, List.of(variant), now).stream()
         .findFirst()
-        .orElse(0);
+        .orElseThrow(() -> new InventoryException(InventoryException.Reason.MISSING));
+  }
+
+  /**
+   * Locks the existing balances in ascending variant order (deadlock-free between overlapping
+   * carts), then reads levels in a new statement. Under READ COMMITTED that statement sees every
+   * reservation committed by the previous lock holder; callers must not use REPEATABLE READ.
+   */
+  public List<StockLevel> lockLevels(UUID tenant, Collection<UUID> variants, Instant now) {
+    jdbc.queryForList(
+        """
+        SELECT b.product_id FROM inventory_balance b
+        WHERE b.tenant_id=? AND b.product_id=ANY(CAST(? AS uuid[])) ORDER BY b.product_id FOR UPDATE
+        """,
+        UUID.class,
+        tenant,
+        array(variants));
+    return levels(tenant, variants, now);
+  }
+
+  private static String array(Collection<UUID> ids) {
+    var joiner = new StringJoiner(",", "{", "}");
+    new TreeSet<>(ids).forEach(id -> joiner.add(id.toString()));
+    return joiner.toString();
   }
 
   public Optional<InventoryMovement> previous(UUID tenant, UUID request) {

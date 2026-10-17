@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { apiRequest } from "@/lib/auth-api";
 import type { Product } from "@/lib/catalog";
-import { wholeQuantity, type InventorySnapshot, type MovementRequest } from "@/lib/inventory";
+import { reservedStockMessage, wholeQuantity, type InventorySnapshot, type MovementRequest } from "@/lib/inventory";
 import { variantLabel } from "@/components/variant-builder";
 
 const integer = new Intl.NumberFormat("pt-BR");
@@ -91,6 +91,7 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
     if (submitting.current) return;
     submitting.current = true; setBusy(true); setFeedback(null); setPending(request);
     let confirmed = false;
+    let stale = false;
     try {
       const response = await apiRequest(inventoryApi, { method: "POST", body: request });
       if (response.ok) {
@@ -98,18 +99,19 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
         confirmed = true; setPending(null); setQuantity(""); setReason("");
         setFeedback({ text: "Movimentação registrada. O saldo será consultado novamente.", error: false });
       } else if ([400, 401, 403, 404, 409, 429].includes(response.status)) {
-        const result: { code?: string } = await response.json().catch(() => ({}));
+        const result: { code?: string; reserved?: unknown } = await response.json().catch(() => ({}));
         setPending(null);
+        stale = result.code === "RESERVED_STOCK" || result.code === "INSUFFICIENT_STOCK";
         const messages: Record<string, string> = {
           INSUFFICIENT_STOCK: "Saldo insuficiente para retirar essa quantidade. Confira o estoque e ajuste a movimentação.",
           BALANCE_LIMIT: "Esta movimentação ultrapassa o limite do saldo. Reduza a quantidade.",
           REQUEST_CONFLICT: "A chave desta solicitação está associada a outra movimentação. Consulte o histórico antes de tentar novamente.",
         };
-        setFeedback({ text: response.status === 401 ? "Sua sessão expirou. Entre novamente para movimentar o estoque." : response.status === 404 ? "Produto ou loja indisponível para esta solicitação." : messages[result.code ?? ""] ?? "Não foi possível registrar. Confira os dados e tente novamente.", error: true });
+        setFeedback({ text: response.status === 401 ? "Sua sessão expirou. Entre novamente para movimentar o estoque." : response.status === 404 ? "Produto ou loja indisponível para esta solicitação." : result.code === "RESERVED_STOCK" ? reservedStockMessage(result.reserved) : messages[result.code ?? ""] ?? "Não foi possível registrar. Confira os dados e tente novamente.", error: true });
       } else setFeedback({ text: "Não foi possível confirmar o resultado. Repita a mesma solicitação abaixo; a chave será preservada para evitar duplicação.", error: true });
     } catch { setFeedback({ text: "A conexão foi interrompida e o resultado não foi confirmado. Repita a mesma solicitação abaixo para consultar ou concluir sem duplicar.", error: true }); }
     finally { submitting.current = false; setBusy(false); }
-    if (confirmed) await refresh();
+    if (confirmed || stale) await refresh();
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -145,8 +147,12 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
     {state === "ready" && product?.kind === "VARIABLE" ? <section aria-labelledby="inventory-variant-title"><h2 id="inventory-variant-title">Selecione a combinação</h2><ul className="variant-links">{product.variants.map(variant => <li key={variant.id}><Link href={`${productPath}/estoque?variantId=${encodeURIComponent(variant.id)}`} aria-current={variant.id === variantId ? "page" : undefined}>{variantLabel(variant.options)} — {variant.sku}</Link></li>)}</ul>{!variantId ? <p>O estoque é separado por combinação. Escolha um SKU para consultar o saldo e registrar movimentações.</p> : null}</section> : null}
     {state === "ready" && product && snapshot ? <>
       <h2>{product.name}</h2><p className="product-sku">SKU: <span translate="no">{variantId ? product.variants.find(variant => variant.id === variantId)?.sku : product.sku}</span></p>
-      <p className="inventory-balance">Saldo atual: <strong>{integer.format(snapshot.quantity)} unidades</strong></p>
-      <p className="notice">Entradas adicionam unidades. Ajustes corrigem o saldo físico. Não há reservas ou movimentações de pedidos nesta etapa.</p>
+      <dl className="inventory-levels">
+        <div><dt>Saldo físico</dt><dd>{integer.format(snapshot.quantity)} unidades</dd></div>
+        <div><dt>Reservado</dt><dd>{integer.format(snapshot.reserved)} unidades</dd></div>
+        <div><dt>Disponível para venda</dt><dd><strong>{integer.format(snapshot.available)} unidades</strong></dd></div>
+      </dl>
+      <p className="notice">Entradas adicionam unidades e ajustes corrigem o saldo físico. Pedidos pendentes reservam unidades por tempo limitado sem alterar o saldo físico; o disponível é o físico menos o reservado. Ajustes de retirada não podem deixar o físico abaixo do reservado.</p>
       {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}
       {refreshFailed ? <p role="alert" className="feedback feedback-error">O saldo exibido pode estar desatualizado. Se uma movimentação foi confirmada, ela já está registrada. Atualize o saldo antes de registrar outra.</p> : null}
       <button type="button" disabled={busy || refreshing || paging} onClick={() => void refresh()}>{refreshing ? "Consultando saldo…" : "Atualizar saldo e histórico"}</button>
