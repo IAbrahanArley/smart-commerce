@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Smart Commerce — Identidade da plataforma</title>
+<style>
+:root {
+  --sc-color-background: #f6f8fa; --sc-color-surface: #fff; --sc-color-text: #172b3a;
+  --sc-color-text-secondary: #365165; --sc-color-action: #174e73; --sc-color-action-hover: #113c59;
+  --sc-color-action-pressed: #0b2d44; --sc-color-on-action: #fff; --sc-color-link: #124f82;
+  --sc-color-focus: #924b00; --sc-color-divider: #ccd5dd; --sc-color-control-border: #657888;
+  --sc-color-disabled-background: #e2e8f0; --sc-color-disabled-text: #365165;
+  --sc-color-success: #166534; --sc-color-success-background: #f0fdf4;
+  --sc-color-danger: #b42318; --sc-color-danger-background: #fef3f2; --sc-color-info-background: #eaf0f5;
+  --sc-space-2: .5rem; --sc-space-3: .75rem; --sc-space-4: 1rem; --sc-space-6: 1.5rem;
+  --sc-radius-control: .25rem; --sc-radius-surface: .5rem;
+  color-scheme: light; font-family: Arial, Helvetica, sans-serif;
+  color: var(--sc-color-text); background: var(--sc-color-background);
+ }
+* { box-sizing: border-box; }
+body { margin: 0; font-size: 1rem; line-height: 1.5; }
+a { color: var(--sc-color-link); text-underline-offset: .2em; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--sc-color-focus); outline-offset: 4px; }
+.skip { position: absolute; top: -6rem; left: 1rem; padding: .75rem; background: white; }
+.skip:focus { top: .5rem; }
+header { border-bottom: 1px solid var(--sc-color-divider); background: var(--sc-color-surface); }
+header>div, main, footer { max-width: 68rem; margin-inline: auto; padding: 1.5rem; }
+header>div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+.brand { color: var(--sc-color-action); font-weight: 700; font-size: 1.25rem; }
+header p, footer p { margin: 0; color: var(--sc-color-text-secondary); font-size: .875rem; }
+main { padding-block: 3rem; }
+h1 { font-size: clamp(1.75rem, 4vw, 2rem); line-height: 1.2; margin: .75rem 0 1rem; text-wrap: balance; }
+h2 { font-size: 1.25rem; line-height: 1.2; margin: 0 0 1rem; }
+h3 { font-size: 1rem; margin: 0 0 .75rem; }
+p { margin: .5rem 0 1rem; }
+.intro { max-width: 44rem; margin-bottom: 2rem; }
+.eyebrow { font-weight: 700; color: var(--sc-color-text-secondary); font-size: .875rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1.5rem; }
+.panel { background: var(--sc-color-surface); padding: clamp(1rem, 3vw, 2rem); border: 1px solid var(--sc-color-divider); border-radius: .5rem; min-width: 0; }
+.palette { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
+.swatch { height: 3rem; border: 1px solid var(--sc-color-divider); border-radius: .25rem; margin-bottom: .5rem; }
+.color p { margin: 0; font-size: .875rem; overflow-wrap: anywhere; }
+.color strong { display: block; }
+.wide { margin-top: 1.5rem; }
+.spec { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,12rem),1fr)); gap: 1.5rem; }
+.spec p { margin: .25rem 0; }
+.sample { max-width: 28rem; margin: 1.5rem auto 0; }
+.field { margin: 1.5rem 0; }
+.label { display: block; font-weight: 700; margin-bottom: .5rem; }
+.input-example { border: 1px solid var(--sc-color-control-border); border-radius: .25rem; padding: .75rem; color: var(--sc-color-text-secondary); overflow-wrap: anywhere; }
+.action-example { background: var(--sc-color-action); color: var(--sc-color-on-action); font-weight: 700; text-align: center; padding: .875rem; border-radius: .25rem; }
+.note { color: var(--sc-color-text-secondary); font-size: .875rem; }
+.feedback { padding: .75rem; border: 1px solid currentColor; border-radius: .25rem; margin-top: 1rem; }
+.success { color: var(--sc-color-success); background: var(--sc-color-success-background); }
+.error { color: var(--sc-color-danger); background: var(--sc-color-danger-background); }
+footer { padding-bottom: 3rem; }
+</style>
+</head>
+<body>
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+<header><div><span class="brand" translate="no">Smart Commerce</span><p>Identidade da plataforma · v1.0</p></div></header>
+<main id="conteudo">
+<section class="intro" aria-labelledby="titulo">
+<p class="eyebrow">Direção aprovada · 16/10/2026</p>
+<h1 id="titulo">Profissional, claro e confiável.</h1>
+<p>Azul profundo, superfícies claras e uma linguagem próxima de quem cuida do próprio comércio. A hierarquia ajuda a encontrar informações e agir com segurança.</p>
+<p class="note">Prancha estática de referência. Os exemplos não executam ações. A fonte oficial das decisões é o <a href="DESIGN.md">DESIGN.md</a>.</p>
+</section>
+<div class="grid">
+<section class="panel" aria-labelledby="cores"><h2 id="cores">Cores com função</h2>
+<div class="palette">
+<div class="color"><div class="swatch" style="background:var(--sc-color-action)"></div><p><strong>Azul de ação</strong>#174E73 · Ações principais</p></div>
+<div class="color"><div class="swatch" style="background:var(--sc-color-text)"></div><p><strong>Texto principal</strong>#172B3A · Conteúdo</p></div>
+<div class="color"><div class="swatch" style="background:var(--sc-color-background)"></div><p><strong>Fundo claro</strong>#F6F8FA · Área de trabalho</p></div>
+<div class="color"><div class="swatch" style="background:var(--sc-color-surface)"></div><p><strong>Superfície branca</strong>#FFFFFF · Formulários e grupos</p></div>
+<div class="color"><div class="swatch" style="background:var(--sc-color-focus)"></div><p><strong>Foco perceptível</strong>#924B00 · Navegação por teclado</p></div>
+<div class="color"><div class="swatch" style="background:var(--sc-color-control-border)"></div><p><strong>Borda de controle</strong>#657888 · Campos identificáveis</p></div>
+</div></section>
+<section class="panel" aria-labelledby="aplicacao"><h2 id="aplicacao">Aplicação em autenticação</h2>
+<p class="note">Mesma assinatura visual do admin, em uma coluna e com foco na tarefa.</p>
+<div class="sample" role="img" aria-label="Exemplo visual de formulário: título Entrar, campo de e-mail e ação Entrar na conta. Não é um formulário funcional.">
+<h3>Entrar</h3><p>Use o e-mail confirmado e a senha da sua conta.</p>
+<div class="field"><span class="label">E-mail</span><div class="input-example">nome@exemplo.com</div></div>
+<div class="action-example">Entrar na conta</div>
+</div>
+<p class="feedback success">Alterações salvas.</p>
+<p class="feedback error">Confira os dados e tente novamente.</p>
+<p class="note">Estados combinam cor e mensagem explícita. As mensagens reais de autenticação seguem o ADR-0005.</p>
+</section>
+</div>
+<section class="panel wide" aria-labelledby="padrao"><h2 id="padrao">O padrão que se repete</h2>
+<div class="spec">
+<div><h3>Tipografia</h3><p>Arial, Helvetica, sans-serif.</p><p>Corpo 16px · notas 14px.</p><p>Títulos 20, 24 e 32px.</p></div>
+<div><h3>Geometria</h3><p>Espaçamento em escala de 4px.</p><p>Controles 4px · superfícies 8px.</p><p>Bordas simples e pouco ruído visual.</p></div>
+<div><h3>Linguagem</h3><p>Português brasileiro e ações diretas.</p><p>“Criar conta”, “Entrar”, “Salvar alterações”.</p><p>Feedback claro, sem promessas exageradas.</p></div>
+<div><h3>Acessibilidade</h3><p>Foco visível, labels e teclado.</p><p>Layout fluido desde 320px.</p><p>WCAG 2.2 AA como objetivo.</p></div>
+</div></section>
+</main>
+<footer><p>Admin e autenticação usam a identidade da plataforma. Temas das lojas terão contrato separado.</p></footer>
+</body></html>

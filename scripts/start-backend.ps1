@@ -1,5 +1,7 @@
 param(
-    [string]$EnvironmentFile = (Join-Path $PSScriptRoot '../infrastructure/.env')
+    [string]$EnvironmentFile = (Join-Path $PSScriptRoot '../infrastructure/.env'),
+    [ValidateSet('dev')]
+    [string]$Profile = 'dev'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,13 +34,14 @@ if ($settings['DB_PORT'] -notmatch '^\d{1,5}$' -or
 }
 
 $previous = @{}
-foreach ($key in @('DB_URL', 'DB_USERNAME', 'DB_PASSWORD')) {
+foreach ($key in @('DB_URL', 'DB_USERNAME', 'DB_PASSWORD', 'SPRING_PROFILES_ACTIVE')) {
     $previous[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
 }
 try {
     $env:DB_URL = "jdbc:postgresql://127.0.0.1:$($settings['DB_PORT'])/$($settings['DB_NAME'])"
     $env:DB_USERNAME = $settings['DB_USERNAME']
     $env:DB_PASSWORD = $settings['DB_PASSWORD']
+    $env:SPRING_PROFILES_ACTIVE = $Profile
     Push-Location (Join-Path $PSScriptRoot '../backend')
     try {
         & ./mvnw.cmd spring-boot:run

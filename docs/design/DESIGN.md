@@ -1,22 +1,41 @@
 # Smart Commerce — Design system
 
-Data: 2026-10-15. Estado: base documental aprovada para orientar interfaces futuras; aplicação em CSS, componentes, páginas e testes depende da tarefa autorizada.
+Versão: 1.0 · Atualizada em 2026-10-16. Direção escolhida pelo responsável: **profissional e confiável, com azul profundo, fundo claro e visual simples, evoluindo o padrão existente**. Este é o padrão da plataforma para as entregas autorizadas.
 
-Este documento é a fonte oficial das decisões de design do Smart Commerce, subordinada ao escopo do [PRD](../product/PRD.md), à [Sprint 1](../product/SPRINT_01.md), à [arquitetura](../architecture/ARCHITECTURE.md) e aos ADRs aplicáveis. Não aprova a proposta ADR-0005 de identidade, ainda em revisão separada, nem inicia a SC-002.
+Este documento é a fonte oficial das decisões de design do Smart Commerce, subordinada ao escopo do [PRD](../product/PRD.md), à [Sprint 1](../product/SPRINT_01.md), à [arquitetura](../architecture/ARCHITECTURE.md) e aos ADRs aplicáveis. Decisões funcionais e de segurança da autenticação pertencem ao [ADR-0005](../architecture/adr/0005-identity-authentication.md), cujas D1–D6 foram aprovadas separadamente. Este documento não amplia esse escopo.
 
-## Identidade visual existente
+## Identidade oficial da plataforma
 
 A plataforma atende pequenos varejistas brasileiros. A direção é uma interface operacional legível, com hierarquia clara, ações específicas e feedback previsível em português brasileiro. Não inventar métricas, depoimentos ou dados financeiros para preencher uma interface.
 
 O bootstrap do admin já utiliza fundo cinza claro, superfícies brancas, texto azul escuro, ação azul e foco castanho. Essa identidade é preservada. Arial/Helvetica/sans-serif continua a família inicial; não há adoção de fonte externa, logotipo novo, tema escuro ou identidade de marca de referência.
 
-Os valores abaixo organizam a identidade existente em tokens semânticos e acrescentam convenções de estados aprovadas documentalmente. Ainda não foram implementados como variáveis CSS. Pares de contraste devem ser verificados no contexto real; paleta isolada não certifica acessibilidade.
+Os valores abaixo são a referência oficial. Um subconjunto já existe como variáveis em `admin-web/src/app/globals.css`; os demais entram somente quando houver consumidor. A prancha [IDENTITY.html](IDENTITY.html) ilustra este documento e não substitui seus contratos. Pares de contraste devem ser verificados no contexto real; paleta isolada não certifica acessibilidade.
+
+## Assinatura, personalidade e linguagem
+
+- **Nome:** Smart Commerce, com espaço e iniciais maiúsculas. Preservar a grafia em títulos, cabeçalho, mensagens e documentação. Não usar SmartCommerce ou SC como marca visível ao usuário; identificadores técnicos existentes não precisam ser renomeados.
+- **Assinatura atual:** nome em texto, Arial/Helvetica/sans-serif, peso 700, azul da plataforma sobre superfície clara. Quando for link, preservar a identificação de navegação e seu foco. Não há símbolo ou logotipo gráfico aprovado.
+- **Personalidade:** confiável, clara e próxima do pequeno varejista. A interface transmite organização por hierarquia, alinhamento e feedback previsível; a tecnologia aparece na utilidade das funções.
+- **Linguagem:** português brasileiro, frases curtas, termos familiares e ações específicas. Preferir “Entrar”, “Criar conta”, “Salvar alterações” e “Sair da conta”. Erros explicam como continuar; mensagens sensíveis continuam genéricas conforme o ADR.
+- **Conteúdo:** não prometer lucro, segurança absoluta, certificações ou resultados automáticos. Não exibir métricas fictícias como dados reais. Estados vazios explicam a ausência de conteúdo e a próxima ação disponível.
+
+## Composição por superfície
+
+| Superfície | Padrão |
+| --- | --- |
+| Autenticação | Fundo claro, painel branco de uma coluna com largura próxima de 28rem, título direto e ação principal evidente. Sem conteúdo promocional competindo com o formulário. |
+| Admin | Superfícies claras, títulos e ações consistentes, dados alinhados e densidade legível. Azul destaca ações e informação; espaço e bordas organizam grupos. Não antecipar menus ou dashboards sem funcionalidade. |
+| Páginas institucionais futuras | Preservam a assinatura e os tokens; composição própria depende do escopo aprovado e da skill adequada. |
+| Vitrines futuras | Temas dos lojistas têm contrato separado; nome, cores e conteúdo da loja não alteram admin ou autenticação. |
+
+Manter os raios de 4px/8px e a geometria simples existentes. Gradientes decorativos, vidro translúcido, sombras intensas, botões em cápsula, fontes externas, tema escuro e novas marcas gráficas não fazem parte deste padrão. Eventual adoção exige proposta e aprovação, sem instalação automática de biblioteca.
 
 ## Tokens semânticos de cor
 
 Componentes devem consumir papéis semânticos, não valores hexadecimais dispersos. Primitivas de cor, quando necessárias, ficam separadas do significado. Prefixo `--sc-` pertence à plataforma.
 
-| Token proposto para implementação | Valor | Papel |
+| Token semântico de referência | Valor | Papel |
 | --- | --- | --- |
 | `--sc-color-background` | `#F6F8FA` | Fundo principal. |
 | `--sc-color-surface` | `#FFFFFF` | Formulários e superfícies. |
@@ -73,13 +92,13 @@ Reutilizar componentes locais no admin conforme surgirem consumidores reais; nã
 
 Definir e revisar padrão, hover, pressionado, foco visível, desabilitado, carregamento, inválido, sucesso e vazio conforme aplicabilidade. Não criar estado sem utilidade no componente. Durante submissão, impedir disparos duplicados sem bloquear desnecessariamente a navegação; após falha, permitir recuperação. Estado de UI não substitui validação, autorização ou idempotência do backend.
 
-## Autenticação: experiência sem alteração arquitetural
+## Autenticação
 
-As telas futuras de identidade pertencem à plataforma, com composição simples de uma coluna e largura de formulário próxima de 28rem quando houver espaço; não exigem hero promocional, imagens ou animações. Fluxos, política de senha, sessão, CSRF e recuperação seguem a decisão de identidade que vier a ser aprovada.
+As telas de autenticação pertencem à plataforma, com composição simples de uma coluna e largura de formulário próxima de 28rem quando houver espaço; não exigem hero promocional, imagens ou animações. Fluxos, política de senha, sessão, CSRF e recuperação seguem o ADR-0005 e a entrega funcional autorizada.
 
 Formulários devem permitir teclado, colar, gerenciadores de senhas e autocomplete apropriado. Usar labels persistentes, instruções antes do erro quando úteis, associação de mensagens aos campos e foco previsível ao falhar. Carregamento precisa de rótulo/feedback acessível e prevenção de submissões duplicadas, com nova tentativa após falha.
 
-Mensagens sensíveis não revelam existência ou status de conta. Não vazar credenciais, cookies, hashes, tokens ou dados pessoais em mensagens, logs, analytics, referer ou evidências. Senhas e identificadores de sessão nunca pertencem a URLs. Tokens CSRF e links de recuperação/verificação, quando necessários, seguem exclusivamente o contrato de identidade que vier a ser aprovado, sem exposição fora desse fluxo. Não simular entrega real de e-mail. Essas regras de UX não concedem autorização para implementar autenticação nem alterar sua arquitetura.
+Mensagens sensíveis não revelam existência ou status de conta. Não vazar credenciais, cookies, hashes, tokens ou dados pessoais em mensagens, logs, analytics, referer ou evidências. Senhas e identificadores de sessão nunca pertencem a URLs. Tokens CSRF e links de recuperação/verificação, quando necessários, seguem exclusivamente o contrato aprovado de identidade, sem exposição fora desse fluxo. Não simular entrega real de e-mail. Essas regras de UX não concedem autorização para implementar autenticação nem alterar sua arquitetura.
 
 ## Acessibilidade e responsividade
 
@@ -125,9 +144,25 @@ Mudanças relevantes exigem aprovação humana antes de aplicação: identidade,
 
 Implementar um componente com os tokens e padrões já aprovados não exige reabrir a decisão visual, desde que a tarefa de implementação esteja autorizada. Mudanças arquiteturais continuam sujeitas aos ADRs e ao fluxo de aprovação próprios. A aprovação desta base documental não autoriza CSS, componentes, páginas, novas dependências ou a SC-002.
 
+## Como seguir o padrão nas próximas entregas
+
+1. Consultar este documento antes de criar ou modificar uma interface.
+2. Reutilizar os tokens e componentes locais existentes. Acrescentar variantes somente com necessidade real, sem criar bibliotecas antecipadas.
+3. Revisar nome, paleta, tipografia, espaçamento, estados, responsividade, linguagem e acessibilidade no diff da entrega.
+4. Registrar desvios como proposta antes de aplicá-los. Mudanças relevantes seguem a aprovação descrita acima.
+5. Atualizar a prancha visual quando uma mudança de identidade for aprovada. Ela é uma referência estática, sem fluxos funcionais, dados reais ou dependências de runtime/CI.
+
+## Verificação desta versão
+
+Em 2026-10-16, frontend e QA revisaram a coerência documental e a prancha, sem bloqueadores. Foram consultadas as Web Interface Guidelines atuais; não foram instaladas ferramentas ou dependências.
+
+Cálculo sRGB dos pares existentes: texto principal/branco 14,55:1; texto secundário/branco 8,33:1; branco/ação 8,85:1; link/branco 8,51:1; sucesso/fundo de sucesso 6,81:1; erro/fundo de erro 6,05:1; foco/branco 6,50:1; borda de controle/branco 4,57:1. Esses resultados valem para esses pares opacos, sem generalizar para outras combinações ou estados.
+
+Prancha aberta no navegador local; verificação de dimensões em 320 e 1440 CSS px sem overflow horizontal no documento. Axe, leitor de tela e zoom manual não foram executados; não há alegação de conformidade WCAG completa.
+
 ## Referências
 
 - [WCAG 2.2](https://www.w3.org/TR/WCAG22/) e [guia de critérios](https://www.w3.org/WAI/WCAG22/quickref/).
 - [Fonte das Web Interface Guidelines](https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md), a consultar novamente em cada revisão.
 - [Playwright: testes de acessibilidade](https://playwright.dev/docs/accessibility-testing), que combinam automação e avaliação manual.
-- Coleção de referência [awesome-design-md](https://github.com/VoltAgent/awesome-design-md); nenhuma identidade externa foi adotada.
+- Coleção [awesome-design-md](https://github.com/VoltAgent/awesome-design-md), revisão local fixada em `3b605329240ce735b510037cca322f1831fdd7f8`, referência analisada IBM, consultada em 2026-10-16. Utilizados apenas os princípios de hierarquia, superfícies simples e papéis de cor. Paleta, Arial, raios e assinatura continuam próprios do Smart Commerce; não foram adotados Carbon, IBM Plex, marca, layout promocional ou dependências de terceiros. Trata-se de análise de referência, não especificação oficial da IBM.

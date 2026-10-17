@@ -4,11 +4,14 @@ SaaS multi-tenant de lojas virtuais independentes com gestão financeira e opera
 
 ## Estado e escopo
 
-SC-001 prepara backend Spring Boot, shell administrativo Next.js, PostgreSQL local, Flyway e CI. Autenticação funcional, usuários, empresas/lojas, catálogo, pagamentos e IA ainda não existem. A vitrine permanece reservada.
+Validações locais: [autenticação](docs/quality/SC-002-AUTH-VALIDATION.md), [empresa/loja](docs/quality/SC-003-VALIDATION.md) e [catálogo básico](docs/quality/CATALOG-VALIDATION.md). A suíte atual possui 62 testes backend aprovados após a refatoração de arquitetura. Publicação e CI remota das alterações funcionais posteriores à fundação permanecem pendentes.
 
-Decisões: [ADR-0004](docs/architecture/adr/0004-project-bootstrap.md). Resultados e limitações: [validação SC-001](docs/quality/SC-001-VALIDATION.md). Isolamento entre empresas depende de SC-003/004 e ainda não foi implementado.
 
-SC-001 publicada no repositório privado confirmado pelo usuário. A [CI remota](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797904235) aprovou backend e admin no commit `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`: seis testes backend sem falhas/erros/ignorados, lint, tipos, build e smoke HTTP do admin aprovados. A primeira execução falhou no seletor Corretto; foi corrigido para Java `21`, sem alterar dependências da aplicação. SEC-003 permanece aberta, sem exceção aprovada: a última auditoria registrou cinco alertas altos na cadeia de desenvolvimento e zero com `--omit=dev`; ESLint 9 está fora de suporte. CI verde não aceita esse risco nem autoriza SC-002. Detalhes em [validação](docs/quality/SC-001-VALIDATION.md), [segurança](docs/security/SC-001-REVIEW.md) e [publicação](docs/quality/SC-001-PUBLICATION.md).
+Backend Spring Boot, admin Next.js, PostgreSQL/Flyway e CI preparados. A SC-002 acrescenta o fluxo local de solicitação por e-mail, confirmação com definição de senha, login, consulta de identidade e logout. A SC-003 acrescenta criação e consulta da empresa/loja do proprietário, com isolamento por vínculo. O catálogo básico acrescenta cadastro, listagem e edição de produtos por loja. Vitrine pública, estoque, pagamentos, IA e recuperação de senha não integram esta entrega.
+
+Decisões: [ADR-0004](docs/architecture/adr/0004-project-bootstrap.md). Resultados e limitações: [validação SC-001](docs/quality/SC-001-VALIDATION.md). O isolamento implementado para empresa/loja e catálogo é verificado por testes A/B; observabilidade ampliada da SC-004 continua pendente.
+
+SC-001 publicada no repositório privado confirmado pelo usuário. A [CI remota](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797904235) aprovou backend e admin no commit `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`: seis testes backend sem falhas/erros/ignorados, lint, tipos, build e smoke HTTP do admin aprovados. A primeira execução falhou no seletor Corretto; foi corrigido para Java `21`, sem alterar dependências da aplicação. SEC-003 permanece aberta, sem exceção aprovada: a última auditoria registrou cinco alertas altos na cadeia de desenvolvimento e zero com `--omit=dev`; ESLint 9 está fora de suporte. CI verde não aceita esse risco; a autorização da SC-002 foi concedida separadamente pelo responsável. Detalhes em [validação](docs/quality/SC-001-VALIDATION.md), [segurança](docs/security/SC-001-REVIEW.md) e [publicação](docs/quality/SC-001-PUBLICATION.md).
 
 ## Estrutura
 
@@ -83,7 +86,11 @@ npm run dev
 - Prontidão: <http://127.0.0.1:8080/actuator/health/readiness>.
 - Vivacidade: <http://127.0.0.1:8080/actuator/health/liveness>.
 
-Somente esses GETs operacionais são permitidos no backend. As demais requisições são negadas. Essa barreira não implementa login. O admin contém apenas uma página técnica sem dados de negócio.
+Abra o admin para criar a conta. O helper inicia o perfil `dev`; as mensagens são gravadas em caixa local protegida fora do repositório/OneDrive, sem envio externo. Copie o link da mensagem mais recente, defina a senha na confirmação e depois faça login. A ativação não autentica automaticamente. Na conta autenticada, o lojista pode criar sua empresa/loja e visualizar somente suas lojas. O vínculo de proprietário é criado pelo servidor; a identidade sozinha não concede acesso a empresas de outros usuários.
+
+Caixa DEV padrão no Windows: `%LOCALAPPDATA%/SmartCommerce/mail`; no Linux: `~/.local/share/SmartCommerce/mail`. Abra o arquivo `.eml` mais recente como texto e copie o link completo, incluindo `#token=...`. O link é sensível: não envie ao chat nem versione mensagens. Tokens duram 30 minutos; o reenvio tem cooldown de 60 segundos.
+
+Rotas: `/cadastro`, `/confirmar-email`, `/entrar`, `/conta` e `/lojas/{id}`. API de mesma origem via Next.js: `/api/auth/csrf`, `/registration`, `/activation`, `/login`, `/me` e `/logout`, todos sob `/api/auth`. Mutações exigem CSRF; senhas e sessões não usam localStorage.
 
 Para encerrar, Ctrl+C nos terminais e parada do banco preservando volume:
 
@@ -93,7 +100,7 @@ docker compose --env-file infrastructure/.env -f infrastructure/compose.yaml sto
 
 ## Outros shells
 
-O backend aceita `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` pelo ambiente. Exporte-as localmente sem colocar senhas em comandos versionados ou logs. `SERVER_ADDRESS` e `SERVER_PORT` são opcionais, assumindo `127.0.0.1` e `8080`.
+Para desenvolvimento, defina também `SPRING_PROFILES_ACTIVE=dev`. O backend aceita `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` pelo ambiente. Exporte-as localmente sem colocar senhas em comandos versionados ou logs. `SERVER_ADDRESS` e `SERVER_PORT` são opcionais, assumindo `127.0.0.1` e `8080`.
 
 Com JDK 21 e essas variáveis presentes, em `backend/`:
 
@@ -107,7 +114,7 @@ Comandos npm/Compose são equivalentes nos demais sistemas. O helper documentado
 
 Compose publica PostgreSQL somente em loopback. Na primeira inicialização de um volume vazio, cria uma conta de aplicação sem privilégios de superusuário, criação de bancos ou roles. A conta administrativa é separada. O usuário local é proprietário do banco para permitir Flyway; separar usuários de migração e runtime fica para a configuração futura de produção.
 
-V1 cria `app_metadata` e registra `bootstrap=SC-001`. Essa tabela global guarda metadados técnicos. A SC-002 Etapa 1 adiciona V2 com `identity_user` e `identity_local_credential`, sem outras entidades, autenticação funcional ou geração de schema por ORM. `flyway_schema_history` controla ambas; V1 não foi reescrita. Contrato: [fundação de identidade](docs/architecture/IDENTITY_FOUNDATION.md).
+V1 cria `app_metadata` e registra `bootstrap=SC-001`. Essa tabela global guarda metadados técnicos. A SC-002 Etapa 1 adiciona V2 com `identity_user` e `identity_local_credential`; V3 acrescenta provas de e-mail e contadores de abuso, V4 cria o schema oficial do Spring Session JDBC V5 adiciona empresa, vínculo e loja; V6 cria o catálogo básico com integridade tenant/loja e precisão monetária. Flyway controla as versões; V1/V2 não foram reescritas e a inicialização automática de sessão fica desabilitada. Contrato: [fundação de identidade](docs/architecture/IDENTITY_FOUNDATION.md).
 
 Alterar senhas no `.env` não altera usuários de um volume já inicializado. Não apague volumes para corrigir isso; trate a mudança de credenciais deliberadamente. Remoção de dados exige aprovação humana e não integra os comandos normais do projeto.
 
@@ -137,10 +144,34 @@ Smoke inicia o build de produção em `127.0.0.1:3100`, verifica página inicial
 
 GitHub Actions executa backend e admin em push/PR. Actions são fixadas por commit, com permissões de leitura e sem deploy ou segredos de produção. Backend usa Testcontainers no runner, sem serviço PostgreSQL duplicado. Admin executa lint explicitamente, tipos, build e smoke.
 
-Origin confirmado: `https://github.com/IAbrahanArley/smart-commerce.git`, repositório privado, branch `main`. A etapa documental UI/UX foi publicada no SHA `c1014ed38fc13d56ed00c64acb34674baf60c17a`, com CI backend/admin aprovada. Main possui proteção e exige os checks backend/admin. Essa evidência anterior não comprova a implementação local da SC-002 Etapa 1, que ainda não tem commit/push autorizado. SEC-003 continua aberta, sem aceite de risco.
+Origin confirmado: `https://github.com/IAbrahanArley/smart-commerce.git`, repositório privado, branch `main`. A etapa documental UI/UX foi publicada no SHA `c1014ed38fc13d56ed00c64acb34674baf60c17a`, com CI backend/admin aprovada. Main possui proteção e exige os checks backend/admin. A Etapa 1 da SC-002 foi publicada no SHA `adbc1b549e863745fd5f2136a4dfcb4e34d49c18`, com [backend/admin aprovados](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38818169657). Essa execução não comprova as alterações funcionais posteriores, ainda locais. SEC-003 continua aberta, sem aceite de risco.
 
-## Próxima tarefa
+## Limites da entrega
 
-Somente a SC-002 Etapa 1 foi autorizada: persistência, política de e-mail/senha, encoder, testes e benchmark. [Contrato](docs/architecture/IDENTITY_FOUNDATION.md) e [evidências de validação](docs/quality/SC-002-STAGE-01-VALIDATION.md) descrevem o estado local. Não existem endpoints de identidade, ativação, sessão, tokens, envio, recuperação ou UI nesta etapa. Aceite, commit/push e Etapas 2–6 exigem nova autorização.
+D1–D6 aprovadas no [ADR-0005](docs/architecture/adr/0005-identity-authentication.md). Fundação e benchmark: [contrato](docs/architecture/IDENTITY_FOUNDATION.md) e [validação da Etapa 1](docs/quality/SC-002-STAGE-01-VALIDATION.md). Mantido PBKDF2-HMAC-SHA256 com 600.000 iterações, salt16 e saída256; benchmark não foi repetido.
 
-O tenant futuro deverá derivar de identidade autenticada e vínculo autorizado; parâmetros, headers ou slug enviados pelo frontend não bastam. Nenhuma empresa, loja, membership ou role foi criada.
+A SC-003 cria o vínculo OWNER junto com a empresa/loja; listagem e detalhe exigem esse vínculo em consultas escopadas pela identidade autenticada. O identificador enviado pelo cliente nunca concede acesso sozinho. Produção exige transporte de e-mail real, HTTPS e dimensionamento específico; o adaptador DEV não deve operar em produção. SEC-003 permanece aberta, sem alteração ou aceite de risco.
+
+## Demonstração da SC-003
+
+1. Criar conta e confirmar o e-mail pelo fluxo local descrito acima; depois entrar.
+2. Em Minha conta, informar nome da empresa, nome da loja e identificador único (ex.: minha-loja).
+3. Criar a loja e abrir seus detalhes. O estado “Em configuração” não representa vitrine publicada.
+4. Entrar com outro lojista: somente os vínculos dele aparecem. Um identificador de loja de outro lojista não permite consulta.
+
+Implementação: [ADR-0006](docs/architecture/adr/0006-tenant-store-onboarding.md). Testes de isolamento usam PostgreSQL descartável e não alteram o volume local. SEC-003 permanece aberta e inalterada.
+
+## Demonstrar o catálogo básico
+
+1. Entre, abra sua loja e selecione Produtos.
+2. Informe nome, SKU e preço maior que zero (ex.: 49,90). Custo pode ficar em branco ou ser zero.
+3. Cadastre e confira os valores. Abra Editar produto, altere e salve; recarregue para conferir a persistência.
+4. SKU repetido na mesma loja mostra erro. Edição desatualizada exige carregar a versão atual, sem sobrescrever dados.
+
+Rotas: /lojas/{tenantId}/produtos e /lojas/{tenantId}/produtos/{productId}. Catálogo interno, sem publicação ou estoque. [Decisões](docs/architecture/adr/0007-basic-catalog.md) e [validação local](docs/quality/CATALOG-VALIDATION.md). SEC-003 permanece inalterada.
+
+## Arquitetura e padrões de desenvolvimento
+
+Backend mantém o monólito modular com camadas explícitas dentro de identity, tenant e catalog: controllers, services, repositories, entities/domain e dto/request/response. Tenant e catálogo utilizam JPA/Spring Data; identidade, sessões e locks PostgreSQL especializados mantêm JDBC em repositórios. Nenhum SQL fica nos serviços. Flyway controla o schema; Hibernate valida e Open Session in View fica desabilitado.
+
+Padrões adaptados do project-rh: [ADR-0008](docs/architecture/adr/0008-layered-persistence-refactoring.md), [convenções](docs/architecture/CODING_STANDARDS.md) e [validação da refatoração](docs/quality/ARCHITECTURE-REFACTOR-VALIDATION.md). No perfil dev, após login no admin usando 127.0.0.1, a documentação autenticada está em http://127.0.0.1:8080/swagger-ui/index.html e http://127.0.0.1:8080/v3/api-docs. Swagger é somente consulta, sem executar operações. Fora de dev, a documentação permanece desabilitada por padrão.

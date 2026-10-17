@@ -15,6 +15,7 @@ Para trabalho de interface, consulte também [docs/design/DESIGN.md](docs/design
 6. Entregue resumo, arquivos alterados, comandos/testes e pendências.
 
 ## Engenharia
+- Backend segue [CODING_STANDARDS.md](docs/architecture/CODING_STANDARDS.md) e ADR-0008: camadas explícitas dentro dos módulos, sem acesso SQL/JPA em controllers ou serviços.
 - Backend Java 21, Spring Boot, PostgreSQL, Flyway; monólito modular.
 - Frontend Next.js/TypeScript; aplicações separadas para admin e vitrine.
 - Não criar microserviços, infraestrutura paga ou integrações reais sem aprovação.

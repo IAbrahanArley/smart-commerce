@@ -1,8 +1,18 @@
 # ADR-0005 — Identidade e autenticação do lojista
 
-Status: **D1/D2/D3 APROVADAS — implementação autorizada exclusivamente da Etapa 1; etapas posteriores não autorizadas.**
+Status: **D1–D6 APROVADAS. Entrega funcional local de cadastro, ativação, login, identidade autenticada e logout autorizada.**
 
-Data: 2026-10-15. Consolida a proposta anterior da branch `docs/sc-001-governance`, a revisão de architect, backend, security e QA e a aprovação humana de D1–D3 com autorização restrita da fundação. A implementação da Etapa 1 foi validada localmente e sua publicação foi autorizada posteriormente pelo responsável. A próxima entrega aguarda aprovação de D4–D6; nenhuma implementação posterior foi autorizada. Contrato implementado da fundação: [IDENTITY_FOUNDATION.md](../IDENTITY_FOUNDATION.md); evidências: [SC-002-STAGE-01-VALIDATION.md](../../quality/SC-002-STAGE-01-VALIDATION.md).
+Data: 2026-10-15. Consolida a proposta anterior da branch `docs/sc-001-governance`, a revisão de architect, backend, security e QA e a aprovação humana de D1–D3 com autorização restrita da fundação. A implementação da Etapa 1 foi validada localmente e sua publicação foi autorizada posteriormente pelo responsável. D4–D6 foram aprovadas posteriormente, autorizando backend e frontend do fluxo local. Recuperação de senha, empresas/lojas, SSO e provedor externo continuam fora desta entrega. Contrato implementado da fundação: [IDENTITY_FOUNDATION.md](../IDENTITY_FOUNDATION.md); evidências: [SC-002-STAGE-01-VALIDATION.md](../../quality/SC-002-STAGE-01-VALIDATION.md).
+
+## Aprovação da entrega funcional local
+
+D4: prova de 30 minutos, reenvio após 60 segundos, invalidando a prova anterior apenas quando efetivamente emitida. Solicitações suprimidas não alteram token nem prorrogam o prazo fixo de sete dias da pendência.
+
+D5: limites PostgreSQL descritos abaixo, sem bloqueio permanente; janelas bloqueadas não são prolongadas. Cadastro e confirmação também têm admissão limitada e cardinalidade máxima dos contadores. Hashing limitado inicialmente a duas operações simultâneas por instância, sem fila; saturação retorna 503/Retry-After uniformemente. Mantidos os parâmetros medidos da Etapa 1, sem novo benchmark.
+
+D6: mensagens DEV em diretório fora do repositório e do OneDrive, acesso restrito, nomes opacos e retenção de 24 horas. Tokens não aparecem em logs; links usam origem configurada e fragmento, com consumo somente em POST explícito. Testes usam captura isolada.
+
+Entrega autorizada: solicitação de cadastro por e-mail → prova → definição de senha/ativação sem login automático → login → consulta de identidade → logout; telas mínimas Next.js conforme DESIGN.md. Sessão JDBC: 30 minutos ociosa e teto absoluto de oito horas, CSRF e rotação de ID. Nenhum tenant, membership ou role é concedido.
 
 ## Contexto e limites
 
@@ -24,9 +34,9 @@ O módulo identity controla identidade global, credencial, comprovação de e-ma
 
 Estas escolhas substituem os pontos condicionais da proposta anterior sobre verificação de e-mail e tempos de sessão/reset. As alternativas Keycloak/OIDC e gerenciadas ficam como histórico/evolução futura, não decisões abertas para iniciar esta implementação.
 
-## D1 — Cadastro e ativação seguros: aprovada como contrato, sem fluxo implementado
+## D1 — Cadastro e ativação seguros: aprovada e implementada na entrega local
 
-**Decisão aprovada:** solicitar somente e-mail → enviar prova → titular escolhe senha em confirmação explícita → ativar atomicamente, sem login automático. Conta pendente não possui credencial utilizável. GET do link não ativa, não consome token nem altera senha. Na Etapa 1 há apenas persistência e guards; cadastro, comprovação e ativação permanecem proibidos até nova autorização.
+**Decisão aprovada:** solicitar somente e-mail → enviar prova → titular escolhe senha em confirmação explícita → ativar atomicamente, sem login automático. Conta pendente não possui credencial utilizável. GET do link não ativa, não consome token nem altera senha. A Etapa 1 entregou persistência e guards; após a aprovação de D4–D6, a entrega funcional local implementou cadastro, comprovação e ativação explícita.
 
 Alternativa: receber senha no cadastro e exigir nova definição ou comprovação explícita após a prova de e-mail. Isso acrescenta estado e caminhos de recuperação, sem benefício necessário ao MVP. Nunca ativar silenciosamente a senha preliminar: se um atacante iniciou o cadastro usando o e-mail da vítima, a confirmação da vítima não pode habilitar uma senha conhecida pelo atacante. Essa é uma análise de ameaça da equipe, não um fluxo já implementado.
 
@@ -50,7 +60,7 @@ Alternativas de tamanho/normalização foram encerradas pela aprovação D3. Nã
 
 Orçamento recomendado para aprovação: p95 de encode e matches de até 1 segundo em referência representativa documentada, com limite de concorrência dimensionado pelos resultados. Referência de hardware e capacidade real são saída obrigatória do benchmark; não prometer SLA de produção sem ambiente-alvo. Meta mais estrita, como 500ms, reduz margem de capacidade e exige medição antes de compromisso. Não transformar tempo de runner compartilhado em gate rígido. Se o piso não couber, registrar bloqueio e rever capacidade/admissão; não reduzir iterações nem trocar algoritmo automaticamente. Aprovação dos critérios não equivale a benchmark aprovado.
 
-## D4 — Validade da prova e retenção: aprovação antes da Etapa 2
+## D4 — Validade da prova e retenção: aprovada
 
 **Recomendação:** prova de e-mail de 30 minutos (distinta do reset), uso único e cooldown de reenvio de 60 segundos. Reenvio invalida o token anterior atomicamente. Alternativa de 24h reduz atrito e aumenta a janela de exposição; não herdar automaticamente o TTL do reset.
 
@@ -58,7 +68,7 @@ Proposta de retenção: pendentes expiram após sete dias, sem reservar indefini
 
 Retenção maior facilita suporte, mas acumula dados e exige justificativa. Esta proposta não fixa retenção de contas ativas nem conclui avaliação jurídica/LGPD. Não executar purga sobre dados existentes ou ambientes reais por este ADR; implementação e validação da limpeza usarão dados descartáveis em tarefa autorizada.
 
-## D5 — Política contra abuso: aprovação antes de liberar endpoints na Etapa 2
+## D5 — Política contra abuso: aprovada
 
 **Recomendação:** estado de limites no PostgreSQL existente, com atualização atômica, TTL, cardinalidade limitada, limpeza e proteção global de concorrência de hashes. Alternativa em memória é mais simples para DEV de uma instância, mas perde contadores no restart e não coordena réplicas. Redis acrescentaria infraestrutura sem necessidade demonstrada. A opção PostgreSQL exige medir contenção e carga; o rate limit também nega por segurança se seu estado não puder ser verificado.
 
@@ -66,7 +76,7 @@ Baseline proposto, sujeito a revisão com o benchmark: cinco falhas de login por
 
 Aplicar a mesma política a identificadores existentes/inexistentes; manter resposta genérica para envio, inclusive quando suprimido, sem alterar credenciais. Contrato de 429/Retry-After para demais limites deve ser consistente e não revelar existência. Derivar origem da conexão/proxy explicitamente confiável; não confiar em X-Forwarded-For arbitrário. O teto global de hashing será fixado pelo benchmark antes do login. Números são propostas do projeto, não valores normativos da OWASP/NIST.
 
-## D6 — Transporte local e inspeção: aprovação antes da Etapa 2
+## D6 — Transporte local e inspeção: aprovada
 
 **Recomendação:** adaptador DEV grava mensagens em diretório local ignorado, com acesso restrito ao desenvolvedor e retenção de 24h; testes capturam mensagens em memória. Sem console, endpoint HTTP público, envio externo ou inclusão de mensagens no Git/artefatos CI. Token em mensagem local é dado sensível mesmo em DEV; origem dos links vem de configuração confiável, nunca Host recebido.
 
@@ -96,7 +106,7 @@ Provedor e remetente de e-mail reais, origem/HTTPS, disponibilidade/custo, refer
 
 Architect confirmou limites e etapas; backend verificou BOM/API e persistência/revogação; security analisou ativação maliciosa, abuso e retenção; QA definiu testes concorrentes, de browser e critérios de evidência. A preferência de architect/backend por memória limitada em DEV foi ponderada frente à recomendação security de contadores PostgreSQL: D5 apresenta os custos e mantém a decisão humana pendente.
 
-A revisão inicial foi documental. Após aprovação humana de D1/D2/D3, a Etapa 1 foi implementada e passou à validação local, registrada separadamente com seus resultados reais. A CI anterior da SC-001/UI/UX não comprova a fundação atual nem autenticação funcional. A publicação da Etapa 1 foi autorizada após os 32 testes locais e o benchmark. D4–D6 aguardam decisão antes da próxima entrega funcional; D7 continua proposta separada, sem instalação autorizada.
+A revisão inicial foi documental. Após aprovação humana de D1/D2/D3, a Etapa 1 foi implementada e passou à validação local, registrada separadamente com seus resultados reais. A CI anterior da SC-001/UI/UX não comprova a fundação atual nem autenticação funcional. A publicação da Etapa 1 foi autorizada após os 32 testes locais e o benchmark. D4–D6 foram aprovadas para a entrega funcional; D7 continua proposta separada, sem instalação autorizada.
 
 **SEC-003 continua aberta, sem correção nem aceite formal/automático de risco.** Referência: [parecer de segurança SC-001](../../security/SC-001-REVIEW.md). Esta revisão não repete a auditoria nem concede exceção; CI verde não encerra o achado.
 

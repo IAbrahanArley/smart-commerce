@@ -4,6 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.smartcommerce.identity.domain.EmailAddress;
+import com.smartcommerce.identity.domain.IdentityStatus;
+import com.smartcommerce.identity.domain.PasswordHash;
+import com.smartcommerce.identity.repositories.JdbcIdentityRepository;
+import com.smartcommerce.identity.security.IdentityPasswordEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -77,15 +82,24 @@ class IdentityPersistenceIT {
             jdbc.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank",
                 String.class))
-        .containsExactly("1", "2");
+        .startsWith("1", "2");
     flyway.validate();
     assertThat(flyway.migrate().migrationsExecuted).isZero();
     assertThat(
             jdbc.queryForList(
                 "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
                 String.class))
-        .contains("identity_user", "identity_local_credential")
-        .doesNotContain("tenant", "store", "membership", "roles", "spring_session");
+        .contains(
+            "identity_user",
+            "identity_local_credential",
+            "identity_email_verification",
+            "identity_rate_limit",
+            "spring_session",
+            "spring_session_attributes",
+            "tenant",
+            "tenant_membership",
+            "store")
+        .doesNotContain("roles");
   }
 
   @Test

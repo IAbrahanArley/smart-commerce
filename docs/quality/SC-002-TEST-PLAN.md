@@ -1,5 +1,7 @@
 # SC-002 — Matriz de aceite e evidências propostas
 
+Atualização de escopo: D4–D6 aprovadas; entrega funcional local de cadastro, prova, definição de senha, login, identidade autenticada e logout autorizada em backend/frontend. As etapas abaixo preservam a decomposição original; recuperação de senha, D7/ferramentas de browser e domínio empresarial não estão autorizados por esta entrega. Critérios de execução passam a priorizar integrações críticas, sem repetir o benchmark.
+
 Data: 2026-10-15. **D1/D2/D3 e somente a Etapa 1 foram autorizadas.** Os testes de fundação passaram à execução local; resultados efetivos e benchmark estão em [SC-002-STAGE-01-VALIDATION.md](SC-002-STAGE-01-VALIDATION.md). Os cenários das Etapas 2–6 permanecem apenas planejados, não executados. Decisões: [ADR-0005](../architecture/adr/0005-identity-authentication.md); sequência: [SC-002-PLAN.md](../product/SC-002-PLAN.md). UX: [DESIGN.md](../design/DESIGN.md) e [QA.md](../agents/QA.md).
 
 Esta matriz atualiza a proposta anterior da branch `docs/sc-001-governance`: comprovação de e-mail é obrigatória, não condicional; o fluxo recomendado define senha após prova e não permite reset ativar PENDING. Sem testes empresariais A/B antecipados: a SC-002 verifica separação de identidades/sessões; empresa e memberships existem somente na SC-003/004.
