@@ -168,3 +168,47 @@ button:active, .action-link:active { background: var(--store-action-pressed); }
 .variant-choice select:focus-visible { outline: 3px solid var(--store-focus); outline-offset: 4px; }
 .offer-availability { margin-top: var(--store-space-6); }
 .price-from { display: block; font-size: .875rem; font-weight: 400; color: var(--store-secondary); }
+.add-to-cart { display: flex; align-items: flex-end; flex-wrap: wrap; gap: var(--store-space-4); margin-top: var(--store-space-6); }
+.quantity-field label { display: block; font-weight: 700; margin-bottom: var(--store-space-2); }
+.quantity-field select { min-width: 5rem; min-height: 44px; padding: var(--store-space-2) var(--store-space-3); font: inherit; color: var(--store-text); background: var(--store-surface); border: 1px solid var(--store-secondary); border-radius: var(--store-radius-control); }
+.quantity-field select:focus-visible { outline: 3px solid var(--store-focus); outline-offset: 4px; }
+button:disabled { background: var(--store-muted-background); color: var(--store-secondary); cursor: not-allowed; }
+.button-secondary { background: var(--store-surface); color: var(--store-action); border: 1px solid var(--store-action); }
+.button-secondary:hover { background: var(--store-muted-background); color: var(--store-action-hover); }
+.button-link { min-height: 44px; padding-inline: 0; background: none; color: var(--store-link); text-decoration: underline; text-underline-offset: 0.2em; }
+.button-link:hover, .button-link:active { background: none; color: var(--store-action-hover); }
+
+.cart-page { padding-block: var(--store-space-8) var(--store-space-12); }
+.cart-notice { margin-top: var(--store-space-6); padding: var(--store-space-4); background: var(--store-surface); border-left: 4px solid var(--store-action); border-radius: var(--store-radius-control); }
+.cart-empty { margin-top: var(--store-space-8); }
+.cart-empty .action-link { margin-top: var(--store-space-6); }
+.cart-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); align-items: start; gap: var(--store-space-8); margin-top: var(--store-space-8); }
+.cart-section-title { font-size: 1.25rem; margin-bottom: var(--store-space-4); }
+.cart-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--store-space-4); }
+.cart-line { display: flex; justify-content: space-between; gap: var(--store-space-8); padding: var(--store-space-6); background: var(--store-surface); border-radius: var(--store-radius-surface); }
+.cart-line-info { display: grid; gap: var(--store-space-2); min-width: 0; align-content: start; }
+.cart-line-info h3 { font-size: 1.125rem; }
+.cart-line-options, .cart-line-unit, .cart-line-quantity { color: var(--store-secondary); overflow-wrap: anywhere; }
+.cart-line-actions { display: grid; justify-items: end; align-content: start; gap: var(--store-space-3); flex-shrink: 0; }
+.cart-quantity-form { display: flex; align-items: flex-end; gap: var(--store-space-3); }
+.cart-line-total { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+.cart-line-total .price-label { display: block; font-weight: 400; }
+.cart-summary { padding: var(--store-space-8); background: var(--store-surface); border-radius: var(--store-radius-surface); }
+.cart-summary h2 { font-size: 1.25rem; }
+.cart-summary dl { margin-top: var(--store-space-6); }
+.cart-summary dt { font-size: 0.875rem; color: var(--store-secondary); }
+.cart-subtotal { margin: var(--store-space-2) 0 0; font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cart-warning { margin-top: var(--store-space-4); font-weight: 700; }
+.cart-note { margin-top: var(--store-space-6); color: var(--store-secondary); font-size: 0.875rem; }
+
+@media (max-width: 54rem) {
+  .cart-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 40rem) {
+  .cart-page { padding-block: var(--store-space-6) var(--store-space-8); }
+  .cart-line { flex-direction: column; gap: var(--store-space-4); padding: var(--store-space-4); }
+  .cart-line-actions { justify-items: start; }
+  .cart-line-total { text-align: left; }
+  .cart-summary { padding: var(--store-space-6); }
+}

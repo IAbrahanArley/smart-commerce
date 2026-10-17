@@ -40,12 +40,15 @@ public class BootstrapSecurityConfiguration {
                         "/api/public/stores/*/products/*/images",
                         "/api/public/stores/*/products/*/images/*/content")
                     .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/public/stores/*/cart/quote")
+                    .permitAll()
                     .anyRequest()
                     .denyAll())
         .sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .securityContext(
             config -> config.securityContextRepository(new NullSecurityContextRepository()))
-        // This chain allows GET only; administrative mutations retain their CSRF protection.
+        // Reads plus the side-effect-free cart quote only: no ambient authority exists on this
+        // chain, so CSRF does not apply; administrative mutations retain their CSRF protection.
         .csrf(AbstractHttpConfigurer::disable)
         .requestCache(AbstractHttpConfigurer::disable)
         .formLogin(AbstractHttpConfigurer::disable)

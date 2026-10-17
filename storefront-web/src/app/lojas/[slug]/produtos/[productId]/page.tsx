@@ -28,10 +28,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <Link className="text-link" href={`/lojas/${encodeURIComponent(store.slug)}#produtos`} prefetch={false}>Conhecer o catálogo da loja <Arrow /></Link>
           </div>
           <div className="detail-purchase-info">
-            <ProductOffer product={product} />
+            <ProductOffer slug={store.slug} product={product} />
             <div className="consultation-note">
               <h2>Gostou deste produto?</h2>
-              <p>Esta vitrine é para consulta. A compra por aqui ainda não está disponível.</p>
+              <p>Adicione ao carrinho para conferir o total calculado pela loja. A finalização da compra ainda não está disponível.</p>
             </div>
           </div>
         </article>
