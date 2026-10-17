@@ -1,6 +1,6 @@
 # Sprint 3 — Carrinho, pedidos e frete básico (planejamento)
 
-Data: 2026-10-17. **Somente planejamento; nenhuma tarefa autorizada.** Base técnica e decisões pendentes: [ADR-0012](../architecture/adr/0012-stock-reservation-cart-orders.md) (proposto). A vitrine de consulta prevista no [ROADMAP](ROADMAP.md) para esta sprint já foi entregue ([ADR-0010](../architecture/adr/0010-public-storefront.md)); esta sprint a estende com compra até `PENDING_PAYMENT`.
+Data: 2026-10-17. **D1–D7 aprovadas em 2026-10-17; SC-005, SC-006 e SC-007 autorizadas. SC-008 a SC-011 aguardam autorização própria.** Base técnica e decisões pendentes: [ADR-0012](../architecture/adr/0012-stock-reservation-cart-orders.md) (proposto). A vitrine de consulta prevista no [ROADMAP](ROADMAP.md) para esta sprint já foi entregue ([ADR-0010](../architecture/adr/0010-public-storefront.md)); esta sprint a estende com compra até `PENDING_PAYMENT`.
 
 **Objetivo:** comprador escolhe variantes, monta carrinho, informa dados e entrega (retirada ou frete fixo) e gera pedido `PENDING_PAYMENT` com reserva de estoque que expira; lojista vê e cancela pedidos. Sem pagamento, baixa definitiva ou Mercado Pago (Sprint 4).
 

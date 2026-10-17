@@ -1,6 +1,10 @@
 # ADR-0012 — Reserva de estoque, carrinho e pedidos pendentes
 
-Status: **proposto** em 2026-10-17. Nada deste ADR está autorizado para implementação. As decisões D1–D7 exigem aprovação do responsável antes da primeira tarefa da Sprint 3 que dependa delas; o plano incremental está em [SPRINT_03.md](../../product/SPRINT_03.md).
+Status: **adotado** em 2026-10-17 para D1–D7, conforme as recomendações da seção 8, aprovadas pelo responsável. Proposto na mesma data; o plano incremental está em [SPRINT_03.md](../../product/SPRINT_03.md).
+
+## Aprovação
+
+Em 2026-10-17 o responsável aprovou: D1 reserva de 30 minutos, valor único da plataforma; D2 dados mínimos do comprador (nome, e-mail, telefone, endereço só para frete fixo, sem CPF), snapshot no pedido e anonimização de pedidos não pagos após 90 dias, com validação jurídica obrigatória antes de produção; D3 retirada e frete fixo único por loja, sem CEP; D4 limites de quantidade e limites atômicos no PostgreSQL por IP/e-mail, sem CAPTCHA; D5 carrinho em cookie da vitrine sem estado no servidor e cotação sem reserva; D6 checkout habilitado somente por configuração em DEV/local até a Sprint 4; D7 ajuste negativo abaixo do reservado bloqueado com `409 RESERVED_STOCK`. Também autorizou iniciar SC-005, SC-006 e SC-007. SC-008 a SC-011 dependem dessas entregas e de autorização própria. Textos de aviso de privacidade (D2) e hipóteses jurídicas continuam pendentes de aprovação. A aprovação não autoriza dependências novas, serviços pagos, integrações reais, deploy ou push.
 
 ## Contexto
 
