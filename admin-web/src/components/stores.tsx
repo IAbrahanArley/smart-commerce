@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { apiRequest, requestError } from "@/lib/auth-api";
 import type { TenantStore } from "@/lib/tenant-api";
+import PageHeader from "@/components/page-header";
 
-export default function StoresPanel({ onSessionExpired }: { onSessionExpired: () => void }) {
+export default function StoresPanel() {
+  const [signedOut, setSignedOut] = useState(false);
   const [stores, setStores] = useState<TenantStore[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -21,14 +23,14 @@ export default function StoresPanel({ onSessionExpired }: { onSessionExpired: ()
   useEffect(() => {
     const controller = new AbortController();
     apiRequest("/api/tenants", { signal: controller.signal }).then(async response => {
-      if (response.status === 401) { onSessionExpired(); return; }
+      if (response.status === 401) { setSignedOut(true); return; }
       if (!response.ok) throw new Error();
       setStores(await response.json());
     }).catch(() => {
       if (!controller.signal.aborted) setLoadError("Não foi possível consultar suas lojas. Tente novamente.");
     }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [attempt, onSessionExpired]);
+  }, [attempt]);
 
   useEffect(() => { if (error || created) feedback.current?.focus(); }, [error, created]);
 
@@ -50,7 +52,7 @@ export default function StoresPanel({ onSessionExpired }: { onSessionExpired: ()
     submitting.current = true; setPending(true);
     try {
       const response = await apiRequest("/api/tenants", { method: "POST", body });
-      if (response.status === 401) { onSessionExpired(); return; }
+      if (response.status === 401) { setSignedOut(true); return; }
       if (response.status === 409) {
         setSlugError("Este identificador já está em uso. Escolha outro para sua loja.");
         slugField.current?.focus(); return;
@@ -66,8 +68,14 @@ export default function StoresPanel({ onSessionExpired }: { onSessionExpired: ()
     finally { submitting.current = false; setPending(false); }
   }
 
-  return <section className="stores-panel" aria-labelledby="stores-title">
-    <h2 id="stores-title">Minhas lojas</h2>
+  if (signedOut) return <section className="page" aria-labelledby="stores-title">
+    <PageHeader id="stores-title" title="Minhas lojas" />
+    <p role="status">Entre para consultar suas lojas. Sua sessão pode ter expirado.</p><Link href="/entrar">Entrar</Link>
+  </section>;
+
+  return <section className="page" aria-labelledby="stores-title">
+    <PageHeader id="stores-title" title="Minhas lojas" description="Escolha uma loja para gerenciar produtos, vitrine e entrega, ou crie uma nova." />
+    <div className="stores-panel">
     {loading ? <p role="status">Consultando suas lojas…</p> : loadError ? <div>
       <p role="alert" className="feedback feedback-error">{loadError}</p>
       <button type="button" onClick={() => { setLoading(true); setLoadError(""); setAttempt(current => current + 1); }}>Consultar lojas novamente</button>
@@ -84,7 +92,7 @@ export default function StoresPanel({ onSessionExpired }: { onSessionExpired: ()
         className={error ? "feedback feedback-error" : created ? "feedback feedback-success" : "feedback-empty"}>
         {error || (created ? <>Loja criada. <Link href={`/lojas/${encodeURIComponent(created.id)}`}>Visualizar {created.store.name}</Link></> : "")}
       </p>
-      <form onSubmit={createStore} aria-busy={pending}>
+      <form onSubmit={(event) => void createStore(event)} aria-busy={pending}>
         <div className="form-field"><label htmlFor="company-name">Nome da empresa</label>
           <input id="company-name" name="companyName" autoComplete="organization" required maxLength={240} pattern=".*\S.*"
             onInput={event => event.currentTarget.setCustomValidity("")} />
@@ -103,6 +111,7 @@ export default function StoresPanel({ onSessionExpired }: { onSessionExpired: ()
         </div>
         <button type="submit" disabled={pending}>{pending ? "Criando loja…" : "Criar minha loja"}</button>
       </form>
+    </div>
     </div>
   </section>;
 }

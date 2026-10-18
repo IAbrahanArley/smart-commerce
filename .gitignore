@@ -42,3 +42,6 @@ Thumbs.db
 
 # Local design-skill review artifacts
 .taste-skill/
+
+# Graphify (grafo local, não versionado)
+graphify-out/
