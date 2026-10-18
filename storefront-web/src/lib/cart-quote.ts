@@ -14,7 +14,8 @@ export type QuoteLine = {
   unitPrice: string | null;
   lineTotal: string | null;
 };
-export type CartQuote = { lines: QuoteLine[]; subtotal: string; purchasable: boolean };
+export type DeliveryOption = { type: "PICKUP"; text: string; fee: string } | { type: "FIXED_SHIPPING"; text: string; fee: string };
+export type CartQuote = { lines: QuoteLine[]; subtotal: string; purchasable: boolean; delivery: DeliveryOption[] };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MONEY = /^\d{1,20}\.\d{2}$/;
@@ -75,5 +76,20 @@ export async function quoteCart(slug: string, lines: CartLine[]): Promise<CartQu
     // Project only public fields even if the upstream adds private properties.
     return { ...base, productId: line.productId, productName: label(line.productName, 120), options, unitPrice: line.unitPrice, lineTotal: line.lineTotal };
   });
-  return { lines: quoted, subtotal: input.subtotal, purchasable: input.purchasable };
+  return { lines: quoted, subtotal: input.subtotal, purchasable: input.purchasable, delivery: delivery(input.delivery) };
+}
+
+// Enabled store options (SC-006/SC-008). Pickup is free; the fixed fee and texts come from the store.
+function delivery(value: unknown): DeliveryOption[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 2) unavailable();
+  const options = value.map((raw): DeliveryOption => {
+    const option = object(raw);
+    if (option.type === "PICKUP") return { type: "PICKUP", text: label(option.instructions, 500), fee: "0.00" };
+    if (option.type === "FIXED_SHIPPING" && option.currency === "BRL" && typeof option.amount === "string" && MONEY.test(option.amount))
+      return { type: "FIXED_SHIPPING", text: label(option.area, 500), fee: option.amount };
+    return unavailable();
+  });
+  if (new Set(options.map(option => option.type)).size !== options.length) unavailable();
+  return options;
 }
