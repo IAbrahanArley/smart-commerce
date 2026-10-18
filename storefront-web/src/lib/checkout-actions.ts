@@ -20,7 +20,7 @@ const MESSAGES = {
   INSUFFICIENT_STOCK: "Não há estoque suficiente para algum item. Revise o carrinho antes de confirmar.",
   ITEM_UNAVAILABLE: "Algum item não está mais disponível. Revise o carrinho antes de confirmar.",
   FULFILLMENT_UNAVAILABLE: "A forma de entrega escolhida não está mais disponível. Escolha outra opção.",
-  REQUEST_CONFLICT: "Os dados mudaram desde a última tentativa. Confira e confirme novamente.",
+  REQUEST_CONFLICT: "Um pedido desta tentativa já foi registrado com os dados enviados antes, e ele não pode ser alterado por aqui. Para não criar um pedido em dobro, nada novo foi gravado. Fale com a loja se precisar corrigir algo.",
   limited: "Muitas tentativas ou pedidos pendentes para este e-mail nesta loja. Tente novamente mais tarde.",
   invalid: "Não foi possível validar os dados do pedido. Confira as informações e tente novamente.",
   missing: "Esta loja não está recebendo pedidos agora.",
@@ -40,7 +40,7 @@ export async function placeOrder(previous: CheckoutState, form: FormData): Promi
   const requestId = validRequestId(submitted) ? submitted.toLowerCase() : randomUUID();
   const values = emptyValues();
   for (const name of CHECKOUT_FIELDS) values[name] = field(form, name);
-  const state = (patch: Partial<CheckoutState>): CheckoutState => ({ requestId, values, errors: {}, message: null, attempt: previous.attempt + 1, ...patch });
+  const state = (patch: Partial<CheckoutState>): CheckoutState => ({ requestId, values, errors: {}, message: null, link: null, attempt: previous.attempt + 1, ...patch });
 
   const jar = await cookies();
   const lines = parseCart(jar.get(cartCookieName(slug))?.value);
@@ -58,15 +58,20 @@ export async function placeOrder(previous: CheckoutState, form: FormData): Promi
       clearCart();
       redirect(orderPath(encodeURIComponent(slug), result.order.id));
     case "replayed":
-      clearCart();
-      if (jar.get(orderCookieName(result.order.id))) redirect(orderPath(encodeURIComponent(slug), result.order.id));
+      // The order cookie is scoped to the status page, so it cannot be seen from here. The backend
+      // does not reissue the token: the link works only if this browser kept it. The cart is kept,
+      // otherwise this page would re-render empty and redirect before the buyer saw the message.
       return state({
-        message: `Seu pedido nº ${result.order.number} já foi registrado, mas não foi possível recuperar o acompanhamento neste navegador. Guarde este número para falar com a loja.`,
+        message: `Seu pedido nº ${result.order.number} já foi registrado; não é preciso confirmar de novo. Se o acompanhamento não abrir neste navegador, guarde este número para falar com a loja.`,
+        link: { href: orderPath(encodeURIComponent(slug), result.order.id), label: "Ver acompanhamento do pedido" },
       });
     case "conflict":
+      // REQUEST_CONFLICT proves an order already exists for this key (ADR-0012, PR #8 review): the
+      // key is kept, and a separate order only starts from the explicit link (a fresh page load).
+      if (result.code === "REQUEST_CONFLICT")
+        return state({ message: MESSAGES.REQUEST_CONFLICT, link: { href: `/lojas/${encodeURIComponent(slug)}/checkout`, label: "Fazer um pedido separado" } });
       revalidatePath(`/lojas/${slug}/checkout`);
       return state({
-        requestId: result.code === "REQUEST_CONFLICT" ? randomUUID() : requestId,
         message: MESSAGES[result.code],
         errors: result.code === "FULFILLMENT_UNAVAILABLE" ? { fulfillment: MESSAGES.FULFILLMENT_UNAVAILABLE } : {},
       });

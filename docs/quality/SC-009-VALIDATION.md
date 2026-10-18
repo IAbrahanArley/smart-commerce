@@ -25,13 +25,14 @@ Data: 2026-10-18. Branch `feat/sc-009-checkout-ui`, empilhada sobre `feat/sc-008
 - Validação no servidor espelha os limites da SC-008. Caracteres de controle e separadores de linha são rejeitados.
 - O resumo de erros recebe foco e usa `role=alert`, com links para cada campo.
 - Cada campo com erro recebe `aria-invalid` e `aria-describedby`.
-- Erro de entrega fica no `fieldset`, porque `aria-invalid` não é válido em rádio.
+- Erro de entrega fica no `fieldset` e em cada rádio por `aria-describedby` (`aria-invalid` não é válido em rádio). O link do resumo leva ao primeiro rádio, que recebe foco.
 
 **Server action `placeOrder`.**
 - O carrinho vem do cookie HttpOnly, nunca do formulário. Origem externa é rejeitada pelo Next.
 - Pedido criado: grava o cookie do pedido, limpa o carrinho e redireciona para a página de status.
 - `PRICE_CHANGED`, `INSUFFICIENT_STOCK`, `ITEM_UNAVAILABLE` e `FULFILLMENT_UNAVAILABLE`: revalida a página para mostrar a nova cotação e explica o motivo.
-- `REQUEST_CONFLICT`: gera nova chave.
+- `REQUEST_CONFLICT`: prova que já existe pedido para a chave. A chave é mantida, nada novo é gravado e um pedido separado só começa pelo link explícito "Fazer um pedido separado".
+- Replay (`200`, sem token): mostra o número do pedido e o link para o acompanhamento, sem limpar o carrinho (limpar faria a página recarregar vazia e redirecionar antes da mensagem).
 - Falha de rede, timeout ou resposta inesperada é tratada como ambígua: mantém o mesmo `requestId`, e a nova tentativa reaproveita o pedido sem duplicar.
 - Limite 429: mensagem própria.
 
@@ -141,11 +142,26 @@ Arquivos revisados: `checkout-form.tsx`, `checkout/page.tsx`, `pedidos/[orderId]
 - O token nunca aparece em URL, HTML ou `localStorage`. Os logs do Next não registram dados do comprador.
 - Somente `Accept`, `Content-Type`, `X-Order-Token` e os headers assinados de IP vão ao backend. Cookies e `Authorization` do visitante nunca são repassados.
 
+## Correções da revisão do PR #9 (2026-10-18)
+
+Revisão independente, somente leitura, com os achados conferidos no código e no contrato do backend antes da correção.
+
+- **Major, pedido duplicado:** depois de uma falha ambígua em que o pedido foi gravado, reenviar com outro dado recebia `REQUEST_CONFLICT`, e a vitrine trocava a chave. O clique seguinte criava um segundo pedido. Agora a chave é mantida e o conflito explica que o pedido já existe (ADR-0012, ajustes da revisão do PR #8).
+- **Replay inalcançável:** a action procurava o cookie do pedido, que só é enviado no caminho da página de status, então nunca o encontrava. O smoke novo também mostrou que limpar o carrinho no replay fazia a página redirecionar antes da mensagem. Os dois foram corrigidos (ver "Server action").
+- **Acessibilidade:** o link do erro de entrega ia para um `fieldset` não focável; agora vai para o primeiro rádio, que também referencia o erro.
+- **Smoke:** dividido em `smoke.mjs` (executor), `smoke-units.mjs` (regras puras), `smoke-upstream.mjs` (backend sintético que replica replay e `REQUEST_CONFLICT` por impressão digital) e `smoke-checkout.mjs`, para caber no limite de 350 linhas do lint do PR #6. Casos novos:
+  - pedido gravado com resposta perdida e replay sem novo token;
+  - conflito depois de falha ambígua sem troca de chave;
+  - erro de entrega com link e associação;
+  - terceiro servidor com `STOREFRONT_TRUST_FORWARDED_FOR=true`, que assina só o último salto com o HMAC do backend.
+
+Verificação após as correções: `npm run lint`, `typecheck`, `build` e `SMOKE_PORT=3042 npm run test:smoke` aprovados (o smoke usa a porta informada, +1 e +2). O lint também foi conferido com a configuração do PR #6 aplicada (`max-lines` 350 e regras de promises tipadas).
+
 ## Limitações e pendências
 
-- **Replay sem cookie:** se o mesmo pedido for reaproveitado num navegador sem o cookie, só o número do pedido é mostrado, porque o backend não devolve o token de novo por segurança.
+- **Replay sem cookie:** o backend não devolve o token de novo, por segurança. O link de acompanhamento só abre se este navegador guardou o cookie; caso contrário, o comprador fica com o número do pedido.
 - **Loja oculta depois do pedido:** a página de status passa a responder 404, porque depende da loja publicada. A consulta do comprador nessa situação fica para a SC-010.
 - **Limite por IP sem proxy confiável:** o backend vê só o servidor da vitrine, então na prática há um balde por servidor. O limite por e-mail continua valendo. Em produção, exige proxy que sobrescreva o header e a declaração explícita.
 - **Acessibilidade:** sem Axe, leitor de tela ou testes automatizados de navegador (Playwright e Axe ficam para etapa futura). WCAG 2.2 AA é objetivo, não conformidade comprovada.
 - **Pagamento e jurídico:** pagamento inexistente (Sprint 4). O checkout continua restrito a DEV. A política de privacidade completa e a validação jurídica ficam pendentes antes de produção.
-- **CI remota:** depende do push desta branch, que aguarda autorização.
+- **CI remota:** PR #9, empilhado sobre o #8.

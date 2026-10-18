@@ -7,5 +7,7 @@ export type CheckoutState = {
   values: CheckoutValues;
   errors: FieldErrors;
   message: string | null;
+  // Explicit next step shown with the message (order status, or starting a separate order).
+  link: { href: string; label: string } | null;
   attempt: number;
 };

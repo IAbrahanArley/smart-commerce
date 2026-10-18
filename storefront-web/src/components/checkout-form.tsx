@@ -13,7 +13,7 @@ type Props = { slug: string; storeName: string; requestId: string; options: Chec
 const LABELS = { PICKUP: "Retirar na loja", FIXED_SHIPPING: "Receber em casa (frete fixo)" };
 
 export function CheckoutForm({ slug, storeName, requestId, options }: Props) {
-  const initial: CheckoutState = { requestId, values: { ...emptyValues(), fulfillment: options.length === 1 ? options[0].type : "" }, errors: {}, message: null, attempt: 0 };
+  const initial: CheckoutState = { requestId, values: { ...emptyValues(), fulfillment: options.length === 1 ? options[0].type : "" }, errors: {}, message: null, link: null, attempt: 0 };
   const [state, action, pending] = useActionState(placeOrder, initial);
   const summary = useRef<HTMLDivElement>(null);
   const { values, errors } = state;
@@ -45,7 +45,8 @@ export function CheckoutForm({ slug, storeName, requestId, options }: Props) {
       <div ref={summary} tabIndex={-1} role={state.message ? "alert" : undefined} className={state.message ? "checkout-alert" : undefined}>
         {state.message ? <>
           <p>{state.message}</p>
-          {invalid.length > 0 ? <ul>{invalid.map(name => <li key={name}><a href={name === "fulfillment" ? "#checkout-delivery" : `#checkout-${name}`}>{errors[name]}</a></li>)}</ul> : null}
+          {state.link ? <p><a href={state.link.href}>{state.link.label}</a></p> : null}
+          {invalid.length > 0 ? <ul>{invalid.map(name => <li key={name}><a href={name === "fulfillment" ? `#checkout-fulfillment-${options[0]?.type ?? ""}` : `#checkout-${name}`}>{errors[name]}</a></li>)}</ul> : null}
         </> : null}
       </div>
 
@@ -55,7 +56,8 @@ export function CheckoutForm({ slug, storeName, requestId, options }: Props) {
         <div className="delivery-options">
           {options.map(option => (
             <label key={option.type} className="delivery-option">
-              <input type="radio" name="fulfillment" value={option.type} defaultChecked={values.fulfillment === option.type} />
+              <input id={`checkout-fulfillment-${option.type}`} type="radio" name="fulfillment" value={option.type} defaultChecked={values.fulfillment === option.type}
+                aria-describedby={errors.fulfillment ? "fulfillment-error" : undefined} />
               <span className="delivery-option-body">
                 <span className="delivery-option-title">{LABELS[option.type]}</span>
                 <span className="delivery-option-text">{option.text}</span>
