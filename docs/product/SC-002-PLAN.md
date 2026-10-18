@@ -4,7 +4,7 @@ Atualização de escopo: D4–D6 aprovadas; entrega funcional local de cadastro,
 
 Data: 2026-10-15. **D1/D2/D3 e somente Etapa 1 autorizadas pelo responsável.** Fundação implementada para validação local; aceite, commit/push e Etapas 2–6 aguardam autorização. Contrato: [IDENTITY_FOUNDATION.md](../architecture/IDENTITY_FOUNDATION.md); resultados reais: [SC-002-STAGE-01-VALIDATION.md](../quality/SC-002-STAGE-01-VALIDATION.md).
 
-Esta revisão substitui o planejamento anterior da branch `docs/sc-001-governance` para a SC-002, sem mesclar aquela branch ou modificar registros da SC-001. A base preliminar e decisões pendentes estão no [ADR-0005](../architecture/adr/0005-identity-authentication.md). Interfaces seguem [DESIGN.md](../design/DESIGN.md); a matriz verificável está em [SC-002-TEST-PLAN.md](../quality/SC-002-TEST-PLAN.md).
+Esta revisão substitui o planejamento anterior da branch `docs/sc-001-governance` para a SC-002 (modelo de ameaças preservado como histórico em [SC-002-THREAT-MODEL.md](../security/SC-002-THREAT-MODEL.md)), sem mesclar aquela branch ou modificar registros da SC-001. A base preliminar e decisões pendentes estão no [ADR-0005](../architecture/adr/0005-identity-authentication.md). Interfaces seguem [DESIGN.md](../design/DESIGN.md); a matriz verificável está em [SC-002-TEST-PLAN.md](../quality/SC-002-TEST-PLAN.md).
 
 ## Escopo e estado de prontidão
 
