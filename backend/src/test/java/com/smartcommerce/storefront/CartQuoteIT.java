@@ -2,6 +2,7 @@ package com.smartcommerce.storefront;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.smartcommerce.orders.TestOrders;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -81,7 +82,8 @@ class CartQuoteIT {
     assertThat(response.headers().allValues("Set-Cookie")).isEmpty();
     assertThat(response.headers().firstValue("Cache-Control").orElse("")).contains("no-store");
     JsonNode body = JSON.readTree(response.body());
-    assertThat(names(body)).containsExactly("currency", "lines", "subtotal", "purchasable");
+    assertThat(names(body))
+        .containsExactly("currency", "lines", "subtotal", "purchasable", "delivery");
     assertThat(body.get("currency").asString()).isEqualTo("BRL");
     // Only the AVAILABLE line counts: 3 × 15.90, exact decimal.
     assertThat(body.get("subtotal").asString()).isEqualTo("47.70");
@@ -250,7 +252,7 @@ class CartQuoteIT {
         UUID.randomUUID(),
         tenant,
         variant,
-        UUID.randomUUID(),
+        TestOrders.create(jdbc, tenant),
         quantity);
   }
 

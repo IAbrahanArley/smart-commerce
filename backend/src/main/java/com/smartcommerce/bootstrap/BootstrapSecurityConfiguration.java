@@ -39,17 +39,22 @@ public class BootstrapSecurityConfiguration {
                         "/api/public/stores/*/fulfillment",
                         "/api/public/stores/*/products/*",
                         "/api/public/stores/*/products/*/images",
-                        "/api/public/stores/*/products/*/images/*/content")
+                        "/api/public/stores/*/products/*/images/*/content",
+                        "/api/public/stores/*/orders/*")
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/public/stores/*/cart/quote")
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/public/stores/*/cart/quote",
+                        "/api/public/stores/*/orders")
                     .permitAll()
                     .anyRequest()
                     .denyAll())
         .sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .securityContext(
             config -> config.securityContextRepository(new NullSecurityContextRepository()))
-        // Reads plus the side-effect-free cart quote only: no ambient authority exists on this
-        // chain, so CSRF does not apply; administrative mutations retain their CSRF protection.
+        // Reads, the side-effect-free cart quote and the checkout (SC-008): no ambient authority
+        // exists on this chain (no cookie or session; the buyer token travels in a header), so
+        // CSRF does not apply; administrative mutations retain their CSRF protection.
         .csrf(AbstractHttpConfigurer::disable)
         .requestCache(AbstractHttpConfigurer::disable)
         .formLogin(AbstractHttpConfigurer::disable)

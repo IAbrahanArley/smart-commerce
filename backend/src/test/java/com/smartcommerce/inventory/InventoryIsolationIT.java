@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.smartcommerce.identity.security.IdentityPasswordEncoder;
 import com.smartcommerce.inventory.domain.ReservationLine;
 import com.smartcommerce.inventory.services.InventoryReservationService;
+import com.smartcommerce.orders.TestOrders;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.URI;
@@ -214,7 +215,7 @@ class InventoryIsolationIT {
     UUID product = createProduct(a, tenantA, "RESERVED");
     String route = inventory(tenantA, product);
     assertThat(a.post(route, movement("ENTRY", 5, "Entrada")).statusCode()).isEqualTo(201);
-    UUID order = UUID.randomUUID();
+    UUID order = TestOrders.create(jdbc, tenantA);
     reservations.reserve(tenantA, order, List.of(new ReservationLine(product, 3)));
     JsonNode state = JSON.readTree(a.get(route).body());
     assertThat(state.get("quantity").asInt()).isEqualTo(5);
