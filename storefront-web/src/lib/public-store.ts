@@ -21,17 +21,17 @@ export type PublicProductDetail = { store: PublicStore; product: PublicProduct; 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-function unavailable(): never {
+export function unavailable(): never {
   // Never include upstream URLs, response bodies or personal data in the render error.
   throw new Error("Não foi possível consultar a vitrine. Tente novamente.");
 }
 
-function slugPath(slug: string): string {
+export function slugPath(slug: string): string {
   if (slug.length < 3 || slug.length > 63 || !SLUG.test(slug)) notFound();
   return `/api/public/stores/${encodeURIComponent(slug)}`;
 }
 
-function apiOrigin(): string {
+export function apiOrigin(): string {
   try {
     const value = new URL(process.env.STOREFRONT_API_ORIGIN ?? "http://127.0.0.1:8080");
     if (!['http:', 'https:'].includes(value.protocol) || value.username || value.password

@@ -26,10 +26,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <div className="detail-summary">
             <h1 id="product-title">{product.name}</h1>
             <p className="detail-store">Um produto de <span translate="no">{store.name}</span>.</p>
-            <ProductOffer product={product} />
+            <ProductOffer slug={store.slug} product={product} />
             <div className="consultation-note">
               <h2>Gostou deste produto?</h2>
-              <p>Esta vitrine é para consulta. A compra por aqui ainda não está disponível.</p>
+              <p>Adicione ao carrinho para conferir o total calculado pela loja. A finalização da compra ainda não está disponível.</p>
             </div>
           </div>
           <div className="detail-description">

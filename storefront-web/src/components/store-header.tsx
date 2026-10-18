@@ -10,6 +10,7 @@ export function StoreHeader({ store }: { store: PublicStore }) {
         </Link>
         <nav aria-label="Navegação da loja">
           <Link href={`/lojas/${encodeURIComponent(store.slug)}#produtos`} prefetch={false}>Ver produtos</Link>
+          <Link href={`/lojas/${encodeURIComponent(store.slug)}/carrinho`} prefetch={false}>Carrinho</Link>
           <a href="#sobre-a-vitrine">Sobre a vitrine</a>
         </nav>
       </div>
