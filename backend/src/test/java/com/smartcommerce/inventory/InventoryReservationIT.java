@@ -9,6 +9,7 @@ import com.smartcommerce.inventory.domain.ReservationLine;
 import com.smartcommerce.inventory.repositories.InventoryRepository;
 import com.smartcommerce.inventory.services.InventoryReservationService;
 import com.smartcommerce.inventory.services.InventoryService;
+import com.smartcommerce.orders.TestOrders;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -83,7 +84,7 @@ class InventoryReservationIT {
         UUID.randomUUID(),
         tenantA,
         variant,
-        UUID.randomUUID(),
+        TestOrders.create(jdbc, tenantA),
         Timestamp.from(expiresAt),
         Timestamp.from(expiresAt.minus(Duration.ofMinutes(30))));
     var before = inventory.level(tenantA, variant, expiresAt.minus(1, ChronoUnit.MICROS));
@@ -103,7 +104,8 @@ class InventoryReservationIT {
       throws Exception {
     UUID variant = product(tenantA, "LAST", 2);
     long movements = movements();
-    var result = reservations.reserve(tenantA, UUID.randomUUID(), List.of(line(variant, 2)));
+    var result =
+        reservations.reserve(tenantA, TestOrders.create(jdbc, tenantA), List.of(line(variant, 2)));
     assertThat(result.expiresAt())
         .isBetween(Instant.now().plus(Duration.ofMinutes(29)), Instant.now().plusSeconds(1800));
     assertThat(publicAvailable(variant)).isFalse();
@@ -135,11 +137,13 @@ class InventoryReservationIT {
   @Test
   void releaseIsIdempotentAndRestoresAvailabilityImmediately() throws Exception {
     UUID variant = product(tenantA, "REL", 3);
-    UUID order = UUID.randomUUID();
+    UUID order = TestOrders.create(jdbc, tenantA);
     reservations.reserve(tenantA, order, List.of(line(variant, 3)));
     assertThat(publicAvailable(variant)).isFalse();
     assertThatThrownBy(
-            () -> reservations.reserve(tenantA, UUID.randomUUID(), List.of(line(variant, 1))))
+            () ->
+                reservations.reserve(
+                    tenantA, TestOrders.create(jdbc, tenantA), List.of(line(variant, 1))))
         .hasFieldOrPropertyWithValue("reason", InventoryException.Reason.INSUFFICIENT_STOCK);
     assertThat(reservations.release(tenantB, order)).isZero();
     assertThat(reservations.release(tenantA, order)).isEqualTo(1);
@@ -164,7 +168,8 @@ class InventoryReservationIT {
           () -> {
             barrier.await(20, TimeUnit.SECONDS);
             try {
-              reservations.reserve(tenantA, UUID.randomUUID(), List.of(line(variant, 1)));
+              reservations.reserve(
+                  tenantA, TestOrders.create(jdbc, tenantA), List.of(line(variant, 1)));
               return "OK";
             } catch (InventoryException exception) {
               return exception.reason().name();
@@ -201,14 +206,14 @@ class InventoryReservationIT {
                 () -> {
                   barrier.await(20, TimeUnit.SECONDS);
                   return reservations.reserve(
-                      tenantA, UUID.randomUUID(), List.of(line(x, 1), line(y, 1)));
+                      tenantA, TestOrders.create(jdbc, tenantA), List.of(line(x, 1), line(y, 1)));
                 });
         var two =
             pool.submit(
                 () -> {
                   barrier.await(20, TimeUnit.SECONDS);
                   return reservations.reserve(
-                      tenantA, UUID.randomUUID(), List.of(line(y, 1), line(x, 1)));
+                      tenantA, TestOrders.create(jdbc, tenantA), List.of(line(y, 1), line(x, 1)));
                 });
         for (var future : List.of(one, two)) {
           try {
@@ -236,7 +241,8 @@ class InventoryReservationIT {
                 () -> {
                   barrier.await(20, TimeUnit.SECONDS);
                   try {
-                    reservations.reserve(tenantA, UUID.randomUUID(), List.of(line(variant, 3)));
+                    reservations.reserve(
+                        tenantA, TestOrders.create(jdbc, tenantA), List.of(line(variant, 3)));
                     return "OK";
                   } catch (InventoryException exception) {
                     return exception.reason().name();
@@ -275,7 +281,7 @@ class InventoryReservationIT {
   void reservationsAreIsolatedByTenantEvenWithSameSkuAndViaDirectSql() throws Exception {
     UUID variantA = product(tenantA, "SAME-SKU", 1);
     UUID variantB = product(tenantB, "SAME-SKU", 1);
-    reservations.reserve(tenantA, UUID.randomUUID(), List.of(line(variantA, 1)));
+    reservations.reserve(tenantA, TestOrders.create(jdbc, tenantA), List.of(line(variantA, 1)));
     var levelB = inventory.level(tenantB, variantB, Instant.now());
     assertThat(levelB.reserved()).isZero();
     assertThat(levelB.available()).isEqualTo(1);
@@ -303,7 +309,7 @@ class InventoryReservationIT {
                     UUID.randomUUID(),
                     tenantA,
                     variantB,
-                    UUID.randomUUID()))
+                    TestOrders.create(jdbc, tenantA)))
         .isInstanceOf(DataIntegrityViolationException.class);
     assertThatThrownBy(
             () ->
@@ -317,7 +323,7 @@ class InventoryReservationIT {
   @Test
   void schemaRejectsInvalidQuantitiesStatesWindowsAndDuplicatedOrderLines() {
     UUID variant = product(tenantA, "CHECKS", 5);
-    UUID order = UUID.randomUUID();
+    UUID order = TestOrders.create(jdbc, tenantA);
     String insert =
         "INSERT INTO inventory_reservation(id,tenant_id,variant_id,order_id,quantity,status,expires_at,created_at,closed_at) VALUES (?,?,?,?,?,?,now()+(?)::interval,now(),?)";
     for (Object[] invalid :
@@ -335,7 +341,7 @@ class InventoryReservationIT {
                       UUID.randomUUID(),
                       tenantA,
                       variant,
-                      UUID.randomUUID(),
+                      order,
                       invalid[0],
                       invalid[1],
                       invalid[2],

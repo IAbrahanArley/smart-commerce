@@ -29,8 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
  * revalidated against it and prices always come from the catalog. Stock status uses the available
  * quantity net of active reservations. No reservation, no write (ADR-0012 D5).
  *
- * <p>Extension point: delivery options (SC-006) join {@link CartQuoteView} once the store
- * fulfillment configuration exists; that integration happens here, without changing line pricing.
+ * <p>Delivery options (SC-006) come from the same public read model as the storefront, so the quote
+ * and the checkout (SC-008) price the same enabled options.
  */
 @Service
 public class CartQuoteService {
@@ -38,12 +38,17 @@ public class CartQuoteService {
   private final StorefrontRepository storefront;
   private final CartQuoteRepository quotes;
   private final Clock clock;
+  private final PublicFulfillmentService fulfillment;
 
   public CartQuoteService(
-      StorefrontRepository storefront, CartQuoteRepository quotes, Clock clock) {
+      StorefrontRepository storefront,
+      CartQuoteRepository quotes,
+      Clock clock,
+      PublicFulfillmentService fulfillment) {
     this.storefront = storefront;
     this.quotes = quotes;
     this.clock = clock;
+    this.fulfillment = fulfillment;
   }
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -86,7 +91,12 @@ public class CartQuoteService {
               money(variant.price()),
               money(total)));
     }
-    return new CartQuoteView(CURRENCY, List.copyOf(views), money(subtotal), purchasable);
+    return new CartQuoteView(
+        CURRENCY,
+        List.copyOf(views),
+        money(subtotal),
+        purchasable,
+        fulfillment.find(slug).options());
   }
 
   private static String money(BigDecimal value) {

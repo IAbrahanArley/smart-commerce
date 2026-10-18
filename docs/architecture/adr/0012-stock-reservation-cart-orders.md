@@ -4,7 +4,15 @@ Status: **adotado** em 2026-10-17 para D1–D7, conforme as recomendações da s
 
 ## Aprovação
 
-Em 2026-10-17 o responsável aprovou: D1 reserva de 30 minutos, valor único da plataforma; D2 dados mínimos do comprador (nome, e-mail, telefone, endereço só para frete fixo, sem CPF), snapshot no pedido e anonimização de pedidos não pagos após 90 dias, com validação jurídica obrigatória antes de produção; D3 retirada e frete fixo único por loja, sem CEP; D4 limites de quantidade e limites atômicos no PostgreSQL por IP/e-mail, sem CAPTCHA; D5 carrinho em cookie da vitrine sem estado no servidor e cotação sem reserva; D6 checkout habilitado somente por configuração em DEV/local até a Sprint 4; D7 ajuste negativo abaixo do reservado bloqueado com `409 RESERVED_STOCK`. Também autorizou iniciar SC-005, SC-006 e SC-007. SC-008 a SC-011 dependem dessas entregas e de autorização própria. Textos de aviso de privacidade (D2) e hipóteses jurídicas continuam pendentes de aprovação. A aprovação não autoriza dependências novas, serviços pagos, integrações reais, deploy ou push.
+Em 2026-10-17 o responsável aprovou: D1 reserva de 30 minutos, valor único da plataforma; D2 dados mínimos do comprador (nome, e-mail, telefone, endereço só para frete fixo, sem CPF), snapshot no pedido e anonimização de pedidos não pagos após 90 dias, com validação jurídica obrigatória antes de produção; D3 retirada e frete fixo único por loja, sem CEP; D4 limites de quantidade e limites atômicos no PostgreSQL por IP/e-mail, sem CAPTCHA; D5 carrinho em cookie da vitrine sem estado no servidor e cotação sem reserva; D6 checkout habilitado somente por configuração em DEV/local até a Sprint 4; D7 ajuste negativo abaixo do reservado bloqueado com `409 RESERVED_STOCK`. Também autorizou iniciar SC-005, SC-006 e SC-007. SC-008 a SC-011 dependem dessas entregas e de autorização própria. Hipóteses jurídicas continuam pendentes de validação antes de produção. A aprovação não autoriza dependências novas, serviços pagos, integrações reais, deploy ou push.
+
+### Decisões complementares para SC-008 e SC-009 (2026-10-18)
+
+O responsável autorizou a SC-008 e aprovou:
+
+- **D4, IP confiável:** o servidor do storefront-web envia o IP do visitante em `X-SC-Client-IP` com `X-SC-Client-IP-Timestamp` e `X-SC-Client-IP-Signature` = HMAC-SHA256 de um segredo compartilhado (variável de ambiente nas duas aplicações, sem valor versionado, mínimo de 32 caracteres), aceito por até 60 segundos. Sem segredo configurado ou com assinatura inválida, o backend usa o endereço da conexão. Os contadores guardam somente HMAC do IP com chave efêmera gerada na inicialização, sem IP em claro; reiniciar o backend zera as janelas.
+- **D4, valores:** até 20 linhas e 1–10 unidades por linha; até 5 pedidos pendentes não expirados por e-mail por loja; até 20 tentativas de checkout por IP por hora.
+- **D2, aviso de privacidade do checkout (SC-009):** "Seus dados (nome, e-mail, telefone e, se escolher entrega, o endereço) são usados apenas pela {nome da loja} para processar e entregar este pedido e para falar com você sobre ele. Eles não são compartilhados com outras lojas. Se o pedido não for pago, seus dados pessoais são anonimizados em até 90 dias. Pagamento ainda não está disponível nesta etapa." A política completa da loja e a validação jurídica continuam pendentes antes de produção.
 
 ## Contexto
 

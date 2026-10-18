@@ -59,6 +59,14 @@ management:
           include: readinessState,db
         liveness:
           include: livenessState
+orders:
+  checkout:
+    # D6: checkout creates real pending orders and reservations but there is no payment yet.
+    # Never enable it outside DEV/local until the payment integration exists.
+    enabled: ${ORDERS_CHECKOUT_ENABLED:false}
+  client-ip:
+    # D4: shared with the storefront-web server to sign the visitor IP (>= 32 characters).
+    secret: ${STOREFRONT_FORWARDING_SECRET:}
 identity:
   public-origin: ${IDENTITY_PUBLIC_ORIGIN:http://127.0.0.1:3000}
   secure-cookies: ${IDENTITY_SECURE_COOKIES:false}
@@ -76,6 +84,10 @@ spring:
   config:
     activate:
       on-profile: dev
+orders:
+  checkout:
+    # D6: local development only; the dev profile is never used outside the developer machine.
+    enabled: ${ORDERS_CHECKOUT_ENABLED:true}
 springdoc:
   api-docs:
     enabled: true

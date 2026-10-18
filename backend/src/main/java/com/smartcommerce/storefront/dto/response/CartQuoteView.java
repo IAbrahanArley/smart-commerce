@@ -4,7 +4,12 @@ import java.util.List;
 
 /**
  * {@code subtotal} sums AVAILABLE lines only; {@code purchasable} is true when every line is
- * AVAILABLE. Delivery options join this view after SC-006 (see CartQuoteService).
+ * AVAILABLE. {@code delivery} lists the store's enabled options (SC-006) with their fees; the buyer
+ * picks one and the checkout total is subtotal plus the chosen fee.
  */
 public record CartQuoteView(
-    String currency, List<CartQuoteLineView> lines, String subtotal, boolean purchasable) {}
+    String currency,
+    List<CartQuoteLineView> lines,
+    String subtotal,
+    boolean purchasable,
+    List<PublicFulfillmentView.Option> delivery) {}
