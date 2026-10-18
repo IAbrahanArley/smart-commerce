@@ -81,7 +81,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       }
       form.reset();
       if (mode === "login") {
-        router.replace("/conta");
+        router.replace("/lojas");
         router.refresh();
       } else if (mode === "activation") {
         token.current = "";
@@ -108,7 +108,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         {error || success}
       </p>
       {mode === "activation" && success ? null : (
-        <form onSubmit={submit} aria-busy={pending}>
+        <form onSubmit={(event) => void submit(event)} aria-busy={pending}>
           {mode !== "activation" ? <div className="form-field">
             <label htmlFor="email">E-mail</label>
             <input id="email" name="email" type="email" autoComplete={mode === "login" ? "username" : "email"}

@@ -13,7 +13,11 @@ Decisões: [ADR-0004](docs/architecture/adr/0004-project-bootstrap.md). Resultad
 
 SC-001 publicada no repositório privado confirmado pelo usuário. A [CI remota](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797904235) aprovou backend e admin no commit `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`: seis testes backend sem falhas/erros/ignorados, lint, tipos, build e smoke HTTP do admin aprovados. A primeira execução falhou no seletor Corretto; foi corrigido para Java `21`, sem alterar dependências da aplicação. SEC-003 permanece aberta, sem exceção aprovada: a última auditoria registrou cinco alertas altos na cadeia de desenvolvimento e zero com `--omit=dev`; ESLint 9 está fora de suporte. CI verde não aceita esse risco; a autorização da SC-002 foi concedida separadamente pelo responsável. Detalhes em [validação](docs/quality/SC-001-VALIDATION.md), [segurança](docs/security/SC-001-REVIEW.md) e [publicação](docs/quality/SC-001-PUBLICATION.md).
 
+Agentes de IA: instruções em [AGENTS.md](AGENTS.md) (Claude via [CLAUDE.md](CLAUDE.md)); checks e revisão em [docs/quality/README.md](docs/quality/README.md); ferramentas e pendências do toolkit em [docs/setup.md](docs/setup.md).
+
 ## Estrutura
+
+A página inicial do admin (`/`) apresenta a plataforma. `/admin/produtos` e `/loja/produto` são demonstrações locais com dados fictícios, sem API, autenticação ou persistência; `/componentes` reúne amostras dos componentes locais. Para operar lojas reais, use `/entrar` e `/lojas`; a vitrine real continua na aplicação `storefront-web`. As URLs operacionais foram preservadas. Ver [validação da landing](docs/quality/LANDING-VALIDATION.md).
 
 ```text
 backend/          Spring Boot, Maven Wrapper, Flyway e testes
@@ -90,7 +94,7 @@ Abra o admin para criar a conta. O helper inicia o perfil `dev`; as mensagens s�
 
 Caixa DEV padrão no Windows: `%LOCALAPPDATA%/SmartCommerce/mail`; no Linux: `~/.local/share/SmartCommerce/mail`. Abra o arquivo `.eml` mais recente como texto e copie o link completo, incluindo `#token=...`. O link é sensível: não envie ao chat nem versione mensagens. Tokens duram 30 minutos; o reenvio tem cooldown de 60 segundos.
 
-Rotas: `/cadastro`, `/confirmar-email`, `/entrar`, `/conta` e `/lojas/{id}`. API de mesma origem via Next.js: `/api/auth/csrf`, `/registration`, `/activation`, `/login`, `/me` e `/logout`, todos sob `/api/auth`. Mutações exigem CSRF; senhas e sessões não usam localStorage.
+Rotas: `/cadastro`, `/confirmar-email`, `/entrar`, `/lojas` (minhas lojas, destino após o login), `/conta`, `/lojas/{id}` e `/lojas/{id}/entrega`. API de mesma origem via Next.js: `/api/auth/csrf`, `/registration`, `/activation`, `/login`, `/me` e `/logout`, todos sob `/api/auth`. Mutações exigem CSRF; senhas e sessões não usam localStorage.
 
 Para encerrar, Ctrl+C nos terminais e parada do banco preservando volume:
 
@@ -155,7 +159,7 @@ A SC-003 cria o vínculo OWNER junto com a empresa/loja; listagem e detalhe exig
 ## Demonstração da SC-003
 
 1. Criar conta e confirmar o e-mail pelo fluxo local descrito acima; depois entrar.
-2. Em Minha conta, informar nome da empresa, nome da loja e identificador único (ex.: minha-loja).
+2. Em Minhas lojas, informar nome da empresa, nome da loja e identificador único (ex.: minha-loja).
 3. Criar a loja e abrir seus detalhes. O estado “Em configuração” não representa vitrine publicada.
 4. Entrar com outro lojista: somente os vínculos dele aparecem. Um identificador de loja de outro lojista não permite consulta.
 
