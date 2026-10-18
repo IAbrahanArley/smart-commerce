@@ -13,6 +13,8 @@ Decisões: [ADR-0004](docs/architecture/adr/0004-project-bootstrap.md). Resultad
 
 SC-001 publicada no repositório privado confirmado pelo usuário. A [CI remota](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38797904235) aprovou backend e admin no commit `b6475731a0b5eb88b3c9c963e06fb2b78ce25b7b`: seis testes backend sem falhas/erros/ignorados, lint, tipos, build e smoke HTTP do admin aprovados. A primeira execução falhou no seletor Corretto; foi corrigido para Java `21`, sem alterar dependências da aplicação. SEC-003 permanece aberta, sem exceção aprovada: a última auditoria registrou cinco alertas altos na cadeia de desenvolvimento e zero com `--omit=dev`; ESLint 9 está fora de suporte. CI verde não aceita esse risco; a autorização da SC-002 foi concedida separadamente pelo responsável. Detalhes em [validação](docs/quality/SC-001-VALIDATION.md), [segurança](docs/security/SC-001-REVIEW.md) e [publicação](docs/quality/SC-001-PUBLICATION.md).
 
+Agentes de IA: instruções em [AGENTS.md](AGENTS.md) (Claude via [CLAUDE.md](CLAUDE.md)); checks e revisão em [docs/quality/README.md](docs/quality/README.md); ferramentas e pendências do toolkit em [docs/setup.md](docs/setup.md).
+
 ## Estrutura
 
 ```text

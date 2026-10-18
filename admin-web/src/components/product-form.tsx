@@ -121,7 +121,7 @@ export default function ProductForm({ tenantId, product, storePublished = false,
     formRef.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>(field === "variants" ? '[name="variant-0-sku"]' : `[name="${field}"]`)?.focus();
   }, [busy, errors]);
 
-  const form = <form ref={formRef} className="workspace-main" onSubmit={submit} noValidate aria-busy={busy}>
+  const form = <form ref={formRef} className="workspace-main" onSubmit={(event) => void submit(event)} noValidate aria-busy={busy}>
     <h2>Identificação</h2>
     {!product ? <div className="form-field"><label htmlFor="product-kind">Tipo de produto</label><select id="product-kind" value={kind} disabled={busy} onChange={event => { if (!variants.length || window.confirm("Mudar o tipo descarta as combinações ainda não salvas. Deseja continuar?")) { setKind(event.target.value as "SIMPLE" | "VARIABLE"); setVariants([]); } }}><option value="SIMPLE">Simples — um SKU e um estoque</option><option value="VARIABLE">Com variações — SKU e estoque por combinação</option></select><p className="field-help">O tipo não pode ser alterado depois do cadastro.</p></div> : <p className="field-help">{kind === "VARIABLE" ? "Produto com variações. Preços e estoque são gerenciados por combinação." : "Produto simples."}</p>}
     {([['name', 'Nome do produto', 'Até 120 caracteres.'], ['sku', 'SKU', 'Identificador único nesta loja. Letras maiúsculas e minúsculas são diferentes.'], ['price', 'Preço de venda (R$)', 'Maior que zero. Exemplo: 49,90. Sem separador de milhares.'], ['cost', 'Custo (R$) — opcional', 'Zero é permitido. Deixe em branco se ainda não souber.']] as const).filter(([field]) => field === "name" || kind === "SIMPLE").map(([field, label, hint]) => <div className="form-field" key={field}>

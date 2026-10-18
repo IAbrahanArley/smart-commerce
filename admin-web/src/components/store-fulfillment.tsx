@@ -93,7 +93,7 @@ export default function StoreFulfillment({ tenantId }: { tenantId: string }) {
     {state === "loading" ? <p role="status">Consultando a configuração de entrega…</p> : null}
     {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar a configuração de entrega.</p>
       <button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar entrega novamente</button></> : null}
-    {state === "ready" && fields && saved ? <form ref={formRef} className="fulfillment-form" onSubmit={submit} noValidate aria-busy={busy}>
+    {state === "ready" && fields && saved ? <form ref={formRef} className="fulfillment-form" onSubmit={(event) => void submit(event)} noValidate aria-busy={busy}>
       <fieldset className="variant-definition">
         <legend>Retirada na loja</legend>
         <label className="check-field"><input type="checkbox" name="pickupEnabled" checked={fields.pickupEnabled} disabled={disabled} onChange={event => update("pickupEnabled", event.target.checked)} /> Oferecer retirada</label>

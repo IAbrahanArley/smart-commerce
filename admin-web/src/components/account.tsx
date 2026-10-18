@@ -55,7 +55,7 @@ export default function AccountPanel() {
     {loading ? <p role="status">Consultando sua conta…</p> : account ? <>
       <p>Você está conectado ao Smart Commerce.</p>
       <dl><dt>E-mail</dt><dd className="account-email">{account.email}</dd></dl>
-      <button type="button" onClick={logout} disabled={pending}>{pending ? "Saindo…" : "Sair da conta"}</button>
+      <button type="button" onClick={() => void logout()} disabled={pending}>{pending ? "Saindo…" : "Sair da conta"}</button>
     </> : signedOut ? <><p>Entre para consultar sua conta. Sua sessão pode ter expirado.</p><Link href="/entrar">Entrar</Link></> : null}
   </section>{account ? <StoresPanel onSessionExpired={sessionExpired} /> : null}</div>;
 }

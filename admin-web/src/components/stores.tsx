@@ -84,7 +84,7 @@ export default function StoresPanel({ onSessionExpired }: { onSessionExpired: ()
         className={error ? "feedback feedback-error" : created ? "feedback feedback-success" : "feedback-empty"}>
         {error || (created ? <>Loja criada. <Link href={`/lojas/${encodeURIComponent(created.id)}`}>Visualizar {created.store.name}</Link></> : "")}
       </p>
-      <form onSubmit={createStore} aria-busy={pending}>
+      <form onSubmit={(event) => void createStore(event)} aria-busy={pending}>
         <div className="form-field"><label htmlFor="company-name">Nome da empresa</label>
           <input id="company-name" name="companyName" autoComplete="organization" required maxLength={240} pattern=".*\S.*"
             onInput={event => event.currentTarget.setCustomValidity("")} />
