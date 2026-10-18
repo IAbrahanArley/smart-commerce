@@ -52,3 +52,10 @@ V11 cria inventory_reservation (tenant, variante, pedido, quantidade, estado ACT
 ## Pedidos (SC-008)
 
 V13 cria `sales_order` (tenant, loja, número por loja via `sales_order_counter`, estado PENDING_PAYMENT/EXPIRED/CANCELLED, totais em NUMERIC sem arredondamento com total = subtotal + frete, entrega escolhida e texto exibido, dados mínimos do comprador do D2, endereço só para frete fixo, prazo da reserva, `request_id` único por tenant com impressão digital e hash do token) e `sales_order_item` (snapshot de nome, opções, SKU, preço e custo opcional, quantidade e total da linha), com FKs compostas por tenant para loja, pedido e variante. A FK composta `inventory_reservation(order_id, tenant_id) → sales_order` foi criada como NOT VALID: vale para toda reserva nova, sem rejeitar reservas anteriores aos pedidos. `order_rate_limit` guarda contadores de tentativas com chave HMAC efêmera, sem IP em claro. Não há tabela Customer. [ADR-0012](adr/0012-stock-reservation-cart-orders.md).
+
+V14 indexa `sales_order_item(variant_id, tenant_id)` para a FK RESTRICT. V15 (SC-010) acrescenta a `sales_order` `expired_at`, `cancelled_at`, `cancelled_by` (FK para `identity_user`), `cancel_reason` (3–300 caracteres) e `anonymized_at`, com estas CHECKs:
+- dados de cancelamento existem exatamente em pedidos `CANCELLED`;
+- os campos do comprador só ficam nulos, todos de uma vez, em pedido `EXPIRED`/`CANCELLED` anonimizado;
+- a regra do endereço (V13) vale enquanto o pedido guarda dados pessoais.
+
+Também cria índices para os lotes de expiração e anonimização e para a lista filtrada do admin. A anonimização substitui a impressão digital do `requestId` por zeros, porque ela deriva dos dados do comprador. Nenhum dado é alterado pela migração.

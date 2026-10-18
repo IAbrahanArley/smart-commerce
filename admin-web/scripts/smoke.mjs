@@ -5,6 +5,23 @@ import { decimalInput, formatBRL } from "../src/lib/catalog.ts";
 import { fulfillmentFields, fulfillmentPayload, fulfillmentText } from "../src/lib/fulfillment.ts";
 import { reservedStockMessage, wholeQuantity } from "../src/lib/inventory.ts";
 import { storefrontUrl } from "../src/lib/tenant-api.ts";
+import { cancelReason, formatDateTime, formatPhone, formatPostalCode, orderCursor, orderStatus, ordersApiPath, ordersPagePath } from "../src/lib/orders.ts";
+
+// Orders (SC-010): URL values are validated before reaching the API; the reason mirrors the backend.
+assert.equal(orderStatus("EXPIRED"), "EXPIRED");
+for (const invalid of [undefined, "", "PAID", "expired"]) assert.equal(orderStatus(invalid), null, String(invalid));
+assert.equal(orderCursor("21"), "21");
+for (const invalid of [undefined, "0", "-1", "01", "1e3", "1234567890123456789"]) assert.equal(orderCursor(invalid), null, String(invalid));
+assert.equal(ordersApiPath("t/1", "CANCELLED", "21"), "/api/tenants/t%2F1/orders?status=CANCELLED&after=21");
+assert.equal(ordersApiPath("t", null, null), "/api/tenants/t/orders");
+assert.equal(ordersPagePath("t", "EXPIRED", "40"), "/lojas/t/pedidos?situacao=EXPIRED&apos=40");
+assert.deepEqual(cancelReason("  Cliente desistiu  "), { reason: "Cliente desistiu" });
+for (const invalid of ["", "ab", "   ", "x".repeat(301), "linha\nquebrada", "zero​width"]) assert.ok("error" in cancelReason(invalid), JSON.stringify(invalid));
+assert.ok("reason" in cancelReason("é".repeat(300)));
+assert.equal(formatDateTime("2026-10-18T15:30:00Z").replace(/,/g, ""), "18/10/2026 12:30");
+assert.equal(formatDateTime(null), "—");
+assert.equal(formatPhone("11988887777"), "(11) 98888-7777");
+assert.equal(formatPostalCode("01001000"), "01001-000");
 
 const storefrontOrigin = process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN;
 delete process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN;
@@ -108,6 +125,8 @@ try {
     ["/lojas", "Minhas lojas", "Consultando suas lojas"],
     ["/lojas/00000000-0000-0000-0000-000000000000", "Minha loja", "Consultando sua loja"],
     ["/lojas/00000000-0000-0000-0000-000000000000/entrega", "Entrega", "Consultando a configuração de entrega"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'name="situacao"'],
+    ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Consultando pedido", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Consultando catálogo"],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/novo", "Novo produto", 'aria-label="Navegação da loja"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001", "Editar produto", 'aria-label="Trilha de navegação"'],
@@ -124,7 +143,7 @@ try {
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /Página não encontrada/);
-  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
+  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
 } finally {
   server.kill();
 }

@@ -26,6 +26,15 @@ Aplicação das regras acima, sem mudar valores aprovados:
 - **FK `inventory_reservation → sales_order` NOT VALID:** vale para toda linha nova ou alterada. A validação (`VALIDATE CONSTRAINT`) fica pendente para migração própria antes da primeira implantação fora de DEV, depois de confirmar que não há reservas órfãs.
 - **Loja do item:** a FK composta garante o mesmo tenant entre item, pedido e variante. Que a variante pertence à loja do pedido é garantido pelo serviço, que revalida cada variante pelo slug, e não por constraint. Aceito como está; o reforço no banco fica para quando houver variantes compartilhadas ou escrita fora do checkout.
 
+### Decisões da SC-010 (2026-10-18)
+
+O responsável autorizou a SC-010 e aprovou:
+
+- **Rotina de expiração:** roda no próprio backend a cada 1 minuto, em lotes de 100 com `FOR UPDATE SKIP LOCKED`. Marca como `EXPIRED` os pedidos `PENDING_PAYMENT` vencidos e libera as reservas deles. A troca de estado é condicional (só sai de `PENDING_PAYMENT`), para que várias instâncias nunca liberem duas vezes. O disponível já não depende da rotina: reserva vencida deixa de contar pelo relógio (SC-005).
+- **Anonimização (D2):** 90 dias após a criação, pedidos `EXPIRED` ou `CANCELLED` perdem nome, e-mail, chave de e-mail, telefone e endereço completo. A impressão digital do `requestId` também é substituída, porque é derivada desses dados. Ficam número, itens, valores, tipo e texto da entrega e datas, com `anonymized_at` registrado. Uma rotina diária faz isso, em lotes com `SKIP LOCKED`. A operação é irreversível.
+- **Cancelamento pelo lojista:** somente o OWNER da loja, e só de pedido `PENDING_PAYMENT` ainda no prazo. Motivo obrigatório, de 3 a 300 caracteres numa linha, visível só no admin. Registra quem cancelou e quando, e libera as reservas na mesma transação. Repetir o cancelamento de um pedido cancelado devolve o mesmo resultado, sem novo efeito. Pedido expirado não pode ser cancelado (`409 ORDER_EXPIRED`). O comprador vê apenas "Pedido cancelado".
+- **Admin:** item "Pedidos" no menu da loja. Lista por cursor (número decrescente, 20 por página) com filtro por situação efetiva, em que pendente vencido conta como expirado. O detalhe mostra itens com SKU e custo do snapshot, entrega, valores e dados do comprador, exceto quando anonimizados. Horários em America/Sao_Paulo. Pedido de outra loja, ou sem vínculo OWNER, responde 404 uniforme.
+
 ## Contexto
 
 - [BUSINESS_RULES](../../product/BUSINESS_RULES.md): pedido nasce `PENDING_PAYMENT`, estoque é reservado com expiração, pagamento confirmado gera baixa, cancelamento/expiração libera reserva; disponível = físico − reservado, nunca negativo; snapshot de preço/custo/frete/desconto; dados do comprador não são compartilhados entre lojas. O tempo de reserva deve ser definido antes da implementação.

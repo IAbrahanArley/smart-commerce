@@ -88,9 +88,20 @@ public class InventoryReservationService {
   }
 
   /**
+   * Records the expired reservations of one expired order (SC-010). They no longer count toward
+   * availability, so no balance lock is taken: the expiration batch can close many orders without
+   * locking stock rows out of order. Repeated calls return 0.
+   */
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public int expireOrder(UUID tenant, UUID order) {
+    if (tenant == null || order == null) throw new IllegalArgumentException("Invalid expiry");
+    return reservations.expireOrder(tenant, order, ReservationPolicy.now(clock));
+  }
+
+  /**
    * Marks up to {@code limit} logically expired reservations as EXPIRED. Correctness never depends
-   * on this call: expired rows stop counting as soon as {@code expires_at <= now}. The scheduled
-   * routine that calls it (and expires the order) belongs to SC-010.
+   * on this call: expired rows stop counting as soon as {@code expires_at <= now}. Orders expire
+   * through {@link #expireOrder}; this sweep is kept for rows without that path.
    */
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public int expireDue(int limit) {
