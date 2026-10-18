@@ -6,7 +6,6 @@ import { apiRequest, requestError } from "@/lib/auth-api";
 import { storefrontUrl, type TenantStore } from "@/lib/tenant-api";
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
-import StoreFulfillment from "./store-fulfillment";
 
 export default function StoreDetail({ tenantId }: { tenantId: string }) {
   const [store, setStore] = useState<TenantStore | null>(null);
@@ -50,7 +49,7 @@ export default function StoreDetail({ tenantId }: { tenantId: string }) {
   }, [tenantId, attempt]);
 
   return <section className="page" aria-labelledby="store-title">
-    <PageHeader id="store-title" title={state === "ready" && store ? <span translate="no">{store.store.name}</span> : "Minha loja"} back={{ href: "/conta", label: "Voltar para minhas lojas" }}
+    <PageHeader id="store-title" title={state === "ready" && store ? <span translate="no">{store.store.name}</span> : "Minha loja"}
       description={state === "ready" && store ? store.store.status === "PUBLISHED" ? <StatusBadge tone="positive">Vitrine publicada</StatusBadge> : <StatusBadge tone="neutral">Vitrine oculta</StatusBadge> : undefined}
       action={state === "ready" ? <Link className="button-link" href={`/lojas/${encodeURIComponent(tenantId)}/produtos`}>Gerenciar produtos</Link> : undefined} />
     {state === "loading" ? <p role="status">Consultando sua loja…</p> : null}
@@ -71,7 +70,9 @@ export default function StoreDetail({ tenantId }: { tenantId: string }) {
         </div>
         {store.store.status === "DRAFT" ? <p className="field-help">O endereço público ficará indisponível até você publicar a loja.</p> : null}
       </section>
-      <StoreFulfillment tenantId={tenantId} />
+      <section className="side-card" aria-labelledby="store-fulfillment-title"><h2 id="store-fulfillment-title">Entrega</h2>
+        <p>Retirada na loja e frete fixo exibidos na vitrine publicada.</p>
+        <Link className="back-link" href={`/lojas/${encodeURIComponent(tenantId)}/entrega`}>Configurar entrega</Link></section>
     </> : null}
   </section>;
 }

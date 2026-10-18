@@ -81,7 +81,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       }
       form.reset();
       if (mode === "login") {
-        router.replace("/conta");
+        router.replace("/lojas");
         router.refresh();
       } else if (mode === "activation") {
         token.current = "";

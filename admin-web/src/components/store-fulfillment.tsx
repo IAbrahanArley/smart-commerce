@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { apiRequest, requestError } from "@/lib/auth-api";
 import { formatBRL } from "@/lib/catalog";
+import PageHeader from "@/components/page-header";
 import { type Fulfillment, type FulfillmentErrors, type FulfillmentFields, FULFILLMENT_TEXT_LIMIT, fulfillmentFields, fulfillmentPayload } from "@/lib/fulfillment";
 
 type TextField = keyof FulfillmentErrors;
@@ -10,7 +12,7 @@ type TextField = keyof FulfillmentErrors;
 export default function StoreFulfillment({ tenantId }: { tenantId: string }) {
   const [saved, setSaved] = useState<Fulfillment | null>(null);
   const [fields, setFields] = useState<FulfillmentFields | null>(null);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "signed-out" | "missing" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
   const [conflict, setConflict] = useState(false);
@@ -26,6 +28,8 @@ export default function StoreFulfillment({ tenantId }: { tenantId: string }) {
   useEffect(() => {
     const controller = new AbortController();
     apiRequest(path, { signal: controller.signal }).then(async response => {
+      if (response.status === 401) { setState("signed-out"); return; }
+      if (response.status === 403 || response.status === 404) { setState("missing"); return; }
       if (!response.ok) throw new Error();
       const current: Fulfillment = await response.json();
       setSaved(current); setFields(fulfillmentFields(current)); setConflict(false); setState("ready");
@@ -87,10 +91,11 @@ export default function StoreFulfillment({ tenantId }: { tenantId: string }) {
     {errors[field] ? <p id={`fulfillment-${field}-error`} className="field-error">{errors[field]}</p> : null}
   </div> : null;
 
-  return <section className="store-create" aria-labelledby="fulfillment-title" aria-busy={state === "loading" || busy}>
-    <h2 id="fulfillment-title">Entrega</h2>
-    <p>Escolha como o comprador recebe o pedido. Opções ativas, valor e textos ficam visíveis na vitrine publicada; opções inativas não aparecem.</p>
+  return <section className="page page-panel" aria-labelledby="fulfillment-title" aria-busy={state === "loading" || busy}>
+    <PageHeader id="fulfillment-title" title="Entrega" description="Escolha como o comprador recebe o pedido. Opções ativas, valor e textos ficam visíveis na vitrine publicada; opções inativas não aparecem." />
     {state === "loading" ? <p role="status">Consultando a configuração de entrega…</p> : null}
+    {state === "signed-out" ? <><p role="status">Entre novamente para consultar a entrega. Sua sessão pode ter expirado.</p><Link href="/entrar">Entrar</Link></> : null}
+    {state === "missing" ? <p role="status">Loja indisponível. Volte para suas lojas e escolha uma loja à qual você tem acesso.</p> : null}
     {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar a configuração de entrega.</p>
       <button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar entrega novamente</button></> : null}
     {state === "ready" && fields && saved ? <form ref={formRef} className="fulfillment-form" onSubmit={(event) => void submit(event)} noValidate aria-busy={busy}>

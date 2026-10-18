@@ -92,7 +92,7 @@ Abra o admin para criar a conta. O helper inicia o perfil `dev`; as mensagens s�
 
 Caixa DEV padrão no Windows: `%LOCALAPPDATA%/SmartCommerce/mail`; no Linux: `~/.local/share/SmartCommerce/mail`. Abra o arquivo `.eml` mais recente como texto e copie o link completo, incluindo `#token=...`. O link é sensível: não envie ao chat nem versione mensagens. Tokens duram 30 minutos; o reenvio tem cooldown de 60 segundos.
 
-Rotas: `/cadastro`, `/confirmar-email`, `/entrar`, `/conta` e `/lojas/{id}`. API de mesma origem via Next.js: `/api/auth/csrf`, `/registration`, `/activation`, `/login`, `/me` e `/logout`, todos sob `/api/auth`. Mutações exigem CSRF; senhas e sessões não usam localStorage.
+Rotas: `/cadastro`, `/confirmar-email`, `/entrar`, `/lojas` (minhas lojas, destino após o login), `/conta`, `/lojas/{id}` e `/lojas/{id}/entrega`. API de mesma origem via Next.js: `/api/auth/csrf`, `/registration`, `/activation`, `/login`, `/me` e `/logout`, todos sob `/api/auth`. Mutações exigem CSRF; senhas e sessões não usam localStorage.
 
 Para encerrar, Ctrl+C nos terminais e parada do banco preservando volume:
 
@@ -157,7 +157,7 @@ A SC-003 cria o vínculo OWNER junto com a empresa/loja; listagem e detalhe exig
 ## Demonstração da SC-003
 
 1. Criar conta e confirmar o e-mail pelo fluxo local descrito acima; depois entrar.
-2. Em Minha conta, informar nome da empresa, nome da loja e identificador único (ex.: minha-loja).
+2. Em Minhas lojas, informar nome da empresa, nome da loja e identificador único (ex.: minha-loja).
 3. Criar a loja e abrir seus detalhes. O estado “Em configuração” não representa vitrine publicada.
 4. Entrar com outro lojista: somente os vínculos dele aparecem. Um identificador de loja de outro lojista não permite consulta.
 

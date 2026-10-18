@@ -140,7 +140,8 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
   }
 
   return <section className="page page-panel" aria-labelledby="inventory-title">
-    <PageHeader id="inventory-title" title="Estoque do produto" back={{ href: productPath, label: "Voltar para o produto" }} />
+    <PageHeader id="inventory-title" title="Estoque do produto" current="Estoque"
+      breadcrumbs={[{ href: `/lojas/${encodeURIComponent(tenantId)}/produtos`, label: "Produtos" }, { href: productPath, label: product?.name ?? "Produto" }]} />
     {state === "loading" ? <p role="status">Consultando estoque…</p> : null}
     {state === "signed-out" ? <><p role="status">Entre novamente para consultar o estoque.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <p role="status">Produto ou loja indisponível. Escolha uma loja à qual você tem acesso.</p> : null}
