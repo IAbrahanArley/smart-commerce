@@ -25,9 +25,19 @@ As opções de entrega ainda não entram na cotação; a junção fica para a SC
 - **Backend:** `mvnw.cmd -B -ntp verify -Dspring-boot.repackage.skip=true` com Corretto 21.0.9 e PostgreSQL 18.6/Testcontainers; BUILD SUCCESS em 2026-10-18 08:21:46 -03:00. 128 testes: 56 unitários/arquiteturais e 72 integrações, zero falhas, erros ou ignorados; Spotless limpo. Log: `backend/target/integration-full-verify.log`. O repackage foi pulado porque o backend local executa a partir de `target/`; a CI empacota em runner limpo.
 - **Admin e vitrine:** `npm ci`, `npm run lint`, `npm run typecheck`, `npm run build` e `npm run test:smoke` aprovados em cópias isoladas (mesmo código e lockfiles), para não substituir `.next` dos servidores `next start` em execução. O smoke do admin cobre entrega, novo produto com navegação da loja e mensagem RESERVED_STOCK; o da vitrine cobre carrinho (cookie saneado e por loja, cotação do backend, atributos do cookie e rejeição de origem externa) e ausência de credenciais no upstream.
 
+## Navegador com API real
+
+Em 2026-10-18, com autorização do responsável, backend, admin e vitrine foram reiniciados com o código integrado (`next build` + `next start`; os servidores anteriores, iniciados às 07:58 por outra sessão, foram encerrados). O Flyway validou 12 migrações e aplicou V11 e V12 ao banco local sem erros. Fixture: conta, loja `validacao-adr0011` e produto "Camiseta Validação" da validação do ADR-0011.
+
+- **Entrega (SC-006):** a seção Entrega aparece nos detalhes da loja, no layout redesenhado. Retirada com instruções e frete fixo de 12,50 com área atendida foram salvos ("Entrega salva."), reapareceram após recarregar (valor exibido como "12,50") e a API pública passou a listar só as opções ativas (`PICKUP` e `FIXED_SHIPPING` 12.50 BRL), com acentos corretos em UTF-8.
+- **Estoque com reservado (SC-005):** como reservas só nascem com pedidos (SC-008), foi inserida no banco local uma reserva sintética de 3 unidades da combinação Azul · M (5 físicas), expirando em 15 minutos. A tela de estoque mostrou físico 5, reservado 3 e disponível para venda 2. Uma retirada de 3 unidades foi bloqueada (D7) com a mensagem "Há 3 unidades reservadas por pedidos pendentes…", sem alterar o saldo.
+- **Carrinho (SC-007 + ajuste de integração):** na página do produto, com seletores por atributo do redesenho, "Adicionar ao carrinho" com 3 unidades levou ao carrinho com "Quantidade indisponível. Reduza a quantidade." e subtotal R$ 0,00. Com 2 unidades: "Disponível", R$ 105,00. O cookie do carrinho não é visível a `document.cookie` (HttpOnly). Depois de antecipar o vencimento da reserva sintética no banco, ela continuou com status ACTIVE (a rotina de expiração é da SC-010), mas o disponível voltou a 5 e o carrinho aceitou 5 unidades por R$ 262,50, confirmando a expiração lógica sem rotina.
+
+Interação com o painel do navegador: com o painel oculto, a página fica com viewport 0×0, `requestAnimationFrame` não dispara e o React não revela o conteúdo transmitido por streaming; nesse estado, os campos da entrega foram preenchidos por eventos de DOM. Com o painel visível, o carrinho foi exercitado com cliques reais. A reserva sintética permanece no banco local, vencida e sem efeito na disponibilidade, até a rotina da SC-010 existir.
+
 ## Limitações e pendências
 
-- Nenhuma das três funcionalidades nem o redesenho foram exercitados em navegador com a API real nesta integração; os servidores locais (8080/3000/3001) ainda executam o código anterior e precisam ser reiniciados para refletir V11/V12 e as telas novas. Axe, leitor de tela e avaliação WCAG completa não executados.
+- Axe, leitor de tela e avaliação WCAG completa não executados.
 - Reservas só nascem com o pedido (SC-008); até lá o caminho de reserva é exercitado pelos testes. FK composta `order_id → sales_order` pendente para a SC-008.
 - SC-008 a SC-011 não iniciadas e dependem de autorização. Textos de privacidade (D2) e validação jurídica pendentes antes de produção.
 - SEC-003 permanece aberta e inalterada, sem aceite de risco.
