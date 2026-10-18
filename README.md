@@ -17,6 +17,8 @@ Agentes de IA: instruções em [AGENTS.md](AGENTS.md) (Claude via [CLAUDE.md](CL
 
 ## Estrutura
 
+A página inicial do admin (`/`) apresenta a plataforma. `/admin/produtos` e `/loja/produto` são demonstrações locais com dados fictícios, sem API, autenticação ou persistência; `/componentes` reúne amostras dos componentes locais. Para operar lojas reais, use `/entrar` e `/lojas`; a vitrine real continua na aplicação `storefront-web`. As URLs operacionais foram preservadas. Ver [validação da landing](docs/quality/LANDING-VALIDATION.md).
+
 ```text
 backend/          Spring Boot, Maven Wrapper, Flyway e testes
 admin-web/        Next.js App Router, TypeScript e shell administrativo

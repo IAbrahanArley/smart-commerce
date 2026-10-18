@@ -86,7 +86,20 @@ try {
   const html = await home.text();
   assert.match(html, /<html[^>]*lang="pt-BR"/);
   assert.match(html, /<main[^>]*id="conteudo"/);
-  assert.match(html, /<h1[^>]*>Administração do Smart Commerce<\/h1>/);
+  assert.match(html, /<h1[^>]*>Sua loja\.<br\s*\/?>\s*<span>Tudo conectado\.<\/span><\/h1>/);
+  assert.ok(html.includes('class="presentation landing-page"'), "Direção visual restrita à home");
+  assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1);
+  assert.ok(!html.includes('class="site-header"'), "Landing sem cabeçalho operacional");
+  for (const [path, title] of [["/componentes", "Fundamentos e componentes"], ["/admin/produtos", "Demonstração do admin"], ["/loja/produto", "Demonstração da loja"]]) {
+    const response = await fetch(`${baseUrl}${path}`, { signal: AbortSignal.timeout(5000) });
+    assert.equal(response.status, 200, path);
+    const page = await response.text();
+    assert.ok(page.includes(title), `${path}: título`);
+    assert.ok(!page.includes('class="presentation landing-page"'), `${path}: sem tema da landing`);
+    assert.equal((page.match(/<main[\s>]/g) ?? []).length, 1, `${path}: main único`);
+    assert.equal((page.match(/<h1[\s>]/g) ?? []).length, 1, `${path}: h1 único`);
+    assert.equal(response.headers.get("referrer-policy"), "no-referrer", path);
+  }
   for (const [path, title, field] of [
     ["/cadastro", "Criar conta", 'name="email"'],
     ["/entrar", "Entrar", 'autoComplete="current-password"'],
@@ -106,6 +119,7 @@ try {
     const page = await response.text();
     assert.ok(page.includes(title), `${path}: título`);
     assert.ok(page.includes(field), `${path}: conteúdo semântico`);
+    assert.ok(!page.includes('class="presentation landing-page"'), `${path}: sem tema da landing`);
   }
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);

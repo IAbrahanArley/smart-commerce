@@ -1,6 +1,6 @@
 # Smart Commerce — Design system
 
-Versão: 1.2 · Atualizada em 2026-10-18. Direção escolhida pelo responsável: **profissional e confiável, com azul profundo, fundo claro e visual simples, evoluindo o padrão existente**. Este é o padrão da plataforma para as entregas autorizadas.
+Versão: 1.3 · Atualizada em 2026-10-18. Direção escolhida pelo responsável: **profissional e confiável, com azul profundo, fundo claro e visual simples, evoluindo o padrão existente**. Este é o padrão da plataforma para as entregas autorizadas, com a exceção exclusiva da landing `/` descrita na governança abaixo.
 
 Este documento é a fonte oficial das decisões de design do Smart Commerce, subordinada ao escopo do [PRD](../product/PRD.md), à [Sprint 1](../product/SPRINT_01.md), à [arquitetura](../architecture/ARCHITECTURE.md) e aos ADRs aplicáveis. Decisões funcionais e de segurança da autenticação pertencem ao [ADR-0005](../architecture/adr/0005-identity-authentication.md), cujas D1–D6 foram aprovadas separadamente. Este documento não amplia esse escopo.
 
@@ -155,6 +155,24 @@ Frontend revisa a implementação e QA faz avaliação independente conforme [FR
 Usar dados sintéticos, artefatos sem segredos e retenção controlada; screenshots mascarados não sanitizam traces, URLs ou respostas capturadas. Separar verificações executadas/aprovadas, reprovadas, bloqueadas, pendentes e não aplicáveis justificadas.
 
 ## Governança de mudanças
+
+### Landing e demonstrações — escopo autorizado em 2026-10-18
+
+#### Evolução exclusiva da landing — direção Pacto
+
+Após a análise da referência pública `pactosolucoes.com.br` (redirecionada para `sistemapacto.com.br`), o responsável autorizou aplicar essa direção **somente à landing page**. A decisão permite título Unbounded e corpo Mona Sans, fundo escuro, destaque azul, degradês, vidro no cabeçalho, botões em cápsula e movimentos suaves exclusivamente na rota `/`. Motivação: dar à apresentação pública uma hierarquia e presença visual próprias, mantendo a identidade operacional existente. Alternativa considerada: preservar o tratamento claro anterior; a direção escura foi escolhida pelo responsável ao solicitar a aplicação da referência.
+
+Tokens locais `--lp-*`: fundo `#050A16`, superfície `#0C1526`, texto `#F7F9FF`, secundário `#B4BFD4`, ação `#3264EF`, fundo claro `#F5F7FC` e texto escuro `#16243B`. Fontes WOFF2 hospedadas localmente com licenças SIL OFL preservadas; sem carregamento de provedor externo. Controles têm pelo menos 44px, foco contrastante e fallback de movimento reduzido. Animações decorativas contínuas foram limitadas a menos de cinco segundos; conteúdo permanece disponível sem observer/JavaScript. Breakpoints, teclado, contraste e isolamento têm evidências e limites em [LANDING-VALIDATION.md](../quality/LANDING-VALIDATION.md).
+
+O wrapper recebe `.landing-page` somente quando `usePathname()` é `/`, incluindo header/main/footer. Novas regras CSS, fontes selecionadas e animações são restritas a esse wrapper. Não sobrescrever `:root`, `--sc-*` nem `presentation.css` para propagar essa direção. `/admin/produtos`, `/loja/produto`, `/componentes`, autenticação, admin real e `storefront-web` conservam o padrão anterior. Prévia de interface dentro da landing mantém Arial e os tokens operacionais. As alterações prévias de grupos de rotas continuam; não há mudança de API, tenant, dependências ou arquitetura.
+
+Referência primária: inspeção REA de 2026-10-18 do DOM, CSS e JavaScript públicos da Pacto. A referência orienta técnicas de composição e animação; marca, imagens, textos comerciais, números e depoimentos não são copiados. Skills editoriais são adaptadas a essa direção explicitamente solicitada. `awesome-design-md`: índice sem Pacto; análise Linear consultada apenas como apoio de hierarquia entre marketing escuro e prévia de produto, sem adotar sua identidade. A direção da Pacto já escolhida prevalece sobre sorteio de uma direção alternativa.
+
+O briefing fornecido pelo responsável autoriza a apresentação em `/`, demonstrações isoladas em `/admin/produtos` e `/loja/produto` e galeria em `/componentes`. Essas rotas não existiam no checkout: foram criadas sem substituir telas operacionais. A galeria é uma nova amostra de componentes locais; a antiga home era somente uma entrada administrativa.
+
+O tratamento anterior da apresentação usava fundo de apoio `#E9F1FA` e ação `#00ABE4` com texto `#172B3A`, conforme o briefing. Esse tratamento continua nas demos e galeria; a home adota somente a exceção acima. Os tokens globais do admin/autenticação permanecem. Arial, raios 4/8px, foco e cores semânticas existentes são reutilizados fora da landing. Não há nova biblioteca, integração, imagem de terceiros ou identidade gráfica.
+
+Os grupos de rotas `(presentation)` e `(platform)` separam cabeçalhos, rodapés e navegação. Demos usam dados sintéticos, avisos explícitos e estado efêmero; não consultam identidade nem API de negócio. Itens operacionais sem demo aparecem como “Em preparação”. Recursos planejados não têm ações que simulem disponibilidade.
 
 Mudanças relevantes exigem aprovação humana antes de aplicação: identidade, papéis/valores de cores, tipografia, padrões de interação, acessibilidade, temas ou adoção de biblioteca UI. A proposta deve apresentar motivação, alternativas, impacto nas superfícies/estados, compatibilidade, evidências de acessibilidade e diff documental. Uma recomendação de skill ou referência não é aprovação.
 
