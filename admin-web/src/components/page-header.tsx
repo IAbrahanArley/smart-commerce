@@ -1,9 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export default function PageHeader({ id, title, back, description, action }: { id: string; title: ReactNode; back?: { href: string; label: string }; description?: ReactNode; action?: ReactNode }) {
+export type Crumb = { href: string; label: ReactNode };
+
+// Breadcrumb lists ancestors as links; the current page closes the trail as plain text.
+export default function PageHeader({ id, title, breadcrumbs, current, description, action }: { id: string; title: ReactNode; breadcrumbs?: Crumb[]; current?: ReactNode; description?: ReactNode; action?: ReactNode }) {
   return <header className="page-header">
-    {back ? <Link className="back-link" href={back.href}>{back.label}</Link> : null}
+    {breadcrumbs?.length ? <nav aria-label="Trilha de navegação" className="breadcrumb"><ol>
+      {breadcrumbs.map(crumb => <li key={crumb.href}><Link href={crumb.href}>{crumb.label}</Link></li>)}
+      <li aria-current="page">{current ?? title}</li>
+    </ol></nav> : null}
     <div className="page-header-row">
       <div className="page-header-text">
         <h1 id={id}>{title}</h1>

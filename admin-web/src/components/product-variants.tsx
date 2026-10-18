@@ -58,7 +58,7 @@ function VariantForm({ tenantId, product, variant, locked, onSaved, onReload }: 
     } catch { setStale(true); setError("Não foi possível confirmar o salvamento. Carregue a versão atual antes de repetir."); }
     finally { submitting.current = false; setBusy(false); }
   }
-  return <form onSubmit={submit} className="variant-definition" aria-busy={busy}>
+  return <form onSubmit={(event) => void submit(event)} className="variant-definition" aria-busy={busy}>
     <h3>{variant ? variantLabel(variant.options) : "Adicionar combinação"}</h3>
     {!variant ? product.variants[0]?.options.map((option, index) => <div className="form-field" key={option.name}><label htmlFor={`variant-${id}-option-${index}`}>{option.name}</label><input id={`variant-${id}-option-${index}`} value={values[index]} autoComplete="off" maxLength={80} required disabled={busy || locked || stale} onChange={event => setValues(current => current.map((value, position) => position === index ? event.target.value : value))} /></div>) : null}
     <div className="form-field"><label htmlFor={`variant-${id}-sku`}>SKU da combinação</label><input ref={skuRef} id={`variant-${id}-sku`} value={sku} autoComplete="off" spellCheck={false} maxLength={64} required disabled={busy || locked || stale} onChange={event => setSku(event.target.value)} /></div>

@@ -1,10 +1,19 @@
-# Instruções para o Codex — Smart Commerce
-Você é o agente coordenador de engenharia deste repositório.
+# Instruções para agentes — Smart Commerce
+Você é o agente coordenador de engenharia deste repositório. Codex lê este arquivo diretamente; Claude Code o importa por `CLAUDE.md`.
 
 ## Fonte da verdade
 Leia `docs/product/PRD.md`, `docs/product/SPRINT_01.md`, `docs/architecture/ARCHITECTURE.md` e ADRs relevantes antes de alterar código.
 Não amplie o escopo do MVP sem aprovação. Quando houver lacuna, documente hipótese e peça decisão se houver impacto financeiro, de segurança ou de produto.
 Para trabalho de interface, consulte também [docs/design/DESIGN.md](docs/design/DESIGN.md), fonte oficial das decisões de design da plataforma.
+
+## Mapa de documentação
+Produto: `docs/product/PRD.md` (equivale ao `PRODUCT.md` do toolkit). Arquitetura: `docs/architecture/` e ADRs. Design: `docs/design/DESIGN.md`. Execução local: `README.md`. Qualidade e revisão: `docs/quality/README.md`. Setup do toolkit, ferramentas e pendências: `docs/setup.md`. Papéis: `docs/agents/`. Atualize o documento responsável na mesma mudança de comportamento, comando, schema ou fronteira.
+
+## Comandos canônicos
+- Backend (`backend/`, JDK 21 selecionado): `.\mvnw.cmd -B -ntp verify` (Linux: `bash ./mvnw -B -ntp verify`). Formatação, unitários e integração PostgreSQL via Testcontainers; exige Docker.
+- Admin e vitrine (`admin-web/`, `storefront-web/`): `npm ci --no-fund --no-audit`, `npm run lint`, `npm run typecheck`, `npm run build`, `npm run test:smoke`. Dev: `npm run dev` (portas 3000/3001).
+- Banco local: `docker compose --env-file infrastructure/.env -f infrastructure/compose.yaml up -d --wait postgres`; backend: `./scripts/start-backend.ps1`.
+- Não há verificação combinada nem testes de navegador automatizados; a CI executa os mesmos comandos por aplicação.
 
 ## Fluxo obrigatório
 1. Explique a tarefa e critérios de aceite.
@@ -40,6 +49,23 @@ Para trabalho de interface, consulte também [docs/design/DESIGN.md](docs/design
 - Frontend aplica as instruções de [FRONTEND.md](docs/agents/FRONTEND.md); QA faz revisão independente de UX/acessibilidade conforme [QA.md](docs/agents/QA.md). WCAG 2.2 AA é o objetivo, com evidências automatizadas e manuais, sem presumir conformidade.
 - Resolver skills por nome no catálogo do ambiente e ler seu SKILL.md antes de usá-las. Não versionar caminhos absolutos da instalação nem exigir skills no runtime, build ou CI. Se indisponíveis, registrar a limitação e preservar os critérios documentados de qualidade.
 - Playwright e Axe são ferramentas propostas para etapa futura de testes; este registro não autoriza instalá-las nem inicia a SC-002.
+
+## Continuidade, delegação e revisão
+- Separe observação, hipótese, decisão e evidência. Correções exigem reprodução e prova de regressão quando viável.
+- Um bloqueio para só o que depende dele; conclua o restante autorizado. Respeite pausas e recusas; não prometa execução em segundo plano sem processo verificável.
+- Trabalho inacabado entre sessões usa handoff curto no plano/tarefa existente (objetivo, estado verificado, checks, pendências, recursos, próxima ação). Ao retomar, confira checkout, arquivos e processos antes de confiar no handoff.
+- Delegue só quando isolamento de contexto, especialização ou paralelismo independente compensarem. Escolha o modelo mais leve capaz de cumprir os critérios; segurança, tenant, migrações, concorrência e revisão crítica usam capacidade maior. Detalhes: [ORCHESTRATION.md](docs/agents/ORCHESTRATION.md).
+- Um escritor por arquivo; lockfiles, configuração compartilhada e Git pertencem ao coordenador. Revisores são read-only. O coordenador confere o diff e os checks antes de aceitar o resultado de um subagente.
+- Revisão proporcional ao risco do diff real; encerre quando achados relevantes estiverem resolvidos ou com disposição explícita e os checks afetados passarem.
+- Sem hooks de Git, bloqueios de push ou exigência de branch/worktree por padrão.
+
+## Ferramentas do agente
+Verifique instalação e descoberta antes de depender de uma ferramenta; estado atual em `docs/setup.md`.
+- **Context7:** documentação atual de bibliotecas; resolva o identificador e consulte um conceito por vez, sem enviar segredos ou código privado. Indisponível → documentação oficial, registrando a limitação.
+- **RTK:** com hook nativo ativo, use comandos comuns sem prefixo duplo; sem hook, prefixe comandos suportados. `rtk proxy <cmd>` devolve a saída completa.
+- **Graphify:** use um grafo existente para perguntas estruturais, confirmando no código; registre se estiver desatualizado. Nunca indexe segredos, dependências ou saídas geradas (`.graphifyignore`).
+- **Superpowers / Ponytail / Caveman:** quando instalados, processo proporcional ao tamanho, menor mudança completa e conversa concisa em português; código, docs e commits em redação normal.
+- **Skills de projeto (quando instaladas; ver `docs/setup.md`):** `supabase-postgres-best-practices` antes de SQL/migrações (não adota Supabase); `differential-review` e o prompt de segurança em `docs/quality/README.md` para mudanças sensíveis; skills React/Next da Vercel ao escrever ou revisar o frontend. Instalar skill não autoriza deploy, dependência nova ou mudança de arquitetura.
 
 ## Conclusão de tarefa
 Código, testes relevantes, documentação atualizada e revisão de segurança multi-tenant. Se algum passo não for possível, registrar o motivo.

@@ -59,7 +59,7 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
 
   return <section className="page" aria-labelledby="catalog-title">
     <PageHeader id="catalog-title" title={title}
-      back={view === "list" ? undefined : { href: `${storePath}/produtos`, label: "Voltar para produtos" }}
+      breadcrumbs={view === "list" ? undefined : [{ href: `${storePath}/produtos`, label: "Produtos" }]}
       description={state === "ready" && store ? <>Loja: <strong translate="no">{store.store.name}</strong></> : undefined}
       action={view === "list" && state === "ready" ? <Link className="button-link" href={`${storePath}/produtos/novo`}>Novo produto</Link> : undefined} />
     {state === "loading" ? <p role="status">Consultando catálogo…</p> : null}
