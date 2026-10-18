@@ -1,6 +1,6 @@
 # SC-001 — Proteção de main e validação por pull request
 
-> **Registro histórico**, resgatado em 2026-10-18 do [PR #1](https://github.com/IAbrahanArley/smart-commerce/pull/1), que foi fechado sem merge porque seus planos da SC-002 foram substituídos pelo [ADR-0005](../architecture/adr/0005-identity-authentication.md), [SC-002-PLAN.md](../product/SC-002-PLAN.md) e [SC-002-TEST-PLAN.md](SC-002-TEST-PLAN.md). Descreve a proteção de `main` como configurada em 2026-10-15. Desde então a CI ganhou o job `storefront`; a inclusão dele entre os checks obrigatórios é decisão separada do responsável e deve ser registrada aqui quando aplicada.
+> **Registro histórico**, resgatado em 2026-10-18 do [PR #1](https://github.com/IAbrahanArley/smart-commerce/pull/1), que foi fechado sem merge porque seus planos da SC-002 foram substituídos pelo [ADR-0005](../architecture/adr/0005-identity-authentication.md), [SC-002-PLAN.md](../product/SC-002-PLAN.md) e [SC-002-TEST-PLAN.md](SC-002-TEST-PLAN.md). Descreve a proteção de `main` como configurada em 2026-10-15. Desde então a CI ganhou o job `storefront`. Em 2026-10-18, com autorização do responsável e confirmação de acesso (passkey) feita por ele, a regra passou a exigir `backend`, `admin` e `storefront`, os três emitidos por GitHub Actions; as demais opções da regra foram mantidas (branch atualizada antes do merge e resolução de conversas). Conferido na tela da regra após salvar.
 
 Data: 2026-10-15. Escopo: governança do repositório e documentação. Nenhum código da SC-002 foi implementado.
 
