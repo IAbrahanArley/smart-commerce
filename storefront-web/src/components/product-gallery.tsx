@@ -10,7 +10,9 @@ export function imageUrl(slug: string, productId: string, imageId = "primary") {
 
 export function ProductCover({ slug, productId, name }: { slug: string; productId: string; name: string }) {
   const [failed, setFailed] = useState(false);
-  return <div className="product-cover">{failed ? <p className="image-unavailable">Imagem indisponível</p> : <Image src={imageUrl(slug, productId)} alt={`Foto de ${name}`} width={600} height={600} unoptimized onError={() => setFailed(true)} />}</div>;
+  return <div className="product-cover">{failed ? <p className="image-unavailable">Imagem indisponível</p> : <Image src={imageUrl(slug, productId)} alt={`Foto de ${name}`} width={600} height={600} unoptimized onError={() => setFailed(true)}
+    // An error that fires before hydration never reaches onError, so check the settled image on mount.
+    ref={node => { if (node?.complete && node.naturalWidth === 0) setFailed(true); }} />}</div>;
 }
 
 export default function ProductGallery({ slug, productId, images }: { slug: string; productId: string; images: PublicImage[] }) {

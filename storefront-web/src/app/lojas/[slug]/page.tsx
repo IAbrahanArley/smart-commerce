@@ -23,11 +23,8 @@ export default async function StorePage({ params, searchParams }: Props) {
       <StoreHeader store={store} />
       <main id="conteudo" className="page-width catalog-page" tabIndex={-1}>
         <section className="catalog-intro" aria-labelledby="catalog-title">
-          <div className="intro-content">
-            <h1 id="catalog-title" translate="no">{store.name}</h1>
-            <p>Conheça os produtos da loja, confira os preços e encontre os detalhes de cada item.</p>
-          </div>
-          <a className="intro-link" href="#produtos">Explorar catálogo <Arrow /></a>
+          <h1 id="catalog-title" translate="no">{store.name}</h1>
+          <p>Confira os produtos, os preços e a disponibilidade de cada item.</p>
         </section>
         <section id="produtos" className="catalog-section" aria-labelledby="products-title">
           <div className="section-heading">
@@ -45,8 +42,8 @@ export default async function StorePage({ params, searchParams }: Props) {
                 <li key={product.id}>
                   <article className="product-card">
                     <Link className="product-link" href={`${url}/produtos/${product.id}`} prefetch={false}>
+                      <ProductCover slug={store.slug} productId={product.id} name={product.name} />
                       <div className="product-description">
-                        <ProductCover slug={store.slug} productId={product.id} name={product.name} />
                         <h3>{product.name}</h3>
                         <Availability available={product.available} />
                       </div>

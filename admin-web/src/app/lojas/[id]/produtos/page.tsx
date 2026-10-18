@@ -5,5 +5,5 @@ export const metadata: Metadata = { title: "Produtos | Smart Commerce", robots: 
 
 export default async function ProductsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <Catalog key={id} tenantId={id} />;
+  return <Catalog key={id} tenantId={id} view="list" />;
 }

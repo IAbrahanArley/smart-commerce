@@ -20,19 +20,21 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <Link href={`/lojas/${encodeURIComponent(store.slug)}`} prefetch={false}><Arrow back /> Voltar aos produtos</Link>
         </nav>
         <article className="detail-layout" aria-labelledby="product-title">
-          <div className="detail-description">
+          <div className="detail-media">
+            <ProductGallery slug={store.slug} productId={product.id} images={images} />
+          </div>
+          <div className="detail-summary">
             <h1 id="product-title">{product.name}</h1>
             <p className="detail-store">Um produto de <span translate="no">{store.name}</span>.</p>
-            <ProductGallery slug={store.slug} productId={product.id} images={images} />
-            {product.descriptionHtml ? <section className="product-rich-description" aria-labelledby="description-title"><h2 id="description-title">Descrição do produto</h2><div dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} /></section> : null}
-            <Link className="text-link" href={`/lojas/${encodeURIComponent(store.slug)}#produtos`} prefetch={false}>Conhecer o catálogo da loja <Arrow /></Link>
-          </div>
-          <div className="detail-purchase-info">
             <ProductOffer product={product} />
             <div className="consultation-note">
               <h2>Gostou deste produto?</h2>
               <p>Esta vitrine é para consulta. A compra por aqui ainda não está disponível.</p>
             </div>
+          </div>
+          <div className="detail-description">
+            {product.descriptionHtml ? <section className="product-rich-description" aria-labelledby="description-title"><h2 id="description-title">Descrição do produto</h2><div dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} /></section> : null}
+            <Link className="text-link" href={`/lojas/${encodeURIComponent(store.slug)}#produtos`} prefetch={false}>Conhecer o catálogo da loja <Arrow /></Link>
           </div>
         </article>
       </main>

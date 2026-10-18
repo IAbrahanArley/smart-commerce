@@ -6,6 +6,7 @@ import { apiRequest } from "@/lib/auth-api";
 import type { Product } from "@/lib/catalog";
 import { wholeQuantity, type InventorySnapshot, type MovementRequest } from "@/lib/inventory";
 import { variantLabel } from "@/components/variant-builder";
+import PageHeader from "@/components/page-header";
 
 const integer = new Intl.NumberFormat("pt-BR");
 const date = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "medium", timeZone: "America/Sao_Paulo" });
@@ -136,8 +137,8 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
     finally { setPaging(false); }
   }
 
-  return <section className="stores-panel" aria-labelledby="inventory-title">
-    <Link className="back-link" href={productPath}>Voltar para o produto</Link><h1 id="inventory-title">Estoque do produto</h1>
+  return <section className="page page-panel" aria-labelledby="inventory-title">
+    <PageHeader id="inventory-title" title="Estoque do produto" back={{ href: productPath, label: "Voltar para o produto" }} />
     {state === "loading" ? <p role="status">Consultando estoque…</p> : null}
     {state === "signed-out" ? <><p role="status">Entre novamente para consultar o estoque.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <p role="status">Produto ou loja indisponível. Escolha uma loja à qual você tem acesso.</p> : null}

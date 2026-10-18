@@ -1,6 +1,6 @@
 # Smart Commerce — Design system
 
-Versão: 1.0 · Atualizada em 2026-10-16. Direção escolhida pelo responsável: **profissional e confiável, com azul profundo, fundo claro e visual simples, evoluindo o padrão existente**. Este é o padrão da plataforma para as entregas autorizadas.
+Versão: 1.1 · Atualizada em 2026-10-17. Direção escolhida pelo responsável: **profissional e confiável, com azul profundo, fundo claro e visual simples, evoluindo o padrão existente**. Este é o padrão da plataforma para as entregas autorizadas.
 
 Este documento é a fonte oficial das decisões de design do Smart Commerce, subordinada ao escopo do [PRD](../product/PRD.md), à [Sprint 1](../product/SPRINT_01.md), à [arquitetura](../architecture/ARCHITECTURE.md) e aos ADRs aplicáveis. Decisões funcionais e de segurança da autenticação pertencem ao [ADR-0005](../architecture/adr/0005-identity-authentication.md), cujas D1–D6 foram aprovadas separadamente. Este documento não amplia esse escopo.
 
@@ -25,7 +25,7 @@ Os valores abaixo são a referência oficial. Um subconjunto já existe como var
 | Superfície | Padrão |
 | --- | --- |
 | Autenticação | Fundo claro, painel branco de uma coluna com largura próxima de 28rem, título direto e ação principal evidente. Sem conteúdo promocional competindo com o formulário. |
-| Admin | Superfícies claras, títulos e ações consistentes, dados alinhados e densidade legível. Azul destaca ações e informação; espaço e bordas organizam grupos. Não antecipar menus ou dashboards sem funcionalidade. |
+| Admin | Superfícies claras, títulos e ações consistentes, dados alinhados e densidade legível. Azul destaca ações e informação; espaço e bordas organizam grupos. Telas de uma loja usam a moldura com navegação lateral, limitada a funções existentes. Não antecipar itens de menu ou dashboards sem funcionalidade. |
 | Páginas institucionais futuras | Preservam a assinatura e os tokens; composição própria depende do escopo aprovado e da skill adequada. |
 | Vitrines futuras | Temas dos lojistas têm contrato separado; nome, cores e conteúdo da loja não alteram admin ou autenticação. |
 
@@ -89,6 +89,9 @@ Reutilizar componentes locais no admin conforme surgirem consumidores reais; nã
 | Layout | Landmarks, skip link quando aplicável, ordem de leitura/foco previsível e navegação móvel acessível. |
 | Conteúdo vazio | Explica a ausência e a ação possível; não preenche a tela com dados fictícios. |
 | Tabela, quando necessária | Semântica de cabeçalhos e leitura preservada; scroll delimitado quando o conteúdo realmente exigir duas dimensões. |
+| Cabeçalho de página (`PageHeader`) | Link de volta opcional, `h1`, descrição opcional e ação principal à direita; a ação desce para baixo do título em telas estreitas. |
+| Selo de status (`StatusBadge`) | Texto sempre visível; cor semântica apenas reforça. Positivo: sucesso sobre fundo de sucesso. Neutro: texto secundário sobre fundo desabilitado. |
+| Navegação lateral | `nav` rotulada, item atual com `aria-current="page"`, fundo selecionado e barra de 3px na cor de ação. |
 
 Definir e revisar padrão, hover, pressionado, foco visível, desabilitado, carregamento, inválido, sucesso e vazio conforme aplicabilidade. Não criar estado sem utilidade no componente. Durante submissão, impedir disparos duplicados sem bloquear desnecessariamente a navegação; após falha, permitir recuperação. Estado de UI não substitui validação, autorização ou idempotência do backend.
 
@@ -109,8 +112,18 @@ Objetivo: **WCAG 2.2 nível AA**, avaliado por automação e revisão manual. N�
 - Alvos com preferência de produto por 44×44 CSS px. O mínimo WCAG 2.2 AA de 24×24 CSS px admite condições/exceções próprias; não confundir as duas medidas.
 - Não desabilitar zoom. Testar texto a 200%, reflow equivalente a 320 CSS px/400%, espaçamento de texto e conteúdo longo. Não esconder overflow para encobrir conteúdo inacessível; exceções bidimensionais devem ser justificadas.
 - Layout fluido desde 320px, com revisão em 390, 768 e 1440 CSS px. Breakpoints respondem ao conteúdo; não são autorização para remover ações em telas menores.
-- Formulários em uma coluna quando apropriado; navegação desktop pode se adaptar ao móvel mantendo nomes, foco e operação. Não implementar shell completo antes de existir necessidade.
+- Formulários em uma coluna quando apropriado; navegação desktop pode se adaptar ao móvel mantendo nomes, foco e operação. A moldura do admin segue a seção "Moldura e padrões do admin".
 - Movimento discreto e funcional, com preferência por movimento reduzido respeitada. Nenhuma ação ou informação pode depender de animação.
+
+## Moldura e padrões do admin
+
+Aprovado em 2026-10-17 a partir da [proposta de referências de mercado](PROPOSTA-REFERENCIAS-MERCADO.md) (itens A1–A7).
+
+- **Moldura:** telas de uma loja (`/lojas/[id]/...`) têm navegação lateral fixa em superfície branca a partir de 64rem (1024 CSS px), com cerca de 15rem de largura. Abaixo disso, um botão "Menu" com `aria-expanded` revela a mesma lista. O nome da loja aparece como texto no topo da navegação. Itens somente para funções existentes: visão geral da loja, produtos e conta. A navegação não é prova de autorização; o backend continua validando cada acesso.
+- **Páginas:** conteúdo até cerca de 80rem ao lado do menu; formulários com no máximo 45rem por coluna.
+- **Listas operacionais:** tabela semântica com `caption` e cabeçalhos a partir de 48rem; abaixo disso, lista de linhas com os mesmos dados. Sem seleção em massa, filtros ou ordenação enquanto não houver funcionalidade.
+- **Criação em rota própria:** "Novo produto" é uma página (`/produtos/novo`) acionada pelo cabeçalho da lista; após cadastrar, o lojista segue para a edição do produto.
+- **Edição em duas colunas:** a partir de 64rem, coluna principal (identificação, descrição, fotos e variações) e lateral com publicação e estoque. Em telas menores, uma coluna na ordem do DOM.
 
 ## Plataforma e temas futuros das lojas
 
@@ -165,6 +178,7 @@ Prancha aberta no navegador local; verificação de dimensões em 320 e 1440 CSS
 - [WCAG 2.2](https://www.w3.org/TR/WCAG22/) e [guia de critérios](https://www.w3.org/WAI/WCAG22/quickref/).
 - [Fonte das Web Interface Guidelines](https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md), a consultar novamente em cada revisão.
 - [Playwright: testes de acessibilidade](https://playwright.dev/docs/accessibility-testing), que combinam automação e avaliação manual.
+- Referências de mercado consultadas em 2026-10-17 (Nuvemshop/Nimbus, VTEX Shoreline, Wix, Tray, Loja Integrada e Baymard), com fontes e limitações em [PROPOSTA-REFERENCIAS-MERCADO.md](PROPOSTA-REFERENCIAS-MERCADO.md). Usados apenas padrões estruturais; nenhuma identidade, biblioteca ou componente de terceiros foi adotado.
 - Coleção [awesome-design-md](https://github.com/VoltAgent/awesome-design-md), revisão local fixada em `3b605329240ce735b510037cca322f1831fdd7f8`, referência analisada IBM, consultada em 2026-10-16. Utilizados apenas os princípios de hierarquia, superfícies simples e papéis de cor. Paleta, Arial, raios e assinatura continuam próprios do Smart Commerce; não foram adotados Carbon, IBM Plex, marca, layout promocional ou dependências de terceiros. Trata-se de análise de referência, não especificação oficial da IBM.
 
 ## Base visual da vitrine de consulta
@@ -172,6 +186,8 @@ Prancha aberta no navegador local; verificação de dimensões em 320 e 1440 CSS
 A vitrine autorizada em 2026-10-17 usa o fallback profissional existente: Arial, azul profundo, superfícies claras, controles 4px e superfícies 8px. Tokens --store-* ficam no storefront-web e não sobrescrevem --sc-* do admin. Nome da loja aparece como texto real, sem novo logotipo ou tema personalizado. Publicar somente produtos selecionados, com nome, preço e disponibilidade; sem imagens ou conteúdo comercial inventado. A disponibilidade de compra não é simulada.
 
 O refinamento visual autorizado na mesma data aplica essa base ao cabeçalho em superfície branca, abertura em azul profundo, catálogo com preço e disponibilidade em destaque e detalhe dividido entre identificação do produto e resumo de preço. Em telas menores, a composição passa para uma coluna. Nome real da loja e navegação funcional orientam a página; não adicionar categorias, busca, avaliações, fotos ou ações de compra sem dados e funcionalidades correspondentes. O rodapé identifica a plataforma e o caráter de consulta da vitrine. Os componentes locais compartilham estados de disponibilidade e navegação, sem biblioteca adicional, novo logotipo ou mudança dos tokens aprovados.
+
+Ajustes aprovados em 2026-10-17 (itens V1–V4 da [proposta](PROPOSTA-REFERENCIAS-MERCADO.md)): a abertura do catálogo é compacta, com nome da loja e contagem de produtos, sem bloco azul; o azul fica reservado a ações. A grade usa cards em coluna com foto de capa real em 1:1 e `object-fit: contain`, nome, disponibilidade e preço. A página de produto coloca galeria e descrição à esquerda e um resumo fixo ao rolar (nome, preço, variações e disponibilidade) à direita a partir de 54rem; em telas menores, galeria, resumo e descrição nessa ordem. Variações são escolhidas por atributo (por exemplo Cor e Tamanho) com rádios nativos estilizados, rótulo em texto e seleção indicada por borda, peso e marca de verificação, não só por cor; combinações indisponíveis são indicadas por texto. Quando as variações não compartilham os mesmos atributos, a lista de combinações em `select` continua como alternativa.
 
 A skill design-taste-frontend apoia composição e revisão, preservando paleta/tipografia e sem impor imagens, animações ou conteúdo incompatíveis com o catálogo real e o design aprovado. Personalização visual futura e mudanças relevantes permanecem sujeitas à governança acima.
 

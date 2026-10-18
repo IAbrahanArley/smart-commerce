@@ -112,6 +112,9 @@ try {
   const variable = await page(`/lojas/loja-variavel/produtos/${nextId}`);
   assert.match(variable.html, /Escolha a combinação/);
   assert.match(variable.html, /Cor: Azul/);
+  assert.match(variable.html, /<legend>Cor<\/legend>/);
+  assert.match(variable.html, /type="radio"[^>]*checked=""[^>]*value="Azul"/);
+  assert.ok(!variable.html.includes('id="public-variant"'), "Variações com atributos comuns usam botões por atributo.");
   assert.match(variable.html, /59,90/);
   const photo = await fetch(`${base}/midia/lojas/loja-teste/produtos/${id}/${id}`, { headers: { Cookie: "ADMIN_SESSION=synthetic-not-a-credential", Authorization: "Bearer synthetic-not-a-credential" } });
   assert.equal(photo.status, 200); assert.equal(photo.headers.get("content-type"), "image/png");

@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { apiRequest, requestError } from "@/lib/auth-api";
 import { decimalInput, type Product, type VariantDraft } from "@/lib/catalog";
 import DescriptionEditor from "@/components/description-editor";
 import VariantBuilder from "@/components/variant-builder";
+import StatusBadge from "@/components/status-badge";
 
 type Fields = { name: string; sku: string; price: string; cost: string; descriptionHtml: string };
 type Errors = Partial<Record<keyof Fields | "variants", string>>;
 
-export default function ProductForm({ tenantId, product, storePublished = false, onSaved, onConflict, onDirtyChange }: {
-  tenantId: string; product?: Product; storePublished?: boolean; onSaved: (product: Product, notice?: string) => void; onConflict?: () => void; onDirtyChange?: (dirty: boolean) => void;
+export default function ProductForm({ tenantId, product, storePublished = false, onSaved, onConflict, onDirtyChange, aside }: {
+  tenantId: string; product?: Product; storePublished?: boolean; onSaved: (product: Product, notice?: string) => void; onConflict?: () => void; onDirtyChange?: (dirty: boolean) => void; aside?: ReactNode;
 }) {
   const initial: Fields = { name: product?.name ?? "", sku: product?.sku ?? "", price: product?.price.replace(".", ",") ?? "", cost: product?.cost?.replace(".", ",") ?? "", descriptionHtml: product?.descriptionHtml ?? "" };
   const [fields, setFields] = useState<Fields>(initial);
@@ -120,7 +121,7 @@ export default function ProductForm({ tenantId, product, storePublished = false,
     formRef.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>(field === "variants" ? '[name="variant-0-sku"]' : `[name="${field}"]`)?.focus();
   }, [busy, errors]);
 
-  return <form ref={formRef} onSubmit={submit} noValidate aria-busy={busy}>
+  const form = <form ref={formRef} className="workspace-main" onSubmit={submit} noValidate aria-busy={busy}>
     <h2>Identificação</h2>
     {!product ? <div className="form-field"><label htmlFor="product-kind">Tipo de produto</label><select id="product-kind" value={kind} disabled={busy} onChange={event => { if (!variants.length || window.confirm("Mudar o tipo descarta as combinações ainda não salvas. Deseja continuar?")) { setKind(event.target.value as "SIMPLE" | "VARIABLE"); setVariants([]); } }}><option value="SIMPLE">Simples — um SKU e um estoque</option><option value="VARIABLE">Com variações — SKU e estoque por combinação</option></select><p className="field-help">O tipo não pode ser alterado depois do cadastro.</p></div> : <p className="field-help">{kind === "VARIABLE" ? "Produto com variações. Preços e estoque são gerenciados por combinação." : "Produto simples."}</p>}
     {([['name', 'Nome do produto', 'Até 120 caracteres.'], ['sku', 'SKU', 'Identificador único nesta loja. Letras maiúsculas e minúsculas são diferentes.'], ['price', 'Preço de venda (R$)', 'Maior que zero. Exemplo: 49,90. Sem separador de milhares.'], ['cost', 'Custo (R$) — opcional', 'Zero é permitido. Deixe em branco se ainda não souber.']] as const).filter(([field]) => field === "name" || kind === "SIMPLE").map(([field, label, hint]) => <div className="form-field" key={field}>
@@ -139,14 +140,17 @@ export default function ProductForm({ tenantId, product, storePublished = false,
       </div> : null}
     </section>
     {!product && kind === "VARIABLE" ? <section className="product-section" aria-labelledby="variant-create-title"><h2 id="variant-create-title">Variações e preços</h2><VariantBuilder variants={variants} onChange={setVariants} disabled={busy || conflict} />{errors.variants ? <p role="alert" className="field-error">{errors.variants}</p> : null}</section> : null}
-    {!product ? <p className="field-help">Após cadastrar, abra a edição do produto para incluir fotos e movimentar o estoque de cada SKU.</p> : null}
+    {!product ? <p className="field-help">Após cadastrar, você seguirá para a edição do produto para incluir fotos e movimentar o estoque de cada SKU.</p> : null}
     {message ? <p ref={feedbackRef} tabIndex={-1} role="alert" className="feedback feedback-error">{message}</p> : null}
     {conflict && onConflict ? <button type="button" onClick={() => { if (!dirty || window.confirm("Carregar a versão atual descartará suas alterações não salvas. Deseja continuar?")) onConflict(); }}>Carregar versão atual</button> : <button type="submit" disabled={busy}>{busy ? "Salvando produto…" : product ? "Salvar alterações" : "Cadastrar produto"}</button>}
-    {product ? <section className="store-create" aria-labelledby="product-publication-title"><h2 id="product-publication-title">Publicação do produto</h2>
-      <p>{product.published ? storePublished ? "Este produto está visível na vitrine." : "Este produto está selecionado para a vitrine, mas a loja permanece oculta." : "Este produto está oculto na vitrine."}</p>
+  </form>;
+  return product || aside ? <>{form}<aside className="workspace-side" aria-label="Publicação e estoque">
+    {product ? <section className="side-card" aria-labelledby="product-publication-title"><h2 id="product-publication-title">Publicação do produto</h2>
+      <p>{product.published ? storePublished ? <StatusBadge tone="positive">Visível na vitrine</StatusBadge> : <StatusBadge tone="neutral">Selecionado · Loja oculta</StatusBadge> : <StatusBadge tone="neutral">Oculto na vitrine</StatusBadge>}</p>
       <p className="field-help">A vitrine permite somente consulta. Nome, preço e disponibilidade são públicos quando produto e loja estão publicados.</p>
       {dirty ? <p className="field-help">Salve as alterações do produto antes de mudar sua publicação.</p> : null}
       <button type="button" disabled={busy || conflict || dirty} onClick={() => void publish()}>{busy ? "Aguarde a atualização…" : product.published ? "Ocultar produto" : "Publicar produto"}</button>
     </section> : null}
-  </form>;
+    {aside}
+  </aside></> : form;
 }
