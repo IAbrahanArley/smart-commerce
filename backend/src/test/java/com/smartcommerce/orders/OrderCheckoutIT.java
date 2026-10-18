@@ -353,6 +353,51 @@ class OrderCheckoutIT {
   }
 
   @Test
+  void concurrentCheckoutsAboveThePoolSizeNeverWaitForASecondConnection() throws Exception {
+    // Hikari keeps 10 connections; each checkout must hold at most one at a time (PR #8 review).
+    int threads = 16;
+    var barrier = new CyclicBarrier(threads);
+    var tasks = new ArrayList<Callable<String>>();
+    for (int i = 0; i < threads; i++) {
+      String payload =
+          payload(
+              UUID.randomUUID(),
+              lines(variantA, 1),
+              Map.of("type", "PICKUP"),
+              "Comprador Sintético",
+              "comprador" + i + "@example.test",
+              PHONE,
+              "20.00");
+      tasks.add(
+          () -> {
+            barrier.await(20, TimeUnit.SECONDS);
+            return String.valueOf(post("pedido-a", payload).statusCode());
+          });
+    }
+    assertThat(run(tasks)).containsOnly("201");
+    assertThat(count("sales_order")).isEqualTo(threads);
+  }
+
+  @Test
+  void retriesOfACommittedRequestDoNotUseThePerIpAttempts() throws Exception {
+    String payload = body(UUID.randomUUID(), lines(simpleA, 1), Map.of("type", "PICKUP"), "15.90");
+    assertThat(postFrom("203.0.113.8", true, payload).statusCode()).isEqualTo(201);
+    for (int i = 0; i < 25; i++)
+      assertThat(postFrom("203.0.113.8", true, payload).statusCode()).isEqualTo(200);
+    String changed =
+        body(
+            UUID.fromString(JSON.readTree(payload).get("requestId").asString()),
+            lines(simpleA, 2),
+            Map.of("type", "PICKUP"),
+            "31.80");
+    assertThat(code(postFrom("203.0.113.8", true, changed))).isEqualTo("REQUEST_CONFLICT");
+    // Only the creating attempt was charged: a new attempt from the same IP is still admitted.
+    String rejected = body(UUID.randomUUID(), lines(simpleA, 1), Map.of("type", "PICKUP"), "1.00");
+    assertThat(code(postFrom("203.0.113.8", true, rejected))).isEqualTo("PRICE_CHANGED");
+    assertThat(count("sales_order")).isEqualTo(1);
+  }
+
+  @Test
   void pendingOrdersPerEmailAreLimitedPerStore() throws Exception {
     for (int i = 0; i < 5; i++)
       assertThat(

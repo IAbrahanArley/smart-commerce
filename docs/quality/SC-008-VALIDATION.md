@@ -22,6 +22,18 @@ A chave de e-mail da identidade só normaliza o domínio (a parte local é sens�
 - **Novos:** `OrderDomainTest` (parser e normalização, impressão digital estável, token, assinatura de IP com janela de 60 s, checkout desligado → 404), `OrderCheckoutIT` (9 cenários) e `SalesOrderMigrationIT`.
 - **Frontends:** não alterados nesta tarefa. O novo campo da cotação é aditivo; checks dos frontends não foram executados.
 
+## Correções da revisão do PR #8 (2026-10-18)
+
+Revisão independente, somente leitura, com os achados conferidos no código antes da correção. Decisões registradas no [ADR-0012](../architecture/adr/0012-stock-reservation-cart-orders.md#ajustes-da-revisão-do-pr-8-2026-10-18).
+
+- **Major, pool de conexões:** `admit()` (`REQUIRES_NEW`) rodava dentro da transação do checkout e pedia uma segunda conexão. Com o pool padrão de 10 e espera de 3 s, cerca de 10 checkouts simultâneos se bloqueariam e falhariam com 500. Agora `OrderCheckoutService` não é transacional: resolve a loja, responde retentativas, cobra a admissão e chama `OrderPlacementService.place`, a nova transação do pedido. Cada etapa segura no máximo uma conexão. Regressão: 16 checkouts simultâneos, todos 201.
+- **Retentativas e limite por IP:** um `requestId` já gravado é respondido (replay ou `REQUEST_CONFLICT`) antes de cobrar a admissão. A transação do pedido repete a checagem sob o lock. Regressão: 25 replays do mesmo IP seguem em 200, e uma nova tentativa ainda é admitida.
+- **Segredo ausente fora de DEV:** `CheckoutSafetyCheck` impede a inicialização com checkout habilitado, segredo vazio e perfil diferente de `dev`. Teste unitário dedicado.
+- **Índice:** `V14__sales_order_item_variant_index.sql`, aditiva, cria o índice da FK `sales_order_item(variant_id, tenant_id)`. As FKs do lado do pedido já usam os UNIQUE começados por `order_id`. A V13 não foi alterada, para não mudar seu checksum em bancos locais.
+- **Registrados no ADR, sem código:** teto multiplicado por instâncias (20 × N), validação futura da FK `NOT VALID` e consistência loja do item × loja do pedido garantida pelo serviço.
+
+Verificação após as correções: `mvnw.cmd -B -ntp verify -Dspring-boot.repackage.skip=true`, BUILD SUCCESS em 2026-10-18 16:19:49 -03:00. **146 testes** (62 unitários/arquiteturais e 84 de integração), zero falhas, erros ou ignorados; Spotless limpo. As mensagens `Unexpected error occurred in scheduled task` do Spring Session no log vêm da limpeza agendada depois que os contêineres de teste param; já apareciam na execução anterior e não afetam o resultado. Log local: `backend/target/review-fix-verify.log`.
+
 ## Cobertura dos critérios da SC-008
 
 | Critério | Evidência |

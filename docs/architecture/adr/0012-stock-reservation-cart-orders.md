@@ -14,6 +14,18 @@ O responsável autorizou a SC-008 e aprovou:
 - **D4, valores:** até 20 linhas e 1–10 unidades por linha; até 5 pedidos pendentes não expirados por e-mail por loja; até 20 tentativas de checkout por IP por hora.
 - **D2, aviso de privacidade do checkout (SC-009):** "Seus dados (nome, e-mail, telefone e, se escolher entrega, o endereço) são usados apenas pela {nome da loja} para processar e entregar este pedido e para falar com você sobre ele. Eles não são compartilhados com outras lojas. Se o pedido não for pago, seus dados pessoais são anonimizados em até 90 dias. Pagamento ainda não está disponível nesta etapa." A política completa da loja e a validação jurídica continuam pendentes antes de produção.
 
+### Ajustes da revisão do PR #8 (2026-10-18)
+
+Aplicação das regras acima, sem mudar valores aprovados:
+
+- **Ordem do checkout:** a admissão por IP roda e confirma numa transação própria **antes** da transação do pedido, e não aninhada nela. Cada checkout segura no máximo uma conexão por vez, para que checkouts simultâneos não esgotem o pool esperando uma segunda.
+- **Retentativas não gastam tentativas:** quando já existe pedido para o `requestId`, o backend responde replay (mesma impressão digital) ou `REQUEST_CONFLICT` antes de cobrar a admissão. Nada é gravado e nenhum dado é revelado sem a impressão digital idêntica. A transação do pedido repete essa checagem sob o lock da chave.
+- **`REQUEST_CONFLICT` prova que o pedido existe:** clientes não devem gerar nova chave automaticamente nesse caso, porque isso duplicaria o pedido. Um novo pedido só nasce de ação explícita do comprador.
+- **Segredo obrigatório fora de DEV:** o backend não inicia com checkout habilitado, segredo de IP vazio e perfil diferente de `dev`. Sem o segredo, todos os compradores de todas as lojas cairiam num único balde por IP.
+- **Várias instâncias:** os contadores por IP usam chave efêmera por processo. Com N instâncias do backend, o teto efetivo é 20 × N tentativas por hora. Aceito até a implantação com múltiplas instâncias, quando a chave passa a vir de configuração compartilhada.
+- **FK `inventory_reservation → sales_order` NOT VALID:** vale para toda linha nova ou alterada. A validação (`VALIDATE CONSTRAINT`) fica pendente para migração própria antes da primeira implantação fora de DEV, depois de confirmar que não há reservas órfãs.
+- **Loja do item:** a FK composta garante o mesmo tenant entre item, pedido e variante. Que a variante pertence à loja do pedido é garantido pelo serviço, que revalida cada variante pelo slug, e não por constraint. Aceito como está; o reforço no banco fica para quando houver variantes compartilhadas ou escrita fora do checkout.
+
 ## Contexto
 
 - [BUSINESS_RULES](../../product/BUSINESS_RULES.md): pedido nasce `PENDING_PAYMENT`, estoque é reservado com expiração, pagamento confirmado gera baixa, cancelamento/expiração libera reserva; disponível = físico − reservado, nunca negativo; snapshot de preço/custo/frete/desconto; dados do comprador não são compartilhados entre lojas. O tempo de reserva deve ser definido antes da implementação.
