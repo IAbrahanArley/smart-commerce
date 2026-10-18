@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { decimalInput, formatBRL } from "../src/lib/catalog.ts";
-import { wholeQuantity } from "../src/lib/inventory.ts";
+import { reservedStockMessage, wholeQuantity } from "../src/lib/inventory.ts";
 import { storefrontUrl } from "../src/lib/tenant-api.ts";
 
 const storefrontOrigin = process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN;
@@ -18,6 +18,9 @@ else process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN = storefrontOrigin;
 assert.equal(wholeQuantity("1"), 1);
 assert.equal(wholeQuantity("2147483647"), 2147483647);
 for (const invalid of ["0", "-1", "1.5", "1,5", "1e2", "2.000", "2147483648", "", "NaN"]) assert.equal(wholeQuantity(invalid), null, invalid);
+assert.match(reservedStockMessage(1200), /^Há 1\.200 unidades reservadas por pedidos pendentes\./);
+assert.match(reservedStockMessage(1), /^Há 1 unidade reservada /);
+for (const invalid of [undefined, "3", -1, 1.5]) assert.match(reservedStockMessage(invalid), /^Há unidades reservadas /);
 
 assert.equal(decimalInput("49,90"), "49.90");
 assert.equal(decimalInput("0"), "0.00");
@@ -93,7 +96,7 @@ try {
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /Página não encontrada/);
-  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta, detalhe de loja, catálogo, novo produto com navegação da loja, edição, estoque, validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
+  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta, detalhe de loja, catálogo, novo produto com navegação da loja, edição, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
 } finally {
   server.kill();
 }

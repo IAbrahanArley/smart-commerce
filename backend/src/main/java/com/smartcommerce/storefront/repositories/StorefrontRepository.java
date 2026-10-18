@@ -5,17 +5,24 @@ import com.smartcommerce.storefront.domain.PublicStore;
 import com.smartcommerce.storefront.domain.PublicVariant;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import org.springframework.stereotype.Repository;
 
-/** Public read model: projections whitelist public columns and never load owner/domain entities. */
+/**
+ * Public read model: projections whitelist public columns and never load owner/domain entities.
+ * Availability uses the inventory SQL function (physical minus ACTIVE, unexpired reservations at
+ * {@code now}); never read {@code inventory_balance.quantity} directly here.
+ */
 @Repository
 public class StorefrontRepository {
   private static final String PRODUCTS =
       """
    SELECT p.id,p.name,COALESCE((SELECT MIN(v.price) FROM catalog_variant v WHERE v.product_id=p.id AND v.tenant_id=p.tenant_id),p.price),p.currency,
-    EXISTS(SELECT 1 FROM catalog_variant v JOIN inventory_balance b ON b.product_id=v.id AND b.tenant_id=v.tenant_id
-       WHERE v.product_id=p.id AND v.tenant_id=p.tenant_id AND b.quantity>0) AS available,p.description_html,p.kind
+    EXISTS(SELECT 1 FROM catalog_variant v WHERE v.product_id=p.id AND v.tenant_id=p.tenant_id
+       AND inventory_available_quantity(v.tenant_id,v.id,:now)>0) AS available,p.description_html,p.kind
    FROM store s
    JOIN catalog_product p ON p.store_id=s.id AND p.tenant_id=s.tenant_id AND p.published
    WHERE s.slug=:slug AND s.status='PUBLISHED'
@@ -42,26 +49,32 @@ public class StorefrontRepository {
         .findFirst();
   }
 
-  public List<PublicProduct> list(String slug, UUID after) {
+  public List<PublicProduct> list(String slug, UUID after, Instant now) {
     var query =
         entities
             .createNativeQuery(
                 PRODUCTS + (after == null ? "" : " AND p.id>:after") + " ORDER BY p.id")
             .setParameter("slug", slug)
+            .setParameter("now", utc(now))
             .setMaxResults(21);
     if (after != null) query.setParameter("after", after);
     List<?> rows = query.getResultList();
     return rows.stream().map(StorefrontRepository::product).toList();
   }
 
-  public Optional<PublicProduct> find(String slug, UUID product) {
+  public Optional<PublicProduct> find(String slug, UUID product, Instant now) {
     List<?> rows =
         entities
             .createNativeQuery(PRODUCTS + " AND p.id=:product")
             .setParameter("slug", slug)
+            .setParameter("now", utc(now))
             .setParameter("product", product)
             .getResultList();
     return rows.stream().map(StorefrontRepository::product).findFirst();
+  }
+
+  private static OffsetDateTime utc(Instant now) {
+    return now.atOffset(ZoneOffset.UTC);
   }
 
   private static PublicProduct product(Object raw) {
@@ -76,19 +89,19 @@ public class StorefrontRepository {
         (String) row[6]);
   }
 
-  public List<PublicVariant> variants(String slug, UUID product) {
+  public List<PublicVariant> variants(String slug, UUID product, Instant now) {
     List<?> rows =
         entities
             .createNativeQuery(
                 """
-      SELECT v.id,v.price,v.currency,COALESCE(b.quantity,0)>0,v.options_json
+      SELECT v.id,v.price,v.currency,inventory_available_quantity(v.tenant_id,v.id,:now)>0,v.options_json
       FROM store s JOIN catalog_product p ON p.store_id=s.id AND p.tenant_id=s.tenant_id AND p.published
       JOIN catalog_variant v ON v.product_id=p.id AND v.tenant_id=p.tenant_id
-      LEFT JOIN inventory_balance b ON b.product_id=v.id AND b.tenant_id=v.tenant_id
       WHERE s.slug=:slug AND s.status='PUBLISHED' AND p.id=:product ORDER BY v.id
       """)
             .setParameter("slug", slug)
             .setParameter("product", product)
+            .setParameter("now", utc(now))
             .setMaxResults(50)
             .getResultList();
     return rows.stream()
