@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { apiRequest, requestError } from "@/lib/auth-api";
 import { storefrontUrl, type TenantStore } from "@/lib/tenant-api";
+import StoreFulfillment from "./store-fulfillment";
 
 export default function StoreDetail({ tenantId }: { tenantId: string }) {
   const [store, setStore] = useState<TenantStore | null>(null);
@@ -68,6 +69,7 @@ export default function StoreDetail({ tenantId }: { tenantId: string }) {
         </div>
         {store.store.status === "DRAFT" ? <p className="field-help">O endereço público ficará indisponível até você publicar a loja.</p> : null}
       </section>
+      <StoreFulfillment tenantId={tenantId} />
     </> : null}
   </section>;
 }
