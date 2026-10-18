@@ -103,6 +103,8 @@ O advisory consultado continua classificando o problema como alto, afetando brac
 4. **Evitar execução local privilegiada:** para contribuições não confiáveis, preferir o ambiente efêmero da CI sem segredos. Não disponibilizar `.env` local, credenciais de nuvem ou acesso de deploy a jobs que processam o conteúdo do PR. Acesso ao Docker ou rede e políticas efetivas do repositório exigem análise própria; o YAML sozinho não comprova isolamento completo.
 5. **Acompanhar correção real:** nova versão precisa remover a cadeia afetada ou incluir braces corrigido, com compatibilidade declarada de peers e instalação limpa. Após aprovação de um patch concreto, executar audit completo e produção, explain, `npm ci`, lint, tipos, build e smoke, revisando o diff do lockfile. Não basta o audit de produção retornar zero.
 
+Plano de acompanhamento, responsabilidades, cadência e critérios de encerramento: [SEC-003-FOLLOW-UP.md](SEC-003-FOLLOW-UP.md).
+
 **Conclusão atualizada:** não foi identificado patch estável compatível capaz de corrigir SEC-003 na consulta atual. Não há alteração de package/lock para propor como correção comprovada. A atualização isolada de fast-glob ou ESLint não resolve o achado. Recomenda-se manter SEC-003 bloqueando o aceite integral de segurança até correção verificada ou decisão humana explícita sobre uma exceção temporária documentada, com responsável, escopo de tooling, prazo de revisão e gatilhos de reavaliação. As mitigações acima podem sustentar essa decisão, mas não a concedem automaticamente. EOL do ESLint permanece como risco adicional de manutenção da mesma cadeia; não é um novo CVE demonstrado.
 
 ## Verificações executadas pelo revisor
