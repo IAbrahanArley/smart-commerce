@@ -11,8 +11,8 @@ public enum CartLineStatus {
 
   /**
    * Single comparison point between the requested and the sellable quantity. The sellable quantity
-   * comes from {@code CartQuoteRepository.SELLABLE_QUANTITY}; SC-005 replaces that expression with
-   * the reservation-aware available quantity without changing this rule.
+   * comes from {@code CartQuoteRepository.SELLABLE_QUANTITY}, the reservation-aware available
+   * quantity (SC-005).
    */
   public static CartLineStatus of(long sellable, int requested) {
     if (sellable >= requested) return AVAILABLE;

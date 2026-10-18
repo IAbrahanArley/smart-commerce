@@ -216,6 +216,44 @@ class CartQuoteIT {
         .isEqualTo(movements);
   }
 
+  @Test
+  void quoteUsesAvailableStockNetOfActiveReservationsOnly() throws Exception {
+    // simpleA has 7 on hand: an active reservation of 5 leaves 2 sellable.
+    reserve(tenantA, simpleA, 5, "now() + interval '30 minutes'");
+    // Logically expired reservations stop counting without the expiry routine.
+    reserve(tenantA, simpleA, 2, "now() - interval '1 minute'");
+    // Another tenant's reservation never changes tenant A's availability.
+    reserve(tenantB, simpleB, 50, "now() + interval '30 minutes'");
+    JsonNode three = JSON.readTree(quote("quote-a", lines(Map.of(simpleA, 3)), null).body());
+    assertThat(three.get("lines").get(0).get("status").asString()).isEqualTo("INSUFFICIENT");
+    assertThat(three.get("purchasable").asBoolean()).isFalse();
+    JsonNode two = JSON.readTree(quote("quote-a", lines(Map.of(simpleA, 2)), null).body());
+    assertThat(two.get("lines").get(0).get("status").asString()).isEqualTo("AVAILABLE");
+    assertThat(two.get("subtotal").asString()).isEqualTo("31.80");
+    // Fully reserved in tenant B: nothing sellable there, while tenant A was unaffected above.
+    JsonNode foreign = JSON.readTree(quote("quote-b", lines(Map.of(simpleB, 1)), null).body());
+    assertThat(foreign.get("lines").get(0).get("status").asString()).isEqualTo("UNAVAILABLE");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT quantity FROM inventory_balance WHERE product_id=?",
+                Integer.class,
+                simpleA))
+        .isEqualTo(7);
+  }
+
+  private void reserve(UUID tenant, UUID variant, int quantity, String expiresAt) {
+    jdbc.update(
+        "INSERT INTO inventory_reservation(id,tenant_id,variant_id,order_id,quantity,status,expires_at,created_at)"
+            + " VALUES (?,?,?,?,?,'ACTIVE',"
+            + expiresAt
+            + ",now() - interval '2 hours')",
+        UUID.randomUUID(),
+        tenant,
+        variant,
+        UUID.randomUUID(),
+        quantity);
+  }
+
   @SafeVarargs
   private static String lines(Map<UUID, Integer>... lines) {
     List<Map<String, Object>> items = new ArrayList<>();

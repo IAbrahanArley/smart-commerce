@@ -44,3 +44,7 @@ V8 expande store.status para DRAFT/PUBLISHED e adiciona catalog_product.publishe
 ## Fotos, descrição e variantes
 
 V9 acrescenta descrição HTML sanitizada e tipo SIMPLE/VARIABLE; cria catalog_variant com SKU/preço/custo/opções e unicidade de combinação. A variante padrão preserva o UUID do produto simples, e as referências de estoque passam a apontar para a unidade vendável sem reescrever saldos ou movimentos. V10 cria catalog_product_image com FK composta produto/tenant, bytes JPEG/PNG normalizados, dimensões, descrição alternativa e ordem. Não há armazenamento em caminhos fornecidos pelo cliente. [ADR-0011](adr/0011-catalog-media-description-variants.md).
+
+## Reservas e entrega (Sprint 3)
+
+V11 cria inventory_reservation (tenant, variante, pedido, quantidade, estado ACTIVE/CONSUMED/RELEASED/EXPIRED, expires_at, closed_at), com FK composta variante/tenant, uma reserva por pedido/variante e índice parcial das ativas. Reservas não alteram inventory_balance nem o ledger. A FK composta de order_id para sales_order será criada na SC-008, que introduz o pedido. As funções inventory_reserved_quantity e inventory_available_quantity concentram a fórmula de disponibilidade. V12 cria store_fulfillment 1:1 com a loja (FK composta loja/tenant): retirada com instruções e frete fixo em NUMERIC sem arredondamento (zero = grátis), área atendida e versão otimista. [ADR-0012](adr/0012-stock-reservation-cart-orders.md).
