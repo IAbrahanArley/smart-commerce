@@ -74,12 +74,12 @@ export default function StoresPanel({ onSessionExpired }: { onSessionExpired: ()
     </div> : stores.length === 0 ? <p>Você ainda não tem uma loja. Preencha os dados abaixo para criar a primeira.</p> : <ul className="store-list">
       {stores.map(tenant => <li key={tenant.id} className="store-card">
         <h3><Link href={`/lojas/${encodeURIComponent(tenant.id)}`}>{tenant.store.name}</Link></h3>
-        <p>{tenant.companyName}</p><p className="store-status">Em configuração · Proprietário</p>
+        <p>{tenant.companyName}</p><p className="store-status">{tenant.store.status === "PUBLISHED" ? "Vitrine publicada" : "Em configuração · Vitrine oculta"} · Proprietário</p>
       </li>)}
     </ul>}
     <div className="store-create">
       <h2>Criar minha loja</h2>
-      <p>A loja começa em configuração. A vitrine pública ainda não está disponível.</p>
+      <p>A loja começa em configuração, com a vitrine oculta. Você decide quando publicar a loja e quais produtos exibir.</p>
       <p ref={feedback} role="status" aria-live="polite" tabIndex={-1}
         className={error ? "feedback feedback-error" : created ? "feedback feedback-success" : "feedback-empty"}>
         {error || (created ? <>Loja criada. <Link href={`/lojas/${encodeURIComponent(created.id)}`}>Visualizar {created.store.name}</Link></> : "")}

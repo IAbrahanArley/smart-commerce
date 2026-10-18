@@ -1,6 +1,8 @@
 package com.smartcommerce.catalog.controllers;
 
+import com.smartcommerce.catalog.dto.request.ProductPublicationRequest;
 import com.smartcommerce.catalog.dto.request.ProductRequest;
+import com.smartcommerce.catalog.dto.request.VariantRequest;
 import com.smartcommerce.catalog.dto.response.ProductView;
 import com.smartcommerce.catalog.services.CatalogService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -46,7 +48,7 @@ public final class CatalogController {
   public ResponseEntity<ProductView> create(
       @PathVariable UUID tenantId, @RequestBody ProductRequest input, Authentication actor) {
     ProductView created =
-        catalog.create(UUID.fromString(actor.getName()), tenantId, input.values());
+        catalog.create(UUID.fromString(actor.getName()), tenantId, input.values(), input.details());
     return ResponseEntity.created(
             URI.create("/api/tenants/" + tenantId + "/products/" + created.id()))
         .body(created);
@@ -64,6 +66,52 @@ public final class CatalogController {
         tenantId,
         productId,
         input.values(),
+        input.expectedVersion(),
+        input.details());
+  }
+
+  @PostMapping("/{productId}/variants")
+  public ProductView addVariant(
+      @PathVariable UUID tenantId,
+      @PathVariable UUID productId,
+      @RequestBody VariantRequest input,
+      Authentication actor) {
+    return catalog.addVariant(
+        UUID.fromString(actor.getName()),
+        tenantId,
+        productId,
+        input.values("Variação"),
         input.expectedVersion());
+  }
+
+  @PutMapping("/{productId}/variants/{variantId}")
+  public ProductView updateVariant(
+      @PathVariable UUID tenantId,
+      @PathVariable UUID productId,
+      @PathVariable UUID variantId,
+      @RequestBody VariantRequest input,
+      Authentication actor) {
+    return catalog.updateVariant(
+        UUID.fromString(actor.getName()),
+        tenantId,
+        productId,
+        variantId,
+        input.values("Variação"),
+        input.expectedVersion());
+  }
+
+  @SecurityRequirement(name = "csrf")
+  @PutMapping("/{productId}/publication")
+  public ProductView publish(
+      @PathVariable UUID tenantId,
+      @PathVariable UUID productId,
+      @RequestBody ProductPublicationRequest request,
+      Authentication actor) {
+    return catalog.publish(
+        UUID.fromString(actor.getName()),
+        tenantId,
+        productId,
+        request.value(),
+        request.expectedVersion());
   }
 }

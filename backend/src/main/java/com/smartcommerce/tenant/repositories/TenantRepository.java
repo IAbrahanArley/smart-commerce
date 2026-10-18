@@ -50,6 +50,24 @@ public class TenantRepository {
     return tenants.findOwned(actor, tenant).map(this::details);
   }
 
+  public TenantDetails publish(UUID actor, UUID tenant, boolean published) {
+    UUID storeId =
+        access
+            .lockOwnedStoreForPublication(actor, tenant)
+            .orElseThrow(() -> new TenantPersistenceException(Reason.MISSING));
+    Store store =
+        entities
+            .createQuery(
+                "select s from Store s where s.id=:store and s.tenantId=:tenant", Store.class)
+            .setParameter("store", storeId)
+            .setParameter("tenant", tenant)
+            .getSingleResult();
+    store.publish(published);
+    entities.flush();
+    return findOwned(actor, tenant)
+        .orElseThrow(() -> new TenantPersistenceException(Reason.MISSING));
+  }
+
   private TenantDetails details(Tenant tenant) {
     Store store =
         entities

@@ -7,11 +7,14 @@ import com.smartcommerce.identity.services.IdentityAuthenticationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.context.NullSecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -22,6 +25,39 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 /** Global identity does not authorize any tenant, role or business operation. */
 @Configuration(proxyBeanMethods = false)
 public class BootstrapSecurityConfiguration {
+  /** Public reads never authenticate with, create, or reuse the administrative session. */
+  @Bean
+  @Order(0)
+  SecurityFilterChain publicStorefrontSecurity(HttpSecurity http) throws Exception {
+    return http.securityMatcher("/api/public/**")
+        .authorizeHttpRequests(
+            requests ->
+                requests
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/public/stores/*",
+                        "/api/public/stores/*/fulfillment",
+                        "/api/public/stores/*/products/*",
+                        "/api/public/stores/*/products/*/images",
+                        "/api/public/stores/*/products/*/images/*/content")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/public/stores/*/cart/quote")
+                    .permitAll()
+                    .anyRequest()
+                    .denyAll())
+        .sessionManagement(config -> config.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .securityContext(
+            config -> config.securityContextRepository(new NullSecurityContextRepository()))
+        // Reads plus the side-effect-free cart quote only: no ambient authority exists on this
+        // chain, so CSRF does not apply; administrative mutations retain their CSRF protection.
+        .csrf(AbstractHttpConfigurer::disable)
+        .requestCache(AbstractHttpConfigurer::disable)
+        .formLogin(AbstractHttpConfigurer::disable)
+        .httpBasic(AbstractHttpConfigurer::disable)
+        .logout(AbstractHttpConfigurer::disable)
+        .build();
+  }
+
   @Bean
   CookieCsrfTokenRepository identityCsrfRepository(
       @Value("${identity.secure-cookies:false}") boolean secure) {
@@ -71,9 +107,37 @@ public class BootstrapSecurityConfiguration {
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/auth/me")
                     .authenticated()
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/tenants/*/products/*/images",
+                        "/api/tenants/*/products/*/images/*/content",
+                        "/api/tenants/*/products/*/variants/*/inventory")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/tenants/*/products/*/images",
+                        "/api/tenants/*/products/*/variants",
+                        "/api/tenants/*/products/*/variants/*/inventory")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.PUT,
+                        "/api/tenants/*/products/*/images/order",
+                        "/api/tenants/*/products/*/variants/*")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/tenants/*/products/*/images/*")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.PUT,
+                        "/api/tenants/*/publication",
+                        "/api/tenants/*/products/*/publication")
+                    .authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/tenants", "/api/tenants/*")
                     .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/tenants")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/tenants/*/fulfillment")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.PUT, "/api/tenants/*/fulfillment")
                     .authenticated()
                     .requestMatchers(
                         HttpMethod.GET, "/api/tenants/*/products", "/api/tenants/*/products/*")
@@ -81,6 +145,10 @@ public class BootstrapSecurityConfiguration {
                     .requestMatchers(HttpMethod.POST, "/api/tenants/*/products")
                     .authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/tenants/*/products/*")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/tenants/*/products/*/inventory")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/tenants/*/products/*/inventory")
                     .authenticated()
                     .requestMatchers(
                         HttpMethod.GET,

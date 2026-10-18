@@ -4,10 +4,10 @@ SaaS multi-tenant de lojas virtuais independentes com gestão financeira e opera
 
 ## Estado e escopo
 
-Validações locais: [autenticação](docs/quality/SC-002-AUTH-VALIDATION.md), [empresa/loja](docs/quality/SC-003-VALIDATION.md) e [catálogo básico](docs/quality/CATALOG-VALIDATION.md). A suíte atual possui 62 testes backend aprovados após a refatoração de arquitetura. Publicação e CI remota das alterações funcionais posteriores à fundação permanecem pendentes.
+Validações locais: [autenticação](docs/quality/SC-002-AUTH-VALIDATION.md), [empresa/loja](docs/quality/SC-003-VALIDATION.md), [catálogo básico](docs/quality/CATALOG-VALIDATION.md), [estoque](docs/quality/INVENTORY-VALIDATION.md), [vitrine pública](docs/quality/STOREFRONT-VALIDATION.md) [fotos, descrição e variações](docs/quality/CATALOG-MEDIA-VARIANTS-VALIDATION.md), [reservas](docs/quality/SC-005-VALIDATION.md), [entrega](docs/quality/SC-006-VALIDATION.md), [carrinho](docs/quality/SC-007-VALIDATION.md) e [integração da Sprint 3](docs/quality/SPRINT-03-INTEGRATION-VALIDATION.md). A suíte atual possui 128 testes backend aprovados após a integração de SC-005 a SC-007. Publicação e CI remota das alterações desde `1a04070` permanecem pendentes.
 
 
-Backend Spring Boot, admin Next.js, PostgreSQL/Flyway e CI preparados. A SC-002 acrescenta o fluxo local de solicitação por e-mail, confirmação com definição de senha, login, consulta de identidade e logout. A SC-003 acrescenta criação e consulta da empresa/loja do proprietário, com isolamento por vínculo. O catálogo básico acrescenta cadastro, listagem e edição de produtos por loja. Vitrine pública, estoque, pagamentos, IA e recuperação de senha não integram esta entrega.
+Backend Spring Boot, admin e vitrine Next.js separados, PostgreSQL/Flyway e CI preparados. A SC-002 acrescenta o fluxo local de solicitação por e-mail, confirmação com definição de senha, login, consulta de identidade e logout. A SC-003 acrescenta criação e consulta da empresa/loja do proprietário, com isolamento por vínculo. O catálogo permite cadastrar, listar e editar produtos; o estoque registra entradas e ajustes. A vitrine pública mostra somente lojas e produtos publicados explicitamente, com preços e disponibilidade descontadas as reservas ativas. A loja configura retirada e/ou frete fixo, e o comprador monta um carrinho com cotação calculada pelo backend. Checkout, pedidos, pagamentos, IA e recuperação de senha ainda não integram esta entrega.
 
 Decisões: [ADR-0004](docs/architecture/adr/0004-project-bootstrap.md). Resultados e limitações: [validação SC-001](docs/quality/SC-001-VALIDATION.md). O isolamento implementado para empresa/loja e catálogo é verificado por testes A/B; observabilidade ampliada da SC-004 continua pendente.
 
@@ -18,7 +18,7 @@ SC-001 publicada no repositório privado confirmado pelo usuário. A [CI remota]
 ```text
 backend/          Spring Boot, Maven Wrapper, Flyway e testes
 admin-web/        Next.js App Router, TypeScript e shell administrativo
-storefront-web/   reservado; sem aplicação executável
+storefront-web/   Next.js App Router, vitrine pública de consulta
 infrastructure/   Compose e inicialização técnica do PostgreSQL
 scripts/          execução local do backend em PowerShell
 docs/             produto, arquitetura, ADRs, papéis e evidências
@@ -30,7 +30,7 @@ docs/             produto, arquitetura, ADRs, papéis e evidências
 - JDK 21. A validação local utilizou Corretto 21.0.9; a CI aprovou OpenJDK 21.0.12.1 / Corretto 21.0.12.12.1. O adaptador Corretto da action aceita somente a major `21`, selecionando seu patch disponível. Selecione o JDK no terminal; o Java global pode continuar em outra versão.
 - Maven 3.10.0 obtido pelo Maven Wrapper 3.3.4, sem instalação global.
 - Spring Boot 4.1.1; dependências gerenciadas pelo parent/BOM no `backend/pom.xml`.
-- Node.js 24.12.0; npm local 11.21.0 e npm remoto aprovado 11.6.2 (ambos atendem ao engine 11 do projeto). Versões exatas das bibliotecas em `admin-web/package.json` e `package-lock.json`.
+- Node.js 24.12.0; npm local 11.21.0 e npm remoto aprovado 11.6.2 (ambos atendem ao engine 11 do projeto). Versões exatas das bibliotecas nos manifests e lockfiles de `admin-web/` e `storefront-web/`; a vitrine reutiliza as versões do admin.
 - Docker Desktop/Engine Linux e Compose v2. O CLI instalado sem engine acessível não basta.
 - PostgreSQL 18.6 Bookworm, com digest fixado no Compose e nos testes.
 
@@ -114,7 +114,7 @@ Comandos npm/Compose são equivalentes nos demais sistemas. O helper documentado
 
 Compose publica PostgreSQL somente em loopback. Na primeira inicialização de um volume vazio, cria uma conta de aplicação sem privilégios de superusuário, criação de bancos ou roles. A conta administrativa é separada. O usuário local é proprietário do banco para permitir Flyway; separar usuários de migração e runtime fica para a configuração futura de produção.
 
-V1 cria `app_metadata` e registra `bootstrap=SC-001`. Essa tabela global guarda metadados técnicos. A SC-002 Etapa 1 adiciona V2 com `identity_user` e `identity_local_credential`; V3 acrescenta provas de e-mail e contadores de abuso, V4 cria o schema oficial do Spring Session JDBC V5 adiciona empresa, vínculo e loja; V6 cria o catálogo básico com integridade tenant/loja e precisão monetária. Flyway controla as versões; V1/V2 não foram reescritas e a inicialização automática de sessão fica desabilitada. Contrato: [fundação de identidade](docs/architecture/IDENTITY_FOUNDATION.md).
+V1 cria `app_metadata` e registra `bootstrap=SC-001`. Essa tabela global guarda metadados técnicos. A SC-002 Etapa 1 adiciona V2 com `identity_user` e `identity_local_credential`; V3 acrescenta provas de e-mail e contadores de abuso; V4 cria o schema oficial do Spring Session JDBC; V5 adiciona empresa, vínculo e loja; V6 cria o catálogo com integridade tenant/loja e precisão monetária. V7 acrescenta saldos/movimentos de estoque; V8 permite publicação explícita de loja/produto, mantendo produtos existentes ocultos; V9/V10 criam variantes e fotos; V11 cria reservas de estoque e a função única de disponibilidade; V12 cria a configuração de entrega da loja. Flyway controla as versões; migrações anteriores não foram reescritas e a inicialização automática de sessão fica desabilitada. Contrato: [fundação de identidade](docs/architecture/IDENTITY_FOUNDATION.md).
 
 Alterar senhas no `.env` não altera usuários de um volume já inicializado. Não apague volumes para corrigir isso; trate a mudança de credenciais deliberadamente. Remoção de dados exige aprovação humana e não integra os comandos normais do projeto.
 
@@ -142,9 +142,9 @@ Smoke inicia o build de produção em `127.0.0.1:3100`, verifica página inicial
 
 ## Integração contínua
 
-GitHub Actions executa backend e admin em push/PR. Actions são fixadas por commit, com permissões de leitura e sem deploy ou segredos de produção. Backend usa Testcontainers no runner, sem serviço PostgreSQL duplicado. Admin executa lint explicitamente, tipos, build e smoke.
+GitHub Actions está configurado para executar backend, admin e storefront em push/PR. Actions são fixadas por commit, com permissões de leitura e sem deploy ou segredos de produção. Backend usa Testcontainers no runner, sem serviço PostgreSQL duplicado. Cada frontend executa lint, tipos, build e smoke. O novo job storefront ainda exige publicação e execução remota; validações locais não comprovam CI remota.
 
-Origin confirmado: `https://github.com/IAbrahanArley/smart-commerce.git`, repositório privado, branch `main`. A etapa documental UI/UX foi publicada no SHA `c1014ed38fc13d56ed00c64acb34674baf60c17a`, com CI backend/admin aprovada. Main possui proteção e exige os checks backend/admin. A Etapa 1 da SC-002 foi publicada no SHA `adbc1b549e863745fd5f2136a4dfcb4e34d49c18`, com [backend/admin aprovados](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38818169657). Essa execução não comprova as alterações funcionais posteriores, ainda locais. SEC-003 continua aberta, sem aceite de risco.
+Origin confirmado: `https://github.com/IAbrahanArley/smart-commerce.git`, repositório privado, branch `main`. A etapa documental UI/UX foi publicada no SHA `c1014ed38fc13d56ed00c64acb34674baf60c17a`, com CI backend/admin aprovada. Main possui proteção e exige os checks backend/admin. A Etapa 1 da SC-002 foi publicada no SHA `adbc1b549e863745fd5f2136a4dfcb4e34d49c18`, com [backend/admin aprovados](https://github.com/IAbrahanArley/smart-commerce/actions/runs/38818169657). Essa execução histórica não comprova as alterações atuais de estoque/vitrine, ainda locais. SEC-003 continua aberta, sem aceite de risco.
 
 ## Limites da entrega
 
@@ -168,10 +168,48 @@ Implementação: [ADR-0006](docs/architecture/adr/0006-tenant-store-onboarding.m
 3. Cadastre e confira os valores. Abra Editar produto, altere e salve; recarregue para conferir a persistência.
 4. SKU repetido na mesma loja mostra erro. Edição desatualizada exige carregar a versão atual, sem sobrescrever dados.
 
-Rotas: /lojas/{tenantId}/produtos e /lojas/{tenantId}/produtos/{productId}. Catálogo interno, sem publicação ou estoque. [Decisões](docs/architecture/adr/0007-basic-catalog.md) e [validação local](docs/quality/CATALOG-VALIDATION.md). SEC-003 permanece inalterada.
+Rotas administrativas: /lojas/{tenantId}/produtos e /lojas/{tenantId}/produtos/{productId}. Publicação e estoque são ações separadas, descritas a seguir. [Decisões iniciais](docs/architecture/adr/0007-basic-catalog.md) e [validação do catálogo básico](docs/quality/CATALOG-VALIDATION.md). SEC-003 permanece inalterada.
 
 ## Arquitetura e padrões de desenvolvimento
 
 Backend mantém o monólito modular com camadas explícitas dentro de identity, tenant e catalog: controllers, services, repositories, entities/domain e dto/request/response. Tenant e catálogo utilizam JPA/Spring Data; identidade, sessões e locks PostgreSQL especializados mantêm JDBC em repositórios. Nenhum SQL fica nos serviços. Flyway controla o schema; Hibernate valida e Open Session in View fica desabilitado.
 
 Padrões adaptados do project-rh: [ADR-0008](docs/architecture/adr/0008-layered-persistence-refactoring.md), [convenções](docs/architecture/CODING_STANDARDS.md) e [validação da refatoração](docs/quality/ARCHITECTURE-REFACTOR-VALIDATION.md). No perfil dev, após login no admin usando 127.0.0.1, a documentação autenticada está em http://127.0.0.1:8080/swagger-ui/index.html e http://127.0.0.1:8080/v3/api-docs. Swagger é somente consulta, sem executar operações. Fora de dev, a documentação permanece desabilitada por padrão.
+
+## Demonstrar estoque básico
+
+Abra sua loja, vá a Produtos e selecione Estoque no produto. O saldo inicial é zero. Registre uma Entrada com quantidade inteira e motivo; depois faça um ajuste para adicionar ou retirar unidades. Saídas acima do saldo são bloqueadas. Confira o saldo e o histórico após recarregar; há paginação para movimentações anteriores.
+
+Se houver falha de conexão, permaneça na tela e use Repetir mesma solicitação com segurança. O identificador preservado impede duplicação. Se sair da tela, confira o histórico antes de criar uma nova operação. Não há reservas, pedidos ou baixa automática nesta entrega. [Decisões do estoque](docs/architecture/adr/0009-basic-inventory.md) e [validação](docs/quality/INVENTORY-VALIDATION.md). SEC-003 permanece aberta e inalterada.
+
+## Executar a vitrine pública
+
+Com backend e admin iniciados, em outro terminal:
+
+```powershell
+Set-Location storefront-web
+npm ci --no-fund --no-audit
+npm run dev
+```
+
+Acesse http://localhost:3001/lojas/{slug}. Use localhost na vitrine e 127.0.0.1 no admin para manter os cookies host-only separados em desenvolvimento. O servidor da vitrine usa STOREFRONT_API_ORIGIN (padrão http://127.0.0.1:8080); não encaminha credenciais administrativas. Fora do desenvolvimento, definir origens separadas e HTTPS antes da disponibilização externa.
+
+No admin, selecione Publicar produto na edição de cada item; depois Publicar loja nos detalhes da loja. Ambos precisam estar publicados. Ocultar produto ou loja remove o conteúdo de novas consultas públicas. A vitrine mostra nome, preço e disponibilidade, sem custos nem saldo exato. Esta entrega permite consulta: carrinho, pedidos e pagamentos são etapas posteriores.
+
+Verificações da vitrine: npm run lint, npm run typecheck, npm run build e npm run test:smoke em storefront-web. CI inclui o job storefront além de backend/admin. [Decisões](docs/architecture/adr/0010-public-storefront.md) e [validação local](docs/quality/STOREFRONT-VALIDATION.md).
+
+## Fotos, descrição e variações
+
+No cadastro, escolha produto simples ou com variações. Para variações, informe até três opções (por exemplo, cor/tamanho), gere no máximo 50 combinações e confira SKU, preço e custo de cada uma antes de salvar. O tipo é fixo após a criação: produtos existentes e seus movimentos não são convertidos nem apagados automaticamente. Abra o estoque da combinação desejada para registrar entradas/ajustes.
+
+A descrição aceita parágrafos, negrito, itálico e listas, com HTML básico sanitizado no backend. Conteúdo ativo, estilos e imagens embutidas não são permitidos. Depois de salvar o produto, envie suas fotos na edição: JPEG/PNG, até 5 MiB cada, até seis fotos, lados de 300–4096px e até 16 MP. Informe texto alternativo e use os controles de ordem/capa; o servidor normaliza orientação JPEG, dimensões e metadados. Fotos ficam no PostgreSQL local e acompanham seu backup, sem configurar serviço externo. Para atualizar fotos, salve primeiro os demais campos.
+
+Publique produto e loja para consultar fotos, descrição e combinações na vitrine. [Contratos, limites e decisões](docs/architecture/adr/0011-catalog-media-description-variants.md) e [validação local](docs/quality/CATALOG-MEDIA-VARIANTS-VALIDATION.md). A evolução adiciona somente jsoup 1.23.2 no backend; frontend preserva dependências existentes. SEC-003 continua aberta e inalterada.
+
+## Entrega da loja e carrinho (Sprint 3, parcial)
+
+Decisões aprovadas no [ADR-0012](docs/architecture/adr/0012-stock-reservation-cart-orders.md) (D1–D7) e plano em [SPRINT_03.md](docs/product/SPRINT_03.md). Entregues SC-005 a SC-007:
+
+- **Reservas (SC-005):** disponível = físico − reservas ativas não expiradas (30 minutos). A reserva expira pelo relógio, sem depender de rotina. O estoque no admin mostra físico, reservado e disponível; um ajuste que deixaria o físico abaixo do reservado é bloqueado. Ainda não há endpoint que crie reservas: elas nascem com o pedido (SC-008).
+- **Entrega (SC-006):** nos detalhes da loja, a seção Entrega ativa retirada (com instruções) e/ou frete fixo único (zero = grátis) com a área atendida. Não há cálculo por CEP.
+- **Carrinho (SC-007):** na vitrine, escolha a combinação e a quantidade e selecione Adicionar ao carrinho; o carrinho fica em `/lojas/{slug}/carrinho`, num cookie HttpOnly por loja, e preços e disponibilidade vêm sempre da cotação do backend. Ainda não há checkout: o frete aparece na cotação a partir da SC-008.

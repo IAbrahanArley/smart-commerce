@@ -2,6 +2,7 @@ package com.smartcommerce.tenant.exceptions;
 
 public final class TenantPersistenceException extends RuntimeException {
   public enum Reason {
+    MISSING,
     INACTIVE_IDENTITY,
     SLUG_CONFLICT
   }

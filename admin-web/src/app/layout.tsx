@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Link className="brand" href="/" translate="no">Smart Commerce</Link>
           <span>Administração</span>
         </header>
-        <main id="conteudo" tabIndex={-1}>{children}</main>
+        {children}
         <footer>Smart Commerce · Ambiente de desenvolvimento</footer>
       </body>
     </html>

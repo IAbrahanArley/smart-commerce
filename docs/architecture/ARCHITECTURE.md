@@ -53,3 +53,21 @@ O módulo tenant implementa criação conjunta de empresa/loja/vínculo OWNER e 
 ## Catálogo básico autorizado
 
 O módulo catalog implementa produto simples e consultas autorizadas por vínculo. A entrega inicial usava JDBC; a revisão do [ADR-0008](adr/0008-layered-persistence-refactoring.md) organiza suas camadas e introduz JPA, preservando autorização transacional, escopo de tenant e SQL especializado para atualização concorrente. Contrato monetário e concorrência: [ADR-0007](adr/0007-basic-catalog.md). Esta entrega foi autorizada posteriormente ao planejamento da Sprint 1; não inclui estoque, variantes ou vitrine.
+
+## Estoque básico autorizado
+
+Inventory mantém saldo físico inteiro e histórico auditável por produto. Serviço usa contrato de autorização do catálogo dentro da transação; repositórios concentram JPA e SQL especializado para inicialização concorrente/locks. Escritas idempotentes e serializadas impedem saldo negativo; leituras usam snapshot consistente e paginação por cursor. Sem reservas/pedidos ou novos serviços. [ADR-0009](adr/0009-basic-inventory.md).
+
+## Vitrine pública autorizada
+
+Storefront é modelo público de leitura no mesmo backend, com controllers/services/repositories e projeções restritas por slug publicado. Nova cadeia GET stateless não usa sessões administrativas. storefront-web é aplicação SSR separada, sem proxy administrativo, credenciais encaminhadas ou cache de catálogo. Publicação explícita da loja/produto e contratos: [ADR-0010](adr/0010-public-storefront.md).
+
+## Evolução autorizada do catálogo
+
+Fotos normalizadas em PostgreSQL, descrição HTML sanitizada e unidades vendáveis por combinação de opções evoluem os módulos catalog/inventory/storefront existentes. FKs compostas e autorização continuam obrigatórias; o estoque legado é preservado na variante padrão. Limites, contratos e decisões: [ADR-0011](adr/0011-catalog-media-description-variants.md).
+
+## Carrinho, reservas e pedidos
+
+O [ADR-0012](adr/0012-stock-reservation-cart-orders.md) foi adotado para D1–D7 em 2026-10-17: carrinho sem estado no servidor, reserva por variante criada junto do pedido `PENDING_PAYMENT`, disponibilidade calculada por reservas não expiradas, frete fixo ou retirada e checkout público idempotente. Plano em [SPRINT_03.md](../product/SPRINT_03.md).
+
+Entregues SC-005 a SC-007. O inventory mantém `inventory_reservation` e a função SQL única `inventory_available_quantity`, usada pela vitrine, pela cotação e pelo admin, com o instante do `Clock` do backend. O serviço interno de reserva não tem endpoint e será chamado pelo módulo orders (SC-008). O tenant mantém a configuração de entrega 1:1 com a loja, com leitura pública das opções ativas. O storefront ganha `POST /api/public/stores/{slug}/cart/quote`, stateless e sem gravação; o storefront-web guarda o carrinho em cookie HttpOnly por loja e mutações por server action. A cadeia pública continua sem sessão e aceita somente esse POST além dos GET.

@@ -59,6 +59,15 @@ public class TenantService {
             () -> new TenantException(TenantException.Reason.MISSING, "Loja não encontrada."));
   }
 
+  @Transactional
+  public TenantView publish(UUID actor, UUID tenant, boolean published) {
+    try {
+      return view(tenants.publish(actor, tenant, published));
+    } catch (TenantPersistenceException exception) {
+      throw new TenantException(TenantException.Reason.MISSING, "Loja não encontrada.");
+    }
+  }
+
   private static TenantView view(TenantDetails details) {
     var tenant = details.tenant();
     var store = details.store();

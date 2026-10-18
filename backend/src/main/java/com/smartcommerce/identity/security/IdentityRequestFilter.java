@@ -37,12 +37,40 @@ public final class IdentityRequestFilter extends OncePerRequestFilter {
       response.setStatus(403);
       return;
     }
-    if (request.getContentLengthLong() > 8192) {
+    boolean catalogUpload =
+        "POST".equals(request.getMethod())
+            && request
+                .getRequestURI()
+                .matches("/api/tenants/[0-9a-fA-F-]{36}/products/[0-9a-fA-F-]{36}/images")
+            && request.getContentType() != null
+            && request
+                .getContentType()
+                .toLowerCase(java.util.Locale.ROOT)
+                .startsWith("multipart/form-data;");
+    if (catalogUpload) {
+      // Never fall back to a multipart form parameter for CSRF. Authentication and real token
+      // verification remain in the Security chain, before lazy servlet multipart parsing.
+      if (request.getHeader("X-CSRF-TOKEN") == null) {
+        response.setStatus(403);
+        return;
+      }
+      if (request.getContentLengthLong() > 6L * 1024 * 1024) {
+        response.setStatus(413);
+        return;
+      }
+      chain.doFilter(request, response);
+      return;
+    }
+    int limit =
+        request.getRequestURI().matches("/api/tenants/[0-9a-fA-F-]{36}/products(?:/.*)?")
+            ? 256 * 1024
+            : 8192;
+    if (request.getContentLengthLong() > limit) {
       response.setStatus(413);
       return;
     }
-    byte[] body = request.getInputStream().readNBytes(8193);
-    if (body.length > 8192) {
+    byte[] body = request.getInputStream().readNBytes(limit + 1);
+    if (body.length > limit) {
       response.setStatus(413);
       return;
     }

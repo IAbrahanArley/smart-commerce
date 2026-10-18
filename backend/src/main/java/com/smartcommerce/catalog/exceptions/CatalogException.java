@@ -5,7 +5,11 @@ public final class CatalogException extends RuntimeException {
   public enum Reason {
     MISSING,
     SKU_CONFLICT,
-    VERSION_CONFLICT
+    VERSION_CONFLICT,
+    PRODUCT_KIND_CONFLICT,
+    VARIANT_LIMIT,
+    COMBINATION_CONFLICT,
+    VARIANT_REQUIRED
   }
 
   private final Reason reason;

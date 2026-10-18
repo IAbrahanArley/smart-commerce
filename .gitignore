@@ -39,3 +39,6 @@ Thumbs.db
 .npm/
 .codex/auth.json
 .codex/sessions/
+
+# Local design-skill review artifacts
+.taste-skill/
