@@ -9,6 +9,7 @@ import { quoteCart, type QuoteLine } from "@/lib/cart-quote";
 import { cartCookieName, parseCart } from "@/lib/cart-cookie";
 import { removeCartItem, updateCartItem } from "@/lib/cart-actions";
 import { formatBRL } from "@/lib/price";
+import { checkoutEnabled } from "@/lib/checkout-input";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Carrinho" };
@@ -21,6 +22,7 @@ const NOTICES: Record<string, string> = {
   removido: "Item removido do carrinho.",
   limite: "O carrinho aceita até 20 produtos diferentes. Remova um item para adicionar outro.",
   invalido: "Não foi possível alterar o carrinho. Tente novamente.",
+  revisar: "Alguns itens mudaram de disponibilidade. Revise o carrinho antes de finalizar o pedido.",
 };
 const QUANTITIES = Array.from({ length: 10 }, (_, index) => index + 1);
 const STATUS_TEXT = { AVAILABLE: "Disponível", INSUFFICIENT: "Quantidade indisponível. Reduza a quantidade.", UNAVAILABLE: "Indisponível no momento" };
@@ -33,6 +35,8 @@ export default async function CartPage({ params, searchParams }: Props) {
   const quote = lines.length > 0 ? await quoteCart(store.slug, lines) : null;
   const notice = typeof aviso === "string" ? NOTICES[aviso] : undefined;
   const storeUrl = `/lojas/${encodeURIComponent(store.slug)}`;
+  // D6: the checkout link exists only when explicitly enabled and the whole cart can be bought.
+  const canCheckout = checkoutEnabled(process.env.STOREFRONT_CHECKOUT_ENABLED) && quote !== null && quote.purchasable && quote.delivery.length > 0;
   return (
     <>
       <StoreHeader store={store} />
@@ -63,7 +67,10 @@ export default async function CartPage({ params, searchParams }: Props) {
                 <dd className="cart-subtotal">{formatBRL(quote.subtotal)}</dd>
               </dl>
               {!quote.purchasable ? <p className="cart-warning">Alguns itens estão indisponíveis ou sem a quantidade pedida e não entram no subtotal.</p> : null}
-              <p className="cart-note">Valores calculados pela loja nesta consulta, sem reserva de estoque. Entrega, retirada e finalização da compra ainda não estão disponíveis.</p>
+              {canCheckout ? <Link className="action-link cart-checkout" href={`${storeUrl}/checkout`} prefetch={false}>Finalizar pedido</Link> : null}
+              <p className="cart-note">{canCheckout
+                ? "Valores calculados pela loja nesta consulta, sem reserva de estoque. Na próxima etapa você escolhe a entrega e confirma o pedido."
+                : "Valores calculados pela loja nesta consulta, sem reserva de estoque. A finalização da compra não está disponível no momento."}</p>
             </aside>
           </div>
         )}
