@@ -222,6 +222,7 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 @media (min-width: 90rem) { .order-workspace { grid-template-columns: minmax(0, 1fr) 22rem; } }
 /* Order tables have more columns: stacked rows until the side navigation layout (64rem), then
    text cells wrap between words while amounts stay on one line. */
+/* Explicit table roles in the markup keep the semantics that some browsers drop with display: block. */
 @media (max-width: 63.99rem) {
   .data-table-wrapping thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .data-table-wrapping, .data-table-wrapping caption, .data-table-wrapping tbody, .data-table-wrapping tr, .data-table-wrapping th, .data-table-wrapping td { display: block; }

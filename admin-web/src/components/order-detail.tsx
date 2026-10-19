@@ -20,6 +20,8 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
   const submitting = useRef(false);
   const reasonRef = useRef<HTMLInputElement>(null);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreCancelFocus = useRef(false);
   const storePath = `/lojas/${encodeURIComponent(tenantId)}`;
   const path = `/api/tenants/${encodeURIComponent(tenantId)}/orders/${encodeURIComponent(orderId)}`;
 
@@ -37,7 +39,11 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
   }, [path, attempt]);
 
   useEffect(() => { if (feedback) feedbackRef.current?.focus(); }, [feedback]);
-  useEffect(() => { if (cancelling) reasonRef.current?.focus(); }, [cancelling]);
+  useEffect(() => {
+    if (cancelling) reasonRef.current?.focus();
+    // Closing the form unmounts the focused button: send focus back to the control that opened it.
+    else if (restoreCancelFocus.current) { restoreCancelFocus.current = false; cancelButtonRef.current?.focus(); }
+  }, [cancelling]);
 
   async function cancel(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,16 +87,16 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
           {order.status === "EXPIRED" ? <p>A reserva terminou{order.expiredAt ? ` em ${formatDateTime(order.expiredAt)}` : ` às ${formatDateTime(order.reservationExpiresAt)}`} e as unidades voltaram ao estoque disponível.</p> : null}
           {order.cancellation ? <dl className="order-facts"><div><dt>Cancelado em</dt><dd>{formatDateTime(order.cancellation.cancelledAt)}</dd></div><div><dt>Motivo (visível só para a loja)</dt><dd>{order.cancellation.reason}</dd></div></dl> : null}
         </section>
-        <div className="data-table-wrap"><table className="data-table data-table-wrapping">
+        <div className="data-table-wrap"><table className="data-table data-table-wrapping" role="table">
           <caption>Itens do pedido</caption>
-          <thead><tr><th scope="col">Produto</th><th scope="col">SKU</th><th scope="col" className="numeric">Preço</th><th scope="col" className="numeric">Custo</th><th scope="col" className="numeric">Quantidade</th><th scope="col" className="numeric">Total</th></tr></thead>
-          <tbody>{order.items.map((item, index) => <tr key={index}>
-            <th scope="row">{item.productName}{item.options.length ? <span className="field-help"> · {item.options.map(option => `${option.name}: ${option.value}`).join(" · ")}</span> : null}</th>
-            <td data-label="SKU"><span translate="no">{item.sku}</span></td>
-            <td data-label="Preço" className="numeric">{formatBRL(item.unitPrice)}</td>
-            <td data-label="Custo" className="numeric">{item.unitCost ? formatBRL(item.unitCost) : "Não informado"}</td>
-            <td data-label="Quantidade" className="numeric">{item.quantity}</td>
-            <td data-label="Total" className="numeric">{formatBRL(item.lineTotal)}</td>
+          <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Produto</th><th role="columnheader" scope="col">SKU</th><th role="columnheader" scope="col" className="numeric">Preço</th><th role="columnheader" scope="col" className="numeric">Custo</th><th role="columnheader" scope="col" className="numeric">Quantidade</th><th role="columnheader" scope="col" className="numeric">Total</th></tr></thead>
+          <tbody role="rowgroup">{order.items.map((item, index) => <tr role="row" key={index}>
+            <th role="rowheader" scope="row">{item.productName}{item.options.length ? <span className="field-help"> · {item.options.map(option => `${option.name}: ${option.value}`).join(" · ")}</span> : null}</th>
+            <td role="cell" data-label="SKU"><span translate="no">{item.sku}</span></td>
+            <td role="cell" data-label="Preço" className="numeric">{formatBRL(item.unitPrice)}</td>
+            <td role="cell" data-label="Custo" className="numeric">{item.unitCost ? formatBRL(item.unitCost) : "Não informado"}</td>
+            <td role="cell" data-label="Quantidade" className="numeric">{item.quantity}</td>
+            <td role="cell" data-label="Total" className="numeric">{formatBRL(item.lineTotal)}</td>
           </tr>)}</tbody>
         </table></div>
       </div>
@@ -116,7 +122,7 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
         {order.status === "PENDING_PAYMENT" ? <section className="side-card" aria-labelledby="order-cancel-title">
           <h2 id="order-cancel-title">Cancelar pedido</h2>
           {!cancelling ? <><p>O cancelamento libera as unidades reservadas na hora e não pode ser desfeito.</p>
-            <button type="button" className="button-danger" onClick={() => { setFeedback(null); setCancelling(true); }}>Cancelar pedido</button></>
+            <button ref={cancelButtonRef} type="button" className="button-danger" onClick={() => { setFeedback(null); setCancelling(true); }}>Cancelar pedido</button></>
           : <form onSubmit={event => void cancel(event)} noValidate>
             <label htmlFor="cancel-reason">Motivo do cancelamento</label>
             <p id="cancel-reason-help" className="field-help">Visível só para a loja. De 3 a {CANCEL_REASON_MAX} caracteres. O comprador verá apenas “Pedido cancelado”.</p>
@@ -126,7 +132,7 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
             {reasonError ? <p id="cancel-reason-error" className="field-error">{reasonError}</p> : null}
             <div className="form-actions">
               <button type="submit" className="button-danger" disabled={busy}>{busy ? "Cancelando…" : "Confirmar cancelamento"}</button>
-              <button type="button" className="button-secondary" disabled={busy} onClick={() => { setCancelling(false); setReason(""); setReasonError(""); }}>Manter pedido</button>
+              <button type="button" className="button-secondary" disabled={busy} onClick={() => { restoreCancelFocus.current = true; setCancelling(false); setReason(""); setReasonError(""); }}>Manter pedido</button>
             </div>
           </form>}
         </section> : null}

@@ -81,3 +81,13 @@ Na SC-010, o módulo `orders` ganha a área do lojista (`/api/tenants/{id}/order
 - a anonimização D2, diária.
 
 O admin-web ganha `/lojas/{id}/pedidos` (filtro e página na URL) e o detalhe com cancelamento. [Validação](../quality/SC-010-VALIDATION.md).
+
+A SC-011 revisou o fluxo inteiro ([modelo de ameaças](../security/SC-011-CHECKOUT-THREAT-MODEL.md)):
+
+- o limite por IP do checkout agrupa IPv6 por /64 (`ClientIpBucket`);
+- as rotinas esvaziam a fila dentro de um limite de tempo;
+- a anonimização cobre o motivo de cancelamento;
+- a V16 valida a FK reserva → pedido;
+- o admin só aceita IDs de rota em formato UUID.
+
+[Validação](../quality/SC-011-VALIDATION.md).

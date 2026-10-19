@@ -18,7 +18,8 @@ import org.testcontainers.utility.DockerImageName;
 
 /**
  * V13 is additive: reservations created before orders existed (local fixtures) survive the new
- * order foreign key, which is still enforced for every new reservation.
+ * order foreign key, which is still enforced for every new reservation. V16 validates that key only
+ * when no such reservation remains, and never deletes one.
  */
 @Testcontainers
 class SalesOrderMigrationIT {
@@ -82,6 +83,35 @@ class SalesOrderMigrationIT {
     jdbc.update(reservation, UUID.randomUUID(), tenant, variant, order);
     assertThat(jdbc.queryForObject("SELECT count(*) FROM inventory_reservation", Long.class))
         .isEqualTo(2);
+    // V16 never deletes the pre-order reservation: with it present the key stays NOT VALID.
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT success FROM flyway_schema_history WHERE version='16'", Boolean.class))
+        .isTrue();
+    assertThat(validated(jdbc)).isFalse();
+  }
+
+  @Test
+  void v16ValidatesTheOrderKeyWhenEveryReservationHasAnOrder() {
+    var admin =
+        new JdbcTemplate(
+            new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
+    admin.execute("CREATE DATABASE clean_v16");
+    var source =
+        new DriverManagerDataSource(
+            POSTGRES.getJdbcUrl().replaceFirst("/[^/?]+(?=\\?|$)", "/clean_v16"),
+            POSTGRES.getUsername(),
+            POSTGRES.getPassword());
+    flyway(source, "latest").migrate();
+    assertThat(validated(new JdbcTemplate(source))).isTrue();
+  }
+
+  private static boolean validated(JdbcTemplate jdbc) {
+    return Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            "SELECT convalidated FROM pg_constraint WHERE conname='inventory_reservation_order_tenant_fk'",
+            Boolean.class));
   }
 
   private static Flyway flyway(DriverManagerDataSource source, String target) {

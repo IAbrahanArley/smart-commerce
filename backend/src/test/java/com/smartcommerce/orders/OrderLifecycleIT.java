@@ -353,6 +353,11 @@ class OrderLifecycleIT {
                   Boolean.class,
                   gone))
           .isTrue();
+    // The store's free-text reason may quote the buyer: it is replaced, keeping the CHECKs valid.
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT cancel_reason FROM sales_order WHERE id=?", String.class, oldCancelled))
+        .isEqualTo("Motivo removido na anonimização");
     assertThat(count("SELECT count(*) FROM sales_order_item WHERE order_id='" + oldExpired + "'"))
         .isEqualTo(1);
     assertThat(

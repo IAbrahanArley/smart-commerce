@@ -140,6 +140,16 @@ try {
     assert.ok(page.includes(field), `${path}: conteúdo semântico`);
     assert.ok(!page.includes('class="presentation landing-page"'), `${path}: sem tema da landing`);
   }
+  // Route ids must be canonical UUIDs before any API path is built from them.
+  for (const path of ["/lojas/nao-e-uuid/pedidos", "/lojas/00000000-0000-0000-0000-000000000000/pedidos/nao-e-uuid"]) {
+    const invalid = await fetch(`${baseUrl}${path}`, { signal: AbortSignal.timeout(5000) });
+    // The root loading boundary streams before notFound(), so the status may be 200; the result
+    // is still the not-found page and the orders screen (which would call the API) never renders.
+    assert.ok([200, 404].includes(invalid.status), path);
+    const html = await invalid.text();
+    assert.match(html, /Página não encontrada/, path);
+    assert.ok(!html.includes('name="situacao"') && !html.includes("Consultando pedido"), path);
+  }
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /Página não encontrada/);
