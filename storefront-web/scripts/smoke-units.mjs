@@ -39,8 +39,11 @@ assert.equal(addMoney("99.80", "12.50"), "112.30");
 assert.equal(addMoney("0.01", "0.00"), "0.01");
 assert.equal(addMoney("19999999999999999999.99", "0.01"), "20000000000000000000.00");
 assert.equal(addMoney("1.001", "0.00"), null);
-for (const value of [undefined, "", "1", "TRUE", "yes"]) assert.equal(checkoutEnabled(value), false, String(value));
-assert.equal(checkoutEnabled("true"), true);
+for (const value of [undefined, "", "1", "TRUE", "yes"]) assert.equal(checkoutEnabled(value, "hosted-test", true), false, String(value));
+assert.equal(checkoutEnabled("true", undefined, false), true, "Desenvolvimento local.");
+// D6 + ADR-0014 H2: a production build only checks out in the hosted test environment.
+assert.equal(checkoutEnabled("true", "hosted-test", true), true);
+for (const deployment of [undefined, "", "production", "HOSTED-TEST"]) assert.equal(checkoutEnabled("true", deployment, true), false, String(deployment));
 const requestId = "11111111-1111-4111-8111-111111111111";
 const totals = { PICKUP: "99.80", FIXED_SHIPPING: "112.30" };
 const valid = { ...emptyValues(), fulfillment: "PICKUP", name: " Comprador  Sintético ", email: "pessoa@example.test", phone: "(11) 98888-7777" };

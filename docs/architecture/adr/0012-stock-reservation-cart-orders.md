@@ -34,6 +34,10 @@ Aplicação das regras aprovadas, sem mudar valores:
 - **D2:** a anonimização também substitui o motivo de cancelamento escrito pela loja, que pode citar o comprador. A rotina diária processa a fila até esvaziar, com limite de 10 minutos por execução, e o backend avisa na inicialização se o checkout estiver ligado com as rotinas desligadas.
 - **FK reserva → pedido:** validada pela V16 quando o banco não tem reservas sem pedido. Em bancos locais antigos que ainda tenham essas reservas, ela fica `NOT VALID` com um aviso, sem apagar dados.
 
+### Exceção ao D6 no ambiente de teste hospedado (2026-10-19)
+
+O [ADR-0014](0014-hosted-test-environment.md) (H2) permite checkout sem pagamento **somente** no ambiente de teste hospedado (`DEPLOYMENT_ENVIRONMENT=hosted-test`), com dados sintéticos e aviso permanente. O backend recusa iniciar com checkout fora de `dev` sem esse valor. A produção comercial continua proibida de aceitar pedido sem pagamento.
+
 ### Decisões da SC-010 (2026-10-18)
 
 O responsável autorizou a SC-010 e aprovou:

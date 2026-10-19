@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { checkoutConfigured, hostedTestEnvironment } from "@/lib/checkout-input";
 
 export const metadata: Metadata = {
   title: { default: "Vitrines | Smart Commerce", template: "%s | Smart Commerce" },
@@ -14,12 +15,18 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="pt-BR">
       <body>
         <a className="skip-link" href="#conteudo">Ir para o conteúdo</a>
+        {/* ADR-0014 H2: permanent notice in the hosted test environment. */}
+        {hostedTestEnvironment(process.env.DEPLOYMENT_ENVIRONMENT) ? (
+          <p className="test-environment-banner" role="note"><strong>Ambiente de teste.</strong> Dados fictícios e sem pagamentos reais. Não informe dados pessoais verdadeiros.</p>
+        ) : null}
         <div className="site-content">{children}</div>
         <footer className="site-footer" id="sobre-a-vitrine">
           <div className="page-width footer-content">
             <div className="footer-about">
               <h2>Sobre esta vitrine</h2>
-              <p>Produtos e preços publicados pela loja para você consultar. A compra por aqui ainda não está disponível.</p>
+              <p>{checkoutConfigured()
+                ? "Produtos e preços publicados pela loja. Pedidos feitos aqui são de teste: ainda não há pagamento."
+                : "Produtos e preços publicados pela loja para você consultar. A compra por aqui ainda não está disponível."}</p>
             </div>
             <p className="platform-credit">Tecnologia <span className="platform-name" translate="no">Smart Commerce</span></p>
           </div>

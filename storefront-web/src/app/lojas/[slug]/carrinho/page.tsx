@@ -10,7 +10,7 @@ import { quoteCart, type QuoteLine } from "@/lib/cart-quote";
 import { cartCookieName, parseCart } from "@/lib/cart-cookie";
 import { removeCartItem, updateCartItem } from "@/lib/cart-actions";
 import { formatBRL } from "@/lib/price";
-import { checkoutEnabled } from "@/lib/checkout-input";
+import { checkoutConfigured } from "@/lib/checkout-input";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Carrinho" };
@@ -37,7 +37,7 @@ export default async function CartPage({ params, searchParams }: Props) {
   const notice = typeof aviso === "string" ? NOTICES[aviso] : undefined;
   const storeUrl = `/lojas/${encodeURIComponent(store.slug)}`;
   // D6: the checkout link exists only when explicitly enabled and the whole cart can be bought.
-  const canCheckout = checkoutEnabled(process.env.STOREFRONT_CHECKOUT_ENABLED) && quote !== null && quote.purchasable && quote.delivery.length > 0;
+  const canCheckout = checkoutConfigured() && quote !== null && quote.purchasable && quote.delivery.length > 0;
   return (
     <>
       <StoreHeader store={store} />

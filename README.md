@@ -210,6 +210,14 @@ A descrição aceita parágrafos, negrito, itálico e listas, com HTML básico s
 
 Publique produto e loja para consultar fotos, descrição e combinações na vitrine. [Contratos, limites e decisões](docs/architecture/adr/0011-catalog-media-description-variants.md) e [validação local](docs/quality/CATALOG-MEDIA-VARIANTS-VALIDATION.md). A evolução adiciona somente jsoup 1.23.2 no backend; frontend preserva dependências existentes. SEC-003 continua aberta e inalterada.
 
+## Ambiente de teste hospedado (Render + Vercel)
+
+Para observar o sistema fora da máquina local, o [guia de deploy](docs/deploy/HOSTED-TEST-ENVIRONMENT.md) descreve o backend no Render (imagem `backend/Dockerfile`), o admin e a vitrine na Vercel e o e-mail de cadastro pelo Brevo, com todas as variáveis.
+
+- **Natureza do ambiente:** de teste, com dados fictícios e sem pagamento, conforme o [ADR-0014](docs/architecture/adr/0014-hosted-test-environment.md).
+- **Checkout fora de DEV:** só existe com `DEPLOYMENT_ENVIRONMENT=hosted-test`, como exceção H2 ao D6.
+- **Aviso:** todas as páginas mostram que se trata de um ambiente de teste.
+
 ## Entrega da loja e carrinho (Sprint 3, parcial)
 
 Decisões aprovadas no [ADR-0012](docs/architecture/adr/0012-stock-reservation-cart-orders.md) (D1–D7) e plano em [SPRINT_03.md](docs/product/SPRINT_03.md). Entregues SC-005 a SC-007:

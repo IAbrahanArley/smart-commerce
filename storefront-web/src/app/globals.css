@@ -268,3 +268,6 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
   .checkout-section, .order-details, .order-status { padding: var(--store-space-4); }
   .checkout-form > button { justify-self: stretch; }
 }
+
+/* ADR-0014 H2: hosted test environment notice, existing tokens only. */
+.test-environment-banner { margin: 0; padding: var(--store-space-2) var(--store-space-4); text-align: center; color: var(--store-text); background: var(--store-muted-background); border-bottom: 1px solid var(--store-divider); overflow-wrap: anywhere; }

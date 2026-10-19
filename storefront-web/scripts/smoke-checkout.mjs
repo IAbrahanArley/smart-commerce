@@ -125,7 +125,7 @@ export async function checkoutSmoke({ base, page, cartCookie, port, upstreamPort
   // Behind a declared trusted proxy, the last hop is signed with the shared secret (same HMAC as the backend).
   const trustedPort = port + 2;
   const trusted = await startNext(trustedPort, { ...process.env, STOREFRONT_API_ORIGIN: `http://127.0.0.1:${upstreamPort}`, STOREFRONT_CHECKOUT_ENABLED: "true",
-    STOREFRONT_FORWARDING_SECRET: forwardingSecret, STOREFRONT_TRUST_FORWARDED_FOR: "true" });
+    STOREFRONT_FORWARDING_SECRET: forwardingSecret, STOREFRONT_TRUST_FORWARDED_FOR: "true", DEPLOYMENT_ENVIRONMENT: "hosted-test" });
   try {
     await checkoutPost({ ...buyer, name: "Proxy Confiavel", requestId: "55555555-5555-4555-8555-555555555555" },
       { target: `http://127.0.0.1:${trustedPort}`, headers: { "X-Forwarded-For": "203.0.113.99, 198.51.100.7" } });
