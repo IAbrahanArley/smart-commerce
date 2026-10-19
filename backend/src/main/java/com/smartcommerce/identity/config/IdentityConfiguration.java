@@ -1,6 +1,7 @@
 package com.smartcommerce.identity.config;
 
 import com.smartcommerce.identity.exceptions.IdentityException;
+import com.smartcommerce.identity.mail.BrevoVerificationMail;
 import com.smartcommerce.identity.mail.LocalVerificationMail;
 import com.smartcommerce.identity.mail.VerificationMail;
 import com.smartcommerce.identity.repositories.JdbcIdentityRepository;
@@ -48,7 +49,17 @@ public class IdentityConfiguration {
   @Bean
   @Profile("!dev")
   @ConditionalOnMissingBean(VerificationMail.class)
-  VerificationMail unavailableVerificationMail() {
+  VerificationMail hostedVerificationMail(
+      @Value("${identity.mail.provider:}") String provider,
+      @Value("${identity.mail.brevo.endpoint:}") String endpoint,
+      @Value("${identity.mail.brevo.api-key:}") String apiKey,
+      @Value("${identity.mail.sender-email:}") String senderEmail,
+      @Value("${identity.mail.sender-name:}") String senderName) {
+    // ADR-0014 H1: an HTTP API provider where SMTP is unavailable; nothing configured stays off.
+    if ("brevo".equals(provider))
+      return new BrevoVerificationMail(endpoint, apiKey, senderEmail, senderName);
+    if (provider != null && !provider.isBlank())
+      throw new IllegalStateException("Unsupported identity.mail.provider");
     return (recipient, link) -> {
       throw new IdentityException(
           IdentityException.Reason.UNAVAILABLE,

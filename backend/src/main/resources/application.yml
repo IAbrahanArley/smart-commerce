@@ -79,6 +79,17 @@ identity:
   secure-cookies: ${IDENTITY_SECURE_COOKIES:false}
   mail:
     directory: ${IDENTITY_MAIL_DIRECTORY:}
+    # ADR-0014 H1, outside dev only: "brevo" sends through Brevo's HTTP API (SMTP is blocked on
+    # Render free). Empty keeps registration mail unavailable. Never version the API key.
+    provider: ${IDENTITY_MAIL_PROVIDER:}
+    sender-email: ${IDENTITY_MAIL_SENDER_EMAIL:}
+    sender-name: ${IDENTITY_MAIL_SENDER_NAME:Smart Commerce}
+    brevo:
+      api-key: ${IDENTITY_MAIL_BREVO_API_KEY:}
+deployment:
+  # ADR-0014 H2: "hosted-test" marks the hosted test environment, the only place outside dev
+  # where checkout may be enabled without payments. Any other value keeps D6 strict.
+  environment: ${DEPLOYMENT_ENVIRONMENT:local}
 
 springdoc:
   api-docs:

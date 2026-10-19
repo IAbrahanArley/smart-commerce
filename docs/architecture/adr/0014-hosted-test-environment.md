@@ -62,6 +62,21 @@ Em 2026-10-19 o responsável aprovou:
 - **H3, banco:** **Render Postgres free**, tratado como descartável (expira em 30 dias e não tem backup).
 - **H4, sono e CPU:** **aceitar o sono** do Render free e observar o comportamento real, sem ping de manutenção nem plano pago.
 
+## Implementação (2026-10-19)
+
+**Provedor de e-mail proposto: Brevo.**
+- **Por que o Brevo:** a API HTTP é `POST https://api.brevo.com/v3/smtp/email` com o cabeçalho `api-key`, e há 300 e-mails/dia grátis. Funciona sem domínio próprio: o remetente é verificado por código, e o domínio é trocado por `@brevosend.com`.
+- **Por que não o Resend:** ele exige domínio verificado.
+- **Como foi implementado:** `BrevoVerificationMail`, que fica ativo com `IDENTITY_MAIL_PROVIDER=brevo` e tem testes com servidor local. A chave, o destinatário e o link nunca aparecem em log ou erro.
+- **Fontes:** [API de envio](https://developers.brevo.com/reference/sendtransacemail) e [remetentes](https://help.brevo.com/hc/en-us/articles/208836149-Create-a-new-sender-From-name-and-From-email).
+
+**Demais itens implementados:**
+- **Imagem:** `backend/Dockerfile` multi-stage, com usuário sem privilégios, heap limitado e `PORT` do provedor.
+- **Medição local com o limite do free (0,1 CPU, 512 MB):** a aplicação ficou pronta em **~4 min**, aplicando 16 migrações, e usou ~230 MB.
+- **Admin:** `ADMIN_API_ORIGIN` é validado no build.
+- **Ambiente de teste:** `DEPLOYMENT_ENVIRONMENT=hosted-test` nas três aplicações. No backend, o checkout fora de `dev` exige esse valor, e o D6 passou a ser verificado em código. Nos frontends, o aviso aparece em todas as páginas e a vitrine só mostra o checkout com esse valor.
+- **Guia:** [HOSTED-TEST-ENVIRONMENT.md](../../deploy/HOSTED-TEST-ENVIRONMENT.md).
+
 ## Decisões (aprovadas em 2026-10-19)
 
 - **H1, e-mail:** provedor com API HTTP e camada gratuita, que é um serviço externo novo; ou semeadura de contas de teste pelo operador, sem cadastro público.

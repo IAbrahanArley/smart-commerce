@@ -9,7 +9,7 @@ import { CheckoutForm, type CheckoutOption } from "@/components/checkout-form";
 import { loadCatalog } from "@/lib/public-store";
 import { quoteCart } from "@/lib/cart-quote";
 import { cartCookieName, parseCart } from "@/lib/cart-cookie";
-import { checkoutEnabled } from "@/lib/checkout-input";
+import { checkoutConfigured } from "@/lib/checkout-input";
 import { addMoney, formatBRL } from "@/lib/price";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export default async function CheckoutPage({ params }: Props) {
   // D6: without explicit configuration the route does not exist.
-  if (!checkoutEnabled(process.env.STOREFRONT_CHECKOUT_ENABLED)) notFound();
+  if (!checkoutConfigured()) notFound();
   const { slug } = await params;
   const store = await loadCatalog(slug);
   const cartUrl = `/lojas/${encodeURIComponent(store.slug)}/carrinho`;

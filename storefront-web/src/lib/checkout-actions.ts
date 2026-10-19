@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cartCookieName, cartCookieOptions, parseCart, validSlug } from "@/lib/cart-cookie";
-import { CHECKOUT_FIELDS, checkoutEnabled, emptyValues, type FulfillmentType, validateCheckout, validRequestId } from "@/lib/checkout-input";
+import { CHECKOUT_FIELDS, checkoutConfigured, emptyValues, type FulfillmentType, validateCheckout, validRequestId } from "@/lib/checkout-input";
 import type { CheckoutState } from "@/lib/checkout-state";
 import { orderCookieName, orderCookieOptions, orderPath } from "@/lib/order-cookie";
 import { createOrder } from "@/lib/orders";
@@ -33,7 +33,7 @@ function field(form: FormData, name: string): string {
 }
 
 export async function placeOrder(previous: CheckoutState, form: FormData): Promise<CheckoutState> {
-  if (!checkoutEnabled(process.env.STOREFRONT_CHECKOUT_ENABLED)) notFound();
+  if (!checkoutConfigured()) notFound();
   const slug = field(form, "slug");
   if (!validSlug(slug)) notFound();
   const submitted = field(form, "requestId");

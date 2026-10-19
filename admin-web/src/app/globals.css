@@ -237,3 +237,6 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
   .data-table-wrapping tbody th { min-width: 8rem; }
   .data-table-wrapping thead th, .data-table-wrapping .status-badge { white-space: nowrap; overflow-wrap: normal; }
 }
+
+/* ADR-0014 H2: hosted test environment notice, approved tokens only. */
+.test-environment-banner { margin: 0; padding: var(--sc-space-2) var(--sc-space-4); text-align: center; color: var(--sc-color-text); background: var(--sc-color-info-background); border-bottom: 1px solid var(--sc-color-divider); overflow-wrap: anywhere; }

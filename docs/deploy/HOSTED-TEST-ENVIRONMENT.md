@@ -1,0 +1,122 @@
+# Guia de deploy: ambiente de teste hospedado (Render + Vercel + Brevo)
+
+Base: [ADR-0014](../architecture/adr/0014-hosted-test-environment.md). O ambiente é **de teste, com dados fictícios e sem pagamento**; não é produção comercial.
+
+Regras gerais:
+- Todas as contas, projetos, bancos e chaves são criados por você nos painéis.
+- **Nenhum valor secreto vai para o chat, o Git ou um print.**
+- Siga a ordem abaixo, porque cada passo usa a URL gerada no anterior.
+
+## 0. Antes de começar
+
+- Use a `main` atualizada.
+- Use só **dados sintéticos**: e-mails seus ou de teste, nunca dados de terceiros (D2 pendente de validação jurídica).
+- Gere o segredo compartilhado do IP, com pelo menos 32 caracteres, e guarde-o num gerenciador de senhas. Ele vai, com o mesmo valor, no backend e na vitrine:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+## 1. Brevo (e-mail de cadastro)
+
+1. Crie uma conta gratuita no Brevo (300 e-mails/dia).
+2. **Remetentes** (no painel, algo como "Senders"; os nomes podem variar): adicione um remetente e confirme o código de 6 dígitos enviado a ele.
+   - Sem domínio próprio, o Brevo troca o domínio do remetente por `@brevosend.com`, o que basta para teste.
+   - Endereços de provedores gratuitos (Gmail etc.) não podem ser autenticados.
+3. Se as configurações transacionais tiverem rastreamento de cliques, **desligue-o**: o link de confirmação contém o token e não deve passar por redirecionamento de terceiros.
+4. **Chaves de API** (no painel, algo como "SMTP & API"): crie uma chave só para este ambiente.
+
+## 2. Render: banco
+
+1. **New → Postgres**, plano **Free**. Escolha uma região e use **a mesma** no backend.
+2. Anote os dados de **Internal Connection**: host, porta, banco, usuário e senha.
+3. Limites:
+   - expira **30 dias** após a criação (com 14 dias de carência);
+   - **não tem backup**;
+   - trate os dados como descartáveis.
+
+## 3. Render: backend
+
+1. **New → Web Service**, conecte o repositório e configure:
+   - **Language:** Docker.
+   - **Branch:** `main`.
+   - **Root Directory:** `backend`.
+   - **Dockerfile Path:** `./Dockerfile`.
+   - **Instance Type:** Free.
+   - **Health Check Path:** `/actuator/health/readiness`.
+2. Variáveis de ambiente:
+
+| Variável | Valor |
+| --- | --- |
+| `DB_URL` | `jdbc:postgresql://<host interno>:5432/<banco>` |
+| `DB_USERNAME` / `DB_PASSWORD` | usuário e senha do banco (segredo) |
+| `DEPLOYMENT_ENVIRONMENT` | `hosted-test` |
+| `ORDERS_CHECKOUT_ENABLED` | `true` (exceção H2; o backend recusa iniciar sem `hosted-test`) |
+| `STOREFRONT_FORWARDING_SECRET` | o segredo gerado no passo 0 |
+| `IDENTITY_PUBLIC_ORIGIN` | URL **de produção** do admin na Vercel (passo 4), por exemplo `https://<projeto-admin>.vercel.app`; até lá, um valor HTTPS provisório |
+| `IDENTITY_SECURE_COOKIES` | `true` |
+| `IDENTITY_MAIL_PROVIDER` | `brevo` |
+| `IDENTITY_MAIL_BREVO_API_KEY` | chave do Brevo (segredo) |
+| `IDENTITY_MAIL_SENDER_EMAIL` | remetente verificado no Brevo |
+| `IDENTITY_MAIL_SENDER_NAME` | `Smart Commerce (teste)` |
+
+3. **Não defina** `SPRING_PROFILES_ACTIVE=dev`. A `PORT` é definida pelo Render, e a imagem já escuta em `0.0.0.0`.
+4. **Primeiro deploy:** o build Maven dentro da imagem leva alguns minutos. Na simulação local com o mesmo limite do free (0,1 CPU e 512 MB), a aplicação levou **cerca de 4 minutos para ficar pronta**, aplicando as 16 migrações, e usou cerca de 230 MB.
+5. Anote a URL pública do backend, `https://<servico>.onrender.com`.
+
+## 4. Vercel: admin
+
+1. **Add New → Project**, importe o repositório e configure:
+   - **Root Directory:** `admin-web`.
+   - **Framework:** Next.js.
+2. Variáveis (Production):
+
+| Variável | Valor |
+| --- | --- |
+| `ADMIN_API_ORIGIN` | URL do backend no Render (HTTPS, sem caminho); o build falha se for inválida |
+| `NEXT_PUBLIC_STOREFRONT_ORIGIN` | URL de produção da vitrine (passo 5); pode ser preenchida depois, com novo deploy |
+| `DEPLOYMENT_ENVIRONMENT` | `hosted-test` (mostra o aviso de ambiente de teste) |
+
+3. Depois do deploy, copie a URL de **produção** do projeto e coloque em `IDENTITY_PUBLIC_ORIGIN` no Render, que reinicia o backend.
+4. **URLs de preview** da Vercel têm outra origem, então o login nelas é recusado pela verificação de origem. Isso é esperado; teste na URL de produção.
+
+## 5. Vercel: vitrine
+
+1. Novo projeto com **Root Directory:** `storefront-web`.
+2. Variáveis (Production):
+
+| Variável | Valor |
+| --- | --- |
+| `STOREFRONT_API_ORIGIN` | URL do backend no Render |
+| `STOREFRONT_CHECKOUT_ENABLED` | `true` |
+| `DEPLOYMENT_ENVIRONMENT` | `hosted-test` (sem ele, a vitrine não mostra o checkout: D6) |
+| `STOREFRONT_FORWARDING_SECRET` | o mesmo segredo do backend |
+| `STOREFRONT_TRUST_FORWARDED_FOR` | `true` (a Vercel sobrescreve `X-Forwarded-For` na borda; requisito R1 da SC-011) |
+
+3. Atualize `NEXT_PUBLIC_STOREFRONT_ORIGIN` no admin e faça um novo deploy dele.
+
+## 6. Verificação depois do deploy
+
+1. `https://<backend>/actuator/health` responde 200. Se o serviço estava dormindo, a primeira chamada pode demorar minutos.
+2. **Admin:**
+   - o aviso "Ambiente de teste" aparece;
+   - o cadastro envia o e-mail de confirmação;
+   - o link abre `/confirmar-email`, você define a senha e entra.
+3. **Configuração da loja:** crie a loja, um produto com estoque e a entrega; publique produto e loja.
+4. **Vitrine:**
+   - aviso visível;
+   - adicione ao carrinho, finalize e veja a página do pedido com o prazo da reserva;
+   - no admin, em Pedidos, o pedido aparece; cancele com um motivo.
+5. Se alguma etapa falhar, registre o horário e o passo. Os logs do Render e da Vercel não devem conter chave, token, senha ou e-mail de comprador.
+
+## 7. Comportamentos esperados nos planos gratuitos
+
+- **Sono:** o backend dorme após 15 min sem tráfego. Ao acordar, a vitrine (que espera 5 a 10 s) e o admin podem mostrar "indisponível" até ele subir; basta tentar de novo depois (H4).
+- **Rotinas:** expiração e anonimização só rodam com o backend acordado. A expiração da reserva continua valendo pelo relógio.
+- **Horas:** são 750 h/mês por workspace; um serviço sempre acordado consumiria quase tudo.
+- **Uso comercial:** o Vercel Hobby não permite uso comercial; para operar de verdade, use o Pro.
+
+## 8. Encerramento e rotação
+
+- Para encerrar: apague os dois projetos da Vercel, o web service e o Postgres do Render, e revogue a chave do Brevo.
+- Se um segredo vazar, gere outro, atualize o Render e a vitrine **com o mesmo valor** e faça novo deploy dos dois.

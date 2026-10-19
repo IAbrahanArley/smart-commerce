@@ -1,0 +1,6 @@
+# Only the wrapper, pom and sources enter the build context.
+target/
+*.log
+.idea/
+.vscode/
+*.iml

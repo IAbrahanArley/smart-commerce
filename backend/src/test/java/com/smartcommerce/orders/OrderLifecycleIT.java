@@ -43,6 +43,7 @@ import tools.jackson.databind.json.JsonMapper;
     properties = {
       "orders.maintenance.enabled=false",
       "orders.checkout.enabled=true",
+      "deployment.environment=hosted-test",
       "orders.client-ip.secret=synthetic-forwarding-secret-for-tests-only-0002"
     })
 class OrderLifecycleIT {

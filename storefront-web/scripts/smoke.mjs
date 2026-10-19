@@ -38,10 +38,13 @@ async function page(path, cartCookie) {
 }
 
 try {
-  server = await startNext(port, { ...process.env, STOREFRONT_API_ORIGIN: `http://127.0.0.1:${upstreamPort}`, STOREFRONT_CHECKOUT_ENABLED: "true", STOREFRONT_FORWARDING_SECRET: forwardingSecret, STOREFRONT_TRUST_FORWARDED_FOR: "" },
+  server = await startNext(port, { ...process.env, STOREFRONT_API_ORIGIN: `http://127.0.0.1:${upstreamPort}`, STOREFRONT_CHECKOUT_ENABLED: "true", STOREFRONT_FORWARDING_SECRET: forwardingSecret, STOREFRONT_TRUST_FORWARDED_FOR: "", DEPLOYMENT_ENVIRONMENT: "hosted-test" },
     data => { output = (output + data).slice(-8000); });
   const home = await page("/");
   assert.equal(home.response.status, 200);
+  const catalogPage = await page("/lojas/loja-teste");
+  assert.match(catalogPage.html, /class="test-environment-banner" role="note"><strong>Ambiente de teste\.<\/strong>/, "Aviso de ambiente de teste em toda página.");
+  assert.match(catalogPage.html, /Pedidos feitos aqui são de teste/);
   assert.match(home.html, /Vitrines de lojas/);
   assert.match(home.html, /href="#conteudo"/);
   const catalog = await page("/lojas/loja-teste");
@@ -161,11 +164,11 @@ try {
     assert.equal(request.authorization, undefined, "SSR não deve encaminhar Authorization.");
   }
   console.log("Smoke aprovado (checkout ligado): checkout sem JavaScript, validação por campo, PRICE_CHANGED, retry com a mesma chave após falha ambígua, replay sem novo token, REQUEST_CONFLICT sem chave nova, cookie do pedido por caminho, carrinho limpo, status com token e IP assinado só atrás de proxy confiável; catálogo/detalhe SSR, descrição HTML, variantes, fotos/proxy MIME, preços exatos, paginação, vazio, 404, projeção pública, no-store, carrinho (cookie saneado e por loja, cotação do backend, server action com cookie HttpOnly/SameSite/Secure/Path e rejeição de origem externa) e ausência de cookies/Authorization no upstream. Não substitui browser/API real.");
-  // D6: with the flag absent, no checkout link or route exists, even for a purchasable cart.
+  // D6: a production server with the flag but outside the hosted test environment has no checkout.
   const offPort = port + 1;
   const offBase = `http://127.0.0.1:${offPort}`;
-  const offEnv = { ...process.env, STOREFRONT_API_ORIGIN: `http://127.0.0.1:${upstreamPort}` };
-  delete offEnv.STOREFRONT_CHECKOUT_ENABLED;
+  const offEnv = { ...process.env, STOREFRONT_API_ORIGIN: `http://127.0.0.1:${upstreamPort}`, STOREFRONT_CHECKOUT_ENABLED: "true" };
+  delete offEnv.DEPLOYMENT_ENVIRONMENT;
   const off = await startNext(offPort, offEnv);
   try {
     const offCart = (await (await fetch(`${offBase}/lojas/loja-teste/carrinho`, { headers: { Cookie: buyable } })).text()).replaceAll("<!-- -->", "");
@@ -175,10 +178,11 @@ try {
     const offCheckout = (await (await fetch(`${offBase}/lojas/loja-teste/checkout`, { headers: { Cookie: buyable } })).text()).replaceAll("<!-- -->", "");
     assert.match(offCheckout, /Página não encontrada/);
     assert.ok(!offCheckout.includes("Confirmar pedido"));
+    assert.ok(!offCart.includes("test-environment-banner"), "Fora do ambiente de teste não há aviso.");
   } finally {
     off.kill();
   }
-  console.log("Smoke aprovado (checkout desligado): sem link no carrinho e rota de checkout inexistente.");
+  console.log("Smoke aprovado (checkout desligado): build de produção com a flag mas fora do ambiente de teste não tem link nem rota de checkout (D6), nem aviso.");
 } catch (error) {
   if (output) console.error(output);
   throw error;

@@ -46,6 +46,7 @@ import tools.jackson.databind.json.JsonMapper;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
       "orders.checkout.enabled=true",
+      "deployment.environment=hosted-test",
       "orders.client-ip.secret=" + OrderCheckoutIT.SECRET
     })
 class OrderCheckoutIT {
