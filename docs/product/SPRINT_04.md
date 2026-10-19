@@ -1,6 +1,6 @@
 # Sprint 4 — Mercado Pago em sandbox (planejamento)
 
-Data: 2026-10-19. **Proposta.** Depende da aprovação do [ADR-0013](../architecture/adr/0013-mercado-pago-checkout-pro.md) (P1–P11) e da conclusão da Sprint 3 ([SPRINT_03.md](SPRINT_03.md), SC-011).
+Data: 2026-10-19. **P1–P11 do [ADR-0013](../architecture/adr/0013-mercado-pago-checkout-pro.md) aprovadas em 2026-10-19.** Cada tarefa ainda exige autorização própria. Depende da conclusão da Sprint 3 ([SPRINT_03.md](SPRINT_03.md), SC-011).
 
 **Objetivo:** o lojista conecta sua conta Mercado Pago de teste. O comprador paga um pedido `PENDING_PAYMENT` pelo Checkout Pro em sandbox. O pagamento é confirmado pelo backend (webhook assinado ou conciliação, nunca pelo retorno do navegador), o pedido passa a `PAID` e o estoque é baixado uma única vez. O lojista vê o pagamento e pode reembolsar com confirmação. Sem produção, split, assinatura SaaS nem financeiro (Sprint 5).
 

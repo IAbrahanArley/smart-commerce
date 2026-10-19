@@ -1,6 +1,6 @@
 # ADR-0013 — Pagamentos com Mercado Pago Checkout Pro (Sprint 4)
 
-Status: **proposto** em 2026-10-19. Nenhuma decisão abaixo está aprovada, e nenhum código, credencial ou conta deve ser criado com base neste documento antes da aprovação registrada aqui. Plano incremental: [SPRINT_04.md](../../product/SPRINT_04.md).
+Status: **adotado** em 2026-10-19 para P1–P11, conforme as recomendações abaixo, aprovadas pelo responsável. Proposto na mesma data. Cada tarefa da Sprint 4 ainda exige autorização própria, e as credenciais e contas de teste são criadas pelo responsável. Plano incremental: [SPRINT_04.md](../../product/SPRINT_04.md).
 
 ## Contexto
 
@@ -42,7 +42,16 @@ Fontes:
 - [Renovação de token](https://www.mercadopago.com.br/developers/en/docs/subscriptions/additional-content/security/oauth/renewal)
 - [Reembolso](https://www.mercadopago.com.br/developers/en/reference/online-payments/checkout-api-payments/create-refund/post)
 
-## Decisões propostas (requerem aprovação)
+## Aprovação
+
+Em 2026-10-19 o responsável aprovou:
+
+- **P2:** cartão, Pix e saldo Mercado Pago, com boleto excluído e order expirando em 30 min junto com a reserva.
+- **P4:** pagamento tardio tenta reservar de novo e, sem estoque, fica `PAID` com alerta para o lojista, sem reembolso automático.
+- **P6:** sem túnel em DEV; a confirmação vem da conciliação e do "Simular".
+- **Demais decisões** (P1, P3, P5, P7–P11): conforme a coluna "Recomendação".
+
+## Decisões (aprovadas em 2026-10-19)
 
 | ID | Decisão | Recomendação | Alternativas | Bloqueia |
 | --- | --- | --- | --- | --- |
