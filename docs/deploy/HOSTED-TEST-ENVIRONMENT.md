@@ -48,8 +48,8 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 | Variável | Valor |
 | --- | --- |
-| `DB_URL` | `jdbc:postgresql://<host interno>:5432/<banco>` |
-| `DB_USERNAME` / `DB_PASSWORD` | usuário e senha do banco (segredo) |
+| `DB_URL` | **Cole a Internal Database URL do Render** (`postgresql://usuario:senha@host/banco`): o backend a converte para JDBC e usa o usuário e a senha dela. Também aceita `jdbc:postgresql://<host>:5432/<banco>`. Aspas e espaços nas pontas são ignorados. Como contém a senha, trate como segredo |
+| `DB_USERNAME` / `DB_PASSWORD` | Opcionais com a Internal Database URL; obrigatórios com a forma `jdbc:` (têm prioridade sobre os da URL) |
 | `DEPLOYMENT_ENVIRONMENT` | `hosted-test` |
 | `ORDERS_CHECKOUT_ENABLED` | `true` (exceção H2; o backend recusa iniciar sem `hosted-test`) |
 | `STOREFRONT_FORWARDING_SECRET` | o segredo gerado no passo 0 |
