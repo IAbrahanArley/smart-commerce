@@ -449,10 +449,15 @@ class OrderCheckoutIT {
     // A forged (unsigned) header falls back to the connection address, which is not limited.
     assertThat(postFrom("203.0.113.7", false, valid).statusCode()).isEqualTo(201);
     assertThat(postFrom("198.51.100.9", true, rejected).statusCode()).isEqualTo(409);
-    assertThat(
-            jdbc.queryForList("SELECT bucket_key FROM order_rate_limit", String.class).stream()
-                .noneMatch(key -> key.contains("203") || key.contains("198")))
-        .isTrue();
+    // Keys are HMAC-SHA256 hex digests: the IP is never stored in clear. Checking digit substrings
+    // such as "203" would be flaky, since a random hex digest contains them about 1.5% of the time.
+    assertThat(jdbc.queryForList("SELECT bucket_key FROM order_rate_limit", String.class))
+        .isNotEmpty()
+        .allSatisfy(
+            key ->
+                assertThat(key)
+                    .matches("[0-9a-f]{64}")
+                    .doesNotContain("203.0.113.7", "198.51.100.9", "127.0.0.1"));
     assertThat(output.getAll())
         .doesNotContain(EMAIL, "comprador.sintetico", "98888", "11988887777", "203.0.113.7");
   }

@@ -196,3 +196,43 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
   .product-workspace > * { grid-column: 1; }
   .product-workspace > .workspace-side { grid-column: 2; grid-row: 1 / span 3; position: sticky; top: var(--sc-space-6); }
 }
+
+/* Orders (SC-010): approved tokens only; destructive and secondary button variants per DESIGN.md. */
+.button-danger { color: var(--sc-color-on-action); background: var(--sc-color-danger); }
+.button-danger:hover, .button-danger:active { color: var(--sc-color-on-action); background: var(--sc-color-danger); text-decoration: underline; text-underline-offset: 3px; }
+.button-secondary { color: var(--sc-color-action); background: var(--sc-color-surface); border: 1px solid var(--sc-color-control-border); }
+.button-secondary:hover, .button-secondary:active { color: var(--sc-color-action); background: var(--sc-color-info-background); }
+.form-actions { display: flex; flex-wrap: wrap; gap: var(--sc-space-3); margin-top: var(--sc-space-4); }
+.order-filter { display: flex; flex-wrap: wrap; align-items: end; gap: var(--sc-space-3); margin-top: var(--sc-space-6); }
+.order-filter label { flex-basis: 100%; font-weight: 700; }
+.order-filter select { width: auto; min-width: 14rem; }
+.pagination { display: flex; flex-wrap: wrap; gap: var(--sc-space-6); margin-top: var(--sc-space-4); }
+.pagination a { display: inline-flex; align-items: center; min-height: 44px; }
+.order-workspace { display: grid; gap: var(--sc-space-6); margin-top: var(--sc-space-6); }
+.order-main, .order-aside { display: grid; gap: var(--sc-space-6); align-content: start; min-width: 0; }
+.order-main .data-table-wrap { margin-top: 0; }
+.order-facts { display: grid; gap: var(--sc-space-3); margin: 0; }
+.order-facts div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sc-space-2); }
+.order-facts dt { color: var(--sc-color-text-secondary); }
+.order-facts dd { margin: 0; overflow-wrap: anywhere; }
+.order-facts .numeric { font-variant-numeric: tabular-nums; }
+.order-address { font-style: normal; overflow-wrap: anywhere; }
+.order-created { display: block; }
+/* Two columns only where the items table still fits beside the 22rem aside (side nav included). */
+@media (min-width: 90rem) { .order-workspace { grid-template-columns: minmax(0, 1fr) 22rem; } }
+/* Order tables have more columns: stacked rows until the side navigation layout (64rem), then
+   text cells wrap between words while amounts stay on one line. */
+@media (max-width: 63.99rem) {
+  .data-table-wrapping thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .data-table-wrapping, .data-table-wrapping caption, .data-table-wrapping tbody, .data-table-wrapping tr, .data-table-wrapping th, .data-table-wrapping td { display: block; }
+  .data-table-wrapping tr { display: grid; gap: var(--sc-space-2); padding: var(--sc-space-4); border-top: 1px solid var(--sc-color-divider); }
+  .data-table-wrapping tbody th, .data-table-wrapping td { padding: 0; border: 0; white-space: normal; }
+  .data-table-wrapping .numeric { text-align: left; white-space: normal; }
+  .data-table-wrapping td::before { content: attr(data-label) ": "; font-size: .875rem; font-weight: 700; color: var(--sc-color-text-secondary); }
+}
+@media (min-width: 64rem) {
+  .data-table-wrapping td { white-space: normal; overflow-wrap: break-word; }
+  .data-table-wrapping .numeric { white-space: nowrap; }
+  .data-table-wrapping tbody th { min-width: 8rem; }
+  .data-table-wrapping thead th, .data-table-wrapping .status-badge { white-space: nowrap; overflow-wrap: normal; }
+}

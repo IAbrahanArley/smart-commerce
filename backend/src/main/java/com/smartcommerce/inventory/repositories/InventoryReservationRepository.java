@@ -74,6 +74,19 @@ public class InventoryReservationRepository {
         order);
   }
 
+  /** Records an order's ACTIVE rows already past their deadline as EXPIRED (no balance lock). */
+  public int expireOrder(UUID tenant, UUID order, Instant now) {
+    return jdbc.update(
+        """
+        UPDATE inventory_reservation SET status='EXPIRED', closed_at=?
+        WHERE tenant_id=? AND order_id=? AND status='ACTIVE' AND expires_at<=?
+        """,
+        utc(now),
+        tenant,
+        order,
+        utc(now));
+  }
+
   /**
    * Materializes logically expired rows. Expired rows no longer count toward availability, so no
    * balance lock is needed; SKIP LOCKED lets concurrent runs split the work without blocking.

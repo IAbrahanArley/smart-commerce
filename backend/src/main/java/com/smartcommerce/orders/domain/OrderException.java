@@ -12,7 +12,9 @@ public final class OrderException extends RuntimeException {
     INSUFFICIENT_STOCK,
     REQUEST_CONFLICT,
     PENDING_LIMIT,
-    RATE_LIMITED
+    RATE_LIMITED,
+    /** Admin cancellation of an order whose reservation deadline already passed (SC-010). */
+    ORDER_EXPIRED
   }
 
   private final Reason reason;

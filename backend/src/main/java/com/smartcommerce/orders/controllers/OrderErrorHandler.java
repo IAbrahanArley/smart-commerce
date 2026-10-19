@@ -36,6 +36,7 @@ public final class OrderErrorHandler {
           case REQUEST_CONFLICT -> "Esta tentativa de compra já foi usada com outros dados.";
           case PENDING_LIMIT -> "Há pedidos pendentes demais para este e-mail nesta loja.";
           case RATE_LIMITED -> "Muitas tentativas de compra. Tente novamente mais tarde.";
+          case ORDER_EXPIRED -> "O prazo deste pedido terminou.";
         });
     if (status == 409) body.put("code", error.reason().name());
     if (error.currentTotal() != null)

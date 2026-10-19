@@ -145,6 +145,11 @@ public class BootstrapSecurityConfiguration {
                     .requestMatchers(HttpMethod.PUT, "/api/tenants/*/fulfillment")
                     .authenticated()
                     .requestMatchers(
+                        HttpMethod.GET, "/api/tenants/*/orders", "/api/tenants/*/orders/*")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/tenants/*/orders/*/cancel")
+                    .authenticated()
+                    .requestMatchers(
                         HttpMethod.GET, "/api/tenants/*/products", "/api/tenants/*/products/*")
                     .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/tenants/*/products")

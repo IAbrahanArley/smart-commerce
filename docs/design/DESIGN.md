@@ -210,6 +210,19 @@ O refinamento visual autorizado na mesma data aplica essa base ao cabeçalho em 
 
 O checkout e a página do pedido (SC-009) seguem a mesma base: formulário em uma coluna com resumo lateral, que vira uma coluna abaixo de 52rem; rádios de entrega com rótulo, descrição e total no mesmo alvo; resumo de erros focável com links para os campos; e erros por campo em texto. Os tokens `--store-control-border`, `--store-danger` e `--store-danger-background` reproduzem os valores aprovados de `--sc-color-control-border` e `--sc-color-danger*`, sem nova cor. Os textos usam caixa de frase.
 
+**Pedidos no admin (SC-010).** A lista de pedidos usa a tabela de dados com 5 colunas:
+- pedido, com a data de criação como dica;
+- situação em selo (positivo para "Aguardando pagamento", neutro para expirado e cancelado);
+- comprador;
+- entrega com unidades;
+- total.
+
+Abaixo de 64rem as linhas ficam empilhadas. O filtro e a página ficam na URL (`?situacao=`, `?apos=`).
+
+O detalhe empilha situação, itens, valores, comprador e cancelamento, e só usa duas colunas a partir de 90rem, onde a tabela de itens ainda cabe ao lado do painel de 22rem.
+
+O cancelamento é uma ação destrutiva em duas etapas: "Cancelar pedido" abre o formulário com o motivo, e "Confirmar cancelamento" (destrutivo) fica ao lado de "Manter pedido" (secundário). As variantes destrutiva (texto branco sobre `--sc-color-danger`, 6,57:1 em cálculo sRGB; o estado de hover sublinha o rótulo em vez de usar outra cor) e secundária (superfície, borda de controle e texto de ação) aplicam a regra "principal/secundária/destrutiva por função" desta página, sem nova cor.
+
 Ajustes aprovados em 2026-10-17 (itens V1–V4 da [proposta](PROPOSTA-REFERENCIAS-MERCADO.md)): a abertura do catálogo é compacta, com nome da loja e contagem de produtos, sem bloco azul; o azul fica reservado a ações. A grade usa cards em coluna com foto de capa real em 1:1 e `object-fit: contain`, nome, disponibilidade e preço. A página de produto coloca galeria e descrição à esquerda e um resumo fixo ao rolar (nome, preço, variações e disponibilidade) à direita a partir de 54rem; em telas menores, galeria, resumo e descrição nessa ordem. Variações são escolhidas por atributo (por exemplo Cor e Tamanho) com rádios nativos estilizados, rótulo em texto e seleção indicada por borda, peso e marca de verificação, não só por cor; combinações indisponíveis são indicadas por texto. Quando as variações não compartilham os mesmos atributos, a lista de combinações em `select` continua como alternativa.
 
 A skill design-taste-frontend apoia composição e revisão, preservando paleta/tipografia e sem impor imagens, animações ou conteúdo incompatíveis com o catálogo real e o design aprovado. Personalização visual futura e mudanças relevantes permanecem sujeitas à governança acima.

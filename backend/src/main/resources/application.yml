@@ -64,6 +64,13 @@ orders:
     # D6: checkout creates real pending orders and reservations but there is no payment yet.
     # Never enable it outside DEV/local until the payment integration exists.
     enabled: ${ORDERS_CHECKOUT_ENABLED:false}
+  maintenance:
+    # SC-010: expiration every minute and D2 anonymization once a day, in this process. Several
+    # instances are safe (SKIP LOCKED and compare-and-set).
+    enabled: ${ORDERS_MAINTENANCE_ENABLED:true}
+    expiration-interval: PT1M
+    anonymization-interval: PT24H
+    anonymization-initial-delay: PT10M
   client-ip:
     # D4: shared with the storefront-web server to sign the visitor IP (>= 32 characters).
     secret: ${STOREFRONT_FORWARDING_SECRET:}

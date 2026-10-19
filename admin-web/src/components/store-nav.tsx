@@ -14,6 +14,7 @@ export default function StoreNav({ tenantId }: { tenantId: string }) {
   const items = [
     { href: base, label: "Visão geral", current: pathname === base },
     { href: `${base}/produtos`, label: "Produtos", current: pathname.startsWith(`${base}/produtos`) },
+    { href: `${base}/pedidos`, label: "Pedidos", current: pathname.startsWith(`${base}/pedidos`) },
     { href: `${base}/entrega`, label: "Entrega", current: pathname === `${base}/entrega` },
   ];
 
