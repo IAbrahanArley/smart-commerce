@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { FocusNotice } from "@/components/focus-notice";
 import { StoreHeader } from "@/components/store-header";
 import { Arrow } from "@/components/arrow";
 import { SubmitButton } from "@/components/submit-button";
@@ -45,7 +46,7 @@ export default async function CartPage({ params, searchParams }: Props) {
           <Link href={storeUrl} prefetch={false}><Arrow back /> Continuar comprando</Link>
         </nav>
         <h1>Seu carrinho</h1>
-        {notice ? <p className="cart-notice" role="status">{notice}</p> : null}
+        {notice ? <FocusNotice className="cart-notice">{notice}</FocusNotice> : null}
         {!quote ? (
           <div className="empty-state cart-empty">
             <h2>Seu carrinho está vazio</h2>

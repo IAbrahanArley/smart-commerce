@@ -1,6 +1,6 @@
 # ADR-0012 — Reserva de estoque, carrinho e pedidos pendentes
 
-Status: **adotado** em 2026-10-17 para D1–D7, conforme as recomendações da seção 8, aprovadas pelo responsável. Proposto na mesma data; o plano incremental está em [SPRINT_03.md](../../product/SPRINT_03.md).
+Status: **adotado** em 2026-10-17 para D1–D7, conforme as recomendações da seção 8, aprovadas pelo responsável. Proposto na mesma data; o plano incremental está em [SPRINT_03.md](../../product/SPRINT_03.md). **Implementado na Sprint 3 (SC-005 a SC-010) e revisado de forma integrada na SC-011** em 2026-10-19 ([modelo de ameaças](../../security/SC-011-CHECKOUT-THREAT-MODEL.md), [validação](../../quality/SC-011-VALIDATION.md)). Os riscos residuais R2 (inferência pela cotação) e R6 (números sequenciais) aguardam decisão humana.
 
 ## Aprovação
 
@@ -25,6 +25,14 @@ Aplicação das regras acima, sem mudar valores aprovados:
 - **Várias instâncias:** os contadores por IP usam chave efêmera por processo. Com N instâncias do backend, o teto efetivo é 20 × N tentativas por hora. Aceito até a implantação com múltiplas instâncias, quando a chave passa a vir de configuração compartilhada.
 - **FK `inventory_reservation → sales_order` NOT VALID:** vale para toda linha nova ou alterada. A validação (`VALIDATE CONSTRAINT`) fica pendente para migração própria antes da primeira implantação fora de DEV, depois de confirmar que não há reservas órfãs.
 - **Loja do item:** a FK composta garante o mesmo tenant entre item, pedido e variante. Que a variante pertence à loja do pedido é garantido pelo serviço, que revalida cada variante pelo slug, e não por constraint. Aceito como está; o reforço no banco fica para quando houver variantes compartilhadas ou escrita fora do checkout.
+
+### Ajustes da SC-011 (2026-10-19)
+
+Aplicação das regras aprovadas, sem mudar valores:
+
+- **D4:** o limite por IP agrupa IPv6 por /64 e conta IPv4 mapeado como IPv4, para que uma única máquina não troque de endereço dentro do próprio bloco.
+- **D2:** a anonimização também substitui o motivo de cancelamento escrito pela loja, que pode citar o comprador. A rotina diária processa a fila até esvaziar, com limite de 10 minutos por execução, e o backend avisa na inicialização se o checkout estiver ligado com as rotinas desligadas.
+- **FK reserva → pedido:** validada pela V16 quando o banco não tem reservas sem pedido. Em bancos locais antigos que ainda tenham essas reservas, ela fica `NOT VALID` com um aviso, sem apagar dados.
 
 ### Decisões da SC-010 (2026-10-18)
 

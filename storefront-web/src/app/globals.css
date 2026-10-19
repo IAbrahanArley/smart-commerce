@@ -235,6 +235,7 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
 .field-hint { color: var(--store-secondary); font-size: 0.875rem; }
 .field-error { color: var(--store-danger); font-weight: 700; }
 .checkout-alert { padding: var(--store-space-4); color: var(--store-text); background: var(--store-danger-background); border-left: 4px solid var(--store-danger); border-radius: var(--store-radius-control); }
+.checkout-alert-info { background: var(--store-surface); border-left-color: var(--store-action); }
 .checkout-alert:focus { outline: 3px solid var(--store-focus); outline-offset: 2px; }
 .checkout-alert ul { margin: var(--store-space-2) 0 0; padding-left: var(--store-space-6); }
 .delivery-options { display: grid; gap: var(--store-space-3); }

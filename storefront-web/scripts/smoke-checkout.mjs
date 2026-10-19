@@ -85,6 +85,7 @@ export async function checkoutSmoke({ base, page, cartCookie, port, upstreamPort
   const replayHtml = await text(replay);
   assert.equal(replay.status, 200);
   assert.match(replayHtml, /Seu pedido nº 7 já foi registrado/);
+  assert.match(replayHtml, /role="status" class="checkout-alert checkout-alert-info"/, "Replay é informativo, não erro.");
   assert.match(replayHtml, new RegExp(`href="/lojas/loja-teste/pedidos/${orderId}">Ver acompanhamento do pedido`));
   assert.ok(!replay.headers.getSetCookie().some(cookie => cookie.startsWith("sc-order-")), "Replay não reemite token.");
   // Same key, other data after an ambiguous failure: the backend proves an order exists, so the key is kept.
@@ -114,8 +115,12 @@ export async function checkoutSmoke({ base, page, cartCookie, port, upstreamPort
   const spoofed = orderRequests.find(entry => entry.body.buyer.name === "Ip Forjado");
   assert.ok(spoofed, "Tentativa com X-Forwarded-For forjado deve chegar ao backend.");
   assert.equal(spoofed.headers["x-sc-client-ip"], undefined, "X-Forwarded-For do visitante não pode virar o IP assinado.");
-  const foreignCheckout = await fetch(`${base}/lojas/loja-teste/checkout`, { method: "POST", body: new FormData(), redirect: "manual", headers: { Origin: "https://foreign.example", Cookie: buyable } });
+  // A real action post (valid action id, buyer and cart) from a foreign origin must not run placeOrder.
+  const ordersBefore = orderRequests.length;
+  const foreignCheckout = await checkoutPost({ ...buyer, name: "Origem Externa", requestId: "66666666-6666-4666-8666-666666666666" }, { headers: { Origin: "https://foreign.example" } });
   assert.notEqual(foreignCheckout.status, 303);
+  assert.equal(orderRequests.length, ordersBefore, "Origem externa não pode criar pedido.");
+  assert.ok(!foreignCheckout.headers.getSetCookie().some(cookie => /^sc-(order|cart)-/.test(cookie)), "Origem externa não altera cookies.");
 
   // Behind a declared trusted proxy, the last hop is signed with the shared secret (same HMAC as the backend).
   const trustedPort = port + 2;

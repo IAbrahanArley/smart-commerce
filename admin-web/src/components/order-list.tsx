@@ -46,15 +46,15 @@ export default function OrderList({ tenantId, status, after }: { tenantId: strin
     {state === "missing" ? <p role="status">Loja indisponível. Volte para suas lojas e escolha uma loja à qual você tem acesso.</p> : null}
     {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar os pedidos. Tente novamente.</p><button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar pedidos novamente</button></> : null}
     {state === "ready" && page ? page.orders.length ? <>
-      <div className="data-table-wrap"><table className="data-table data-table-wrapping">
+      <div className="data-table-wrap"><table className="data-table data-table-wrapping" role="table">
         <caption>{after ? "Pedidos mais antigos" : "Pedidos mais recentes"} {filtered}</caption>
-        <thead><tr><th scope="col">Pedido</th><th scope="col">Situação</th><th scope="col">Comprador</th><th scope="col">Entrega</th><th scope="col" className="numeric">Total</th></tr></thead>
-        <tbody>{page.orders.map(order => <tr key={order.id}>
-          <th scope="row"><Link href={`${storePath}/pedidos/${encodeURIComponent(order.id)}`}>Pedido nº {order.number}</Link><span className="cell-hint order-created">Criado em {formatDateTime(order.createdAt)}</span></th>
-          <td data-label="Situação"><StatusBadge tone={order.status === "PENDING_PAYMENT" ? "positive" : "neutral"}>{STATUS_LABELS[order.status]}</StatusBadge></td>
-          <td data-label="Comprador">{order.buyerName ?? "Dados removidos"}</td>
-          <td data-label="Entrega">{SHORT_FULFILLMENT[order.fulfillmentType]} · {order.units === 1 ? "1 unidade" : `${new Intl.NumberFormat("pt-BR").format(order.units)} unidades`}</td>
-          <td data-label="Total" className="numeric">{formatBRL(order.total)}</td>
+        <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Pedido</th><th role="columnheader" scope="col">Situação</th><th role="columnheader" scope="col">Comprador</th><th role="columnheader" scope="col">Entrega</th><th role="columnheader" scope="col" className="numeric">Total</th></tr></thead>
+        <tbody role="rowgroup">{page.orders.map(order => <tr role="row" key={order.id}>
+          <th role="rowheader" scope="row"><Link href={`${storePath}/pedidos/${encodeURIComponent(order.id)}`}>Pedido nº {order.number}</Link><span className="cell-hint order-created">Criado em {formatDateTime(order.createdAt)}</span></th>
+          <td role="cell" data-label="Situação"><StatusBadge tone={order.status === "PENDING_PAYMENT" ? "positive" : "neutral"}>{STATUS_LABELS[order.status]}</StatusBadge></td>
+          <td role="cell" data-label="Comprador">{order.buyerName ?? "Dados removidos"}</td>
+          <td role="cell" data-label="Entrega">{SHORT_FULFILLMENT[order.fulfillmentType]} · {order.units === 1 ? "1 unidade" : `${new Intl.NumberFormat("pt-BR").format(order.units)} unidades`}</td>
+          <td role="cell" data-label="Total" className="numeric">{formatBRL(order.total)}</td>
         </tr>)}</tbody>
       </table></div>
       <nav className="pagination" aria-label="Páginas de pedidos">

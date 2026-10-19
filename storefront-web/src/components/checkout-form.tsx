@@ -18,6 +18,7 @@ export function CheckoutForm({ slug, storeName, requestId, options }: Props) {
   const summary = useRef<HTMLDivElement>(null);
   const { values, errors } = state;
   const invalid = Object.keys(errors) as CheckoutField[];
+  const replayed = state.link?.href.includes("/pedidos/") ?? false;
 
   // After a rejected attempt, move focus to the explanation so screen readers announce it.
   useEffect(() => {
@@ -42,7 +43,9 @@ export function CheckoutForm({ slug, storeName, requestId, options }: Props) {
       <input type="hidden" name="requestId" value={state.requestId} />
       {options.map(option => <input key={option.type} type="hidden" name={`total-${option.type}`} value={option.total} />)}
 
-      <div ref={summary} tabIndex={-1} role={state.message ? "alert" : undefined} className={state.message ? "checkout-alert" : undefined}>
+      {/* A replayed order (link to its status page) is good news: informative style and polite status. */}
+      <div ref={summary} tabIndex={-1} role={state.message ? (replayed ? "status" : "alert") : undefined}
+        className={state.message ? (replayed ? "checkout-alert checkout-alert-info" : "checkout-alert") : undefined}>
         {state.message ? <>
           <p>{state.message}</p>
           {state.link ? <p><a href={state.link.href}>{state.link.label}</a></p> : null}

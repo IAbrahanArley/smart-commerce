@@ -59,3 +59,5 @@ V14 indexa `sales_order_item(variant_id, tenant_id)` para a FK RESTRICT. V15 (SC
 - a regra do endereço (V13) vale enquanto o pedido guarda dados pessoais.
 
 Também cria índices para os lotes de expiração e anonimização e para a lista filtrada do admin. A anonimização substitui a impressão digital do `requestId` por zeros, porque ela deriva dos dados do comprador. Nenhum dado é alterado pela migração.
+
+V16 (SC-011) valida a FK composta `inventory_reservation(order_id, tenant_id) → sales_order` quando todas as reservas têm pedido do mesmo tenant. Se um banco local ainda tiver reservas de antes dos pedidos, a FK continua `NOT VALID` (vale para linhas novas), a migração emite um aviso e nenhuma linha é apagada. Na SC-011 a anonimização passou a substituir também `cancel_reason` por um texto fixo, mantendo as CHECKs da V15.

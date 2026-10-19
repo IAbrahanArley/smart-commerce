@@ -462,6 +462,18 @@ class OrderCheckoutIT {
         .doesNotContain(EMAIL, "comprador.sintetico", "98888", "11988887777", "203.0.113.7");
   }
 
+  @Test
+  void signedIpv6AddressesOfOneSlash64ShareTheAttemptLimit() throws Exception {
+    // One host usually owns a whole /64: rotating addresses inside it must not reset the limit.
+    String rejected = body(UUID.randomUUID(), lines(simpleA, 1), Map.of("type", "PICKUP"), "1.00");
+    for (int i = 1; i <= 20; i++)
+      assertThat(postFrom("2001:db8:7:9::" + Integer.toHexString(i), true, rejected).statusCode())
+          .isEqualTo(409);
+    assertThat(postFrom("2001:db8:7:9:ffff::1", true, rejected).statusCode()).isEqualTo(429);
+    assertThat(postFrom("::ffff:203.0.113.50", true, rejected).statusCode()).isEqualTo(409);
+    assertThat(postFrom("2001:db8:7:a::1", true, rejected).statusCode()).isEqualTo(409);
+  }
+
   // --- helpers ---------------------------------------------------------------------------
 
   private List<String> run(List<Callable<String>> tasks) throws Exception {

@@ -52,8 +52,9 @@ public class OrderMaintenanceRepository {
 
   /**
    * D2: removes the buyer's personal data from closed orders created before {@code cutoff}. The
-   * request fingerprint is derived from that data, so it is replaced too; amounts, items and dates
-   * stay. Returns the number of anonymized orders.
+   * request fingerprint is derived from that data, so it is replaced too, and so is the store's
+   * free text cancellation reason, which may quote the buyer; amounts, items and dates stay.
+   * Returns the number of anonymized orders.
    */
   public int anonymize(Instant cutoff, Instant now, int limit) {
     return jdbc.update(
@@ -61,6 +62,8 @@ public class OrderMaintenanceRepository {
         UPDATE sales_order SET buyer_name=NULL,buyer_email=NULL,buyer_email_key=NULL,buyer_phone=NULL,
           address_line1=NULL,address_line2=NULL,address_district=NULL,address_city=NULL,
           address_state=NULL,address_postal_code=NULL,request_fingerprint=repeat('0',64),
+          cancel_reason=CASE WHEN cancel_reason IS NULL THEN NULL
+            ELSE 'Motivo removido na anonimização' END,
           anonymized_at=?,updated_at=?,version=version+1
         WHERE id IN (SELECT id FROM sales_order
             WHERE anonymized_at IS NULL AND status IN ('EXPIRED','CANCELLED') AND created_at<=?

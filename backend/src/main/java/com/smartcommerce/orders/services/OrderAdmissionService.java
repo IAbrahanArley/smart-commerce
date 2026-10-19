@@ -3,6 +3,7 @@ package com.smartcommerce.orders.services;
 import com.smartcommerce.inventory.domain.ReservationPolicy;
 import com.smartcommerce.orders.domain.OrderException;
 import com.smartcommerce.orders.repositories.OrderRateLimitRepository;
+import com.smartcommerce.orders.security.ClientIpBucket;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -40,16 +41,17 @@ public class OrderAdmissionService {
   public void admit(String clientIp) {
     Instant now = ReservationPolicy.now(clock);
     limits.deleteExpired(now);
-    if (limits.increment(bucket(clientIp == null ? "" : clientIp), now, now.plus(WINDOW))
-        > MAX_ATTEMPTS) throw new OrderException(OrderException.Reason.RATE_LIMITED);
+    if (limits.increment(bucket(ClientIpBucket.of(clientIp)), now, now.plus(WINDOW)) > MAX_ATTEMPTS)
+      throw new OrderException(OrderException.Reason.RATE_LIMITED);
   }
 
-  private String bucket(String clientIp) {
+  /** {@code group} is the normalized address group (IPv6 /64), never stored in clear. */
+  private String bucket(String group) {
     try {
       Mac mac = Mac.getInstance("HmacSHA256");
       mac.init(new SecretKeySpec(key, "HmacSHA256"));
       return HexFormat.of()
-          .formatHex(mac.doFinal(("checkout-ip:" + clientIp).getBytes(StandardCharsets.UTF_8)));
+          .formatHex(mac.doFinal(("checkout-ip:" + group).getBytes(StandardCharsets.UTF_8)));
     } catch (GeneralSecurityException impossible) {
       throw new IllegalStateException(impossible);
     }
