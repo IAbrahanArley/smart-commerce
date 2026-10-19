@@ -67,6 +67,16 @@ Data: 2026-10-18. Branch `feat/sc-010-orders-admin`, a partir da `main` em `3b44
 - O smoke ganhou testes puros (situação, cursor, caminhos, motivo, data, telefone, CEP) e as duas rotas novas.
 - As portas padrão estavam ocupadas por servidores locais.
 
+## CI remota: teste instável corrigido
+
+A primeira execução do PR #11 falhou no job `backend` em um único teste, que já existia desde a SC-008: `OrderCheckoutIT.attemptsPerSignedClientIpAreLimitedAndUnsignedHeadersAreIgnored`.
+
+- A assertiva exigia que nenhuma chave de `order_rate_limit` contivesse as substrings `"203"` ou `"198"`. Só que as chaves são HMAC-SHA256 em hexadecimal, com chave aleatória a cada inicialização.
+- Uma simulação com 100 mil rodadas de 3 chaves aleatórias falhou em 8,7% das vezes. Por isso o teste passou localmente e na CI do #8.
+- A assertiva agora verifica a propriedade real: toda chave tem exatamente 64 caracteres hexadecimais (o que exclui os pontos de qualquer IP) e não contém os IPs literais.
+- O código de produção não mudou.
+- `verify` completo novamente: BUILD SUCCESS, 157 testes, zero falhas.
+
 ## Validação em navegador (painel integrado)
 
 **Ambiente descartável**
