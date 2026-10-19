@@ -1,6 +1,6 @@
 # ADR-0014: Ambiente de teste hospedado (Render + Vercel, planos gratuitos)
 
-Status: **proposto** em 2026-10-19. Nada foi criado nem implantado. Contas, projetos, bancos e segredos são criados **pelo responsável**, e nenhuma decisão abaixo vale antes de ser aprovada aqui.
+Status: **adotado** em 2026-10-19 para H1–H4 (ver "Aprovação"). Proposto na mesma data. Nada foi criado nem implantado. Contas, projetos, bancos e segredos são criados **pelo responsável**, e a preparação do código ainda exige autorização própria.
 
 ## Objetivo
 
@@ -53,7 +53,16 @@ Observar o sistema fora da máquina de desenvolvimento, em HTTPS público e em i
 | B9 | Dados pessoais | Política de privacidade e validação jurídica pendentes | Somente dados sintéticos e contas de teste; vitrine já é `noindex` |
 | B10 | Segredos | Segredo do IP, senha do banco e chave do provedor de e-mail | Cadastrados pelo responsável nos painéis do Render e da Vercel, nunca no chat ou no Git |
 
-## Decisões que precisam de aprovação
+## Aprovação
+
+Em 2026-10-19 o responsável aprovou:
+
+- **H1, e-mail:** adaptador de e-mail por **API HTTP** de um provedor com camada gratuita. O provedor ainda será escolhido; a conta é criada pelo responsável e a chave fica só no painel do Render.
+- **H2, checkout:** **exceção restrita ao D6** apenas neste ambiente de teste hospedado. Ela exige dados sintéticos, aviso visível de "ambiente de teste" em todas as páginas da vitrine e do admin, liga só por configuração explícita do ambiente e deve ser retirada antes de qualquer uso real. A produção comercial continua proibida de aceitar pedido sem pagamento.
+- **H3, banco:** **Render Postgres free**, tratado como descartável (expira em 30 dias e não tem backup).
+- **H4, sono e CPU:** **aceitar o sono** do Render free e observar o comportamento real, sem ping de manutenção nem plano pago.
+
+## Decisões (aprovadas em 2026-10-19)
 
 - **H1, e-mail:** provedor com API HTTP e camada gratuita, que é um serviço externo novo; ou semeadura de contas de teste pelo operador, sem cadastro público.
 - **H2, checkout no ambiente de teste:** manter desligado (D6) ou abrir uma exceção restrita ao ambiente de teste, com dados sintéticos, aviso visível de ambiente de teste e retirada antes de qualquer uso real.
