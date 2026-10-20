@@ -6,6 +6,7 @@ import com.smartcommerce.orders.domain.CheckoutRecords;
 import com.smartcommerce.orders.domain.OrderException;
 import com.smartcommerce.orders.dto.response.OrderView;
 import com.smartcommerce.orders.repositories.OrderRepository;
+import com.smartcommerce.payments.services.PaymentCheckoutService;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -19,10 +20,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OrderQueryService {
   private final OrderRepository orders;
+  private final PaymentCheckoutService payments;
   private final Clock clock;
 
-  public OrderQueryService(OrderRepository orders, Clock clock) {
+  public OrderQueryService(OrderRepository orders, PaymentCheckoutService payments, Clock clock) {
     this.orders = orders;
+    this.payments = payments;
     this.clock = clock;
   }
 
@@ -34,6 +37,9 @@ public class OrderQueryService {
             .filter(found -> AccessToken.matches(token, found.accessTokenHash()))
             .orElseThrow(() -> new OrderException(OrderException.Reason.MISSING));
     return OrderViews.view(
-        order, orders.items(order.tenantId(), order.id()), ReservationPolicy.now(clock));
+        order,
+        orders.items(order.tenantId(), order.id()),
+        ReservationPolicy.now(clock),
+        payments.acceptsPayments(order.tenantId()));
   }
 }

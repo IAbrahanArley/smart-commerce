@@ -13,6 +13,7 @@ import com.smartcommerce.orders.domain.FulfillmentType;
 import com.smartcommerce.orders.domain.OrderException;
 import com.smartcommerce.orders.dto.response.CheckoutView;
 import com.smartcommerce.orders.repositories.OrderRepository;
+import com.smartcommerce.payments.services.PaymentCheckoutService;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -41,16 +42,19 @@ public class OrderPlacementService {
   private static final String CURRENCY = "BRL";
   private final OrderRepository orders;
   private final InventoryReservationService reservations;
+  private final PaymentCheckoutService payments;
   private final Clock clock;
   private final Duration reservationTtl;
 
   public OrderPlacementService(
       OrderRepository orders,
       InventoryReservationService reservations,
+      PaymentCheckoutService payments,
       Clock clock,
       @Value("${inventory.reservation.ttl:PT30M}") Duration reservationTtl) {
     this.orders = orders;
     this.reservations = reservations;
+    this.payments = payments;
     this.clock = clock;
     this.reservationTtl = new ReservationPolicy(reservationTtl).ttl();
   }
@@ -140,7 +144,10 @@ public class OrderPlacementService {
 
   private com.smartcommerce.orders.dto.response.OrderView view(CheckoutRecords.Order order) {
     return OrderViews.view(
-        order, orders.items(order.tenantId(), order.id()), ReservationPolicy.now(clock));
+        order,
+        orders.items(order.tenantId(), order.id()),
+        ReservationPolicy.now(clock),
+        payments.acceptsPayments(order.tenantId()));
   }
 
   private static List<ReservationLine> reservationLines(List<CheckoutLine> lines) {

@@ -5,12 +5,20 @@ import { checkoutEnabled, emptyValues, validateCheckout } from "../src/lib/check
 import { orderCookieName, orderCookieOptions, validOrderToken } from "../src/lib/order-cookie.ts";
 import { signedClientIp, trustedClientIp } from "../src/lib/client-ip.ts";
 import { addLine, CART_MAX_LINES, parseCart, serializeCart } from "../src/lib/cart-cookie.ts";
+import { checkoutPage } from "../src/lib/payment-url.ts";
 
 // Pure rules checked before any server starts.
 export const forwardingSecret = "synthetic-forwarding-secret-for-smoke-0001";
 
 assert.equal(formatBRL("99999999999999999.99").replace(/\s/g, " "), "R$ 99.999.999.999.999.999,99");
 assert.equal(formatBRL("0.01").replace(/\s/g, " "), "R$ 0,01");
+
+// SC-013: the buyer is only ever redirected to an HTTPS Mercado Pago page.
+for (const url of ["https://www.mercadopago.com.br/checkout/v1/redirect?id=1", "https://sandbox.mercadopago.com.br/x", "https://mercadopago.com.ar/x", "https://www.mercadopago.com/x"])
+  assert.equal(checkoutPage(url), true, url);
+for (const url of [undefined, "", "http://www.mercadopago.com.br/x", "https://mercadopago.com.br.evil.example/x", "https://evilmercadopago.com.br/x", "https://user@www.mercadopago.com.br/x",
+  "https://www.mercadopago.com.br:8443/x", "https://www.mercadopago.com.br/x#frag", "javascript:alert(1)", "/lojas/loja-teste", `https://www.mercadopago.com.br/${"x".repeat(2048)}`])
+  assert.equal(checkoutPage(url), false, String(url));
 assert.equal(formatBRL("1.001"), "Preço indisponível");
 assert.equal(formatBRL("19999999999999999980.00").replace(/\s/g, " "), "R$ 19.999.999.999.999.999.980,00");
 

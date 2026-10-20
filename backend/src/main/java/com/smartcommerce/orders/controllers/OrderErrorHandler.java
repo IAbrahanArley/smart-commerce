@@ -23,6 +23,7 @@ public final class OrderErrorHandler {
         switch (error.reason()) {
           case MISSING -> 404;
           case RATE_LIMITED, PENDING_LIMIT -> 429;
+          case PAYMENT_FAILED -> 502;
           default -> 409;
         };
     body.put(
@@ -37,8 +38,11 @@ public final class OrderErrorHandler {
           case PENDING_LIMIT -> "Há pedidos pendentes demais para este e-mail nesta loja.";
           case RATE_LIMITED -> "Muitas tentativas de compra. Tente novamente mais tarde.";
           case ORDER_EXPIRED -> "O prazo deste pedido terminou.";
+          case NOT_PAYABLE -> "Este pedido não está mais aguardando pagamento.";
+          case PAYMENT_UNAVAILABLE -> "Esta loja não está recebendo pagamentos agora.";
+          case PAYMENT_FAILED -> "Não foi possível iniciar o pagamento. Tente novamente.";
         });
-    if (status == 409) body.put("code", error.reason().name());
+    if (status == 409 || status == 502) body.put("code", error.reason().name());
     if (error.currentTotal() != null)
       body.put(
           "currentTotal",

@@ -26,8 +26,10 @@ Banco compartilhado com `tenant_id` em todas as tabelas de domínio específicas
 ## Fundação SC-001
 O [ADR-0004](adr/0004-project-bootstrap.md) registra estrutura do repositório, ferramentas, execução local e CI. O bootstrap não implementa domínio, autenticação funcional nem isolamento de dados de negócio; essas garantias serão verificadas nas tarefas seguintes.
 
-## Fluxo de pagamento (planejado)
+## Fluxo de pagamento
 Lojista autoriza Mercado Pago via OAuth → credenciais protegidas por tenant → pedido pendente + reserva de estoque → Checkout Pro → webhook validado + consulta de status → transição idempotente → baixa de estoque + registros financeiros → reconciliação. Confirmar requisitos atuais e compatibilidade do provedor antes de implementar.
+
+Implementado até a SC-013 (sandbox, [ADR-0013](adr/0013-mercado-pago-checkout-pro.md)): OAuth com tokens cifrados por tenant (SC-012) e criação da order do Checkout Pro a partir do pedido (SC-013). O módulo `orders` confere o comprador e o pedido e entrega ao `payments` só o snapshot. O `payments` chama o provedor fora de transação, com o token da loja do pedido e uma chave de idempotência derivada do pedido. A dependência é de `orders` para `payments`, nunca o contrário. Webhook, confirmação e baixa (SC-014) e conciliação (SC-015) ainda não existem.
 
 ## Princípios financeiros
 Guardar fatos auditáveis e separar data da venda, aprovação, liquidação e movimentação de caixa. BigDecimal, BRL, snapshot de custos e taxas. IA nunca calcula o resultado como fonte de verdade.

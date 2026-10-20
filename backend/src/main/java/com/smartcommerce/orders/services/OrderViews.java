@@ -14,7 +14,10 @@ final class OrderViews {
   private OrderViews() {}
 
   static OrderView view(
-      CheckoutRecords.Order order, List<CheckoutRecords.Item> items, Instant now) {
+      CheckoutRecords.Order order,
+      List<CheckoutRecords.Item> items,
+      Instant now,
+      boolean acceptsPayments) {
     String status =
         "PENDING_PAYMENT".equals(order.status())
                 && !ReservationPolicy.active(order.reservationExpiresAt(), now)
@@ -40,7 +43,8 @@ final class OrderViews {
         money(order.total()),
         new OrderView.Fulfillment(order.fulfillment().name(), order.fulfillmentText()),
         order.reservationExpiresAt(),
-        order.createdAt());
+        order.createdAt(),
+        acceptsPayments && "PENDING_PAYMENT".equals(status));
   }
 
   static String money(BigDecimal value) {

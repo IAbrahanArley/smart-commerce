@@ -61,3 +61,14 @@ V14 indexa `sales_order_item(variant_id, tenant_id)` para a FK RESTRICT. V15 (SC
 Também cria índices para os lotes de expiração e anonimização e para a lista filtrada do admin. A anonimização substitui a impressão digital do `requestId` por zeros, porque ela deriva dos dados do comprador. Nenhum dado é alterado pela migração.
 
 V16 (SC-011) valida a FK composta `inventory_reservation(order_id, tenant_id) → sales_order` quando todas as reservas têm pedido do mesmo tenant. Se um banco local ainda tiver reservas de antes dos pedidos, a FK continua `NOT VALID` (vale para linhas novas), a migração emite um aviso e nenhuma linha é apagada. Na SC-011 a anonimização passou a substituir também `cancel_reason` por um texto fixo, mantendo as CHECKs da V15.
+
+## Pagamentos (Sprint 4)
+
+V17 (SC-012) cria `payment_oauth_state` (tentativas de OAuth com o `state` só em SHA-256 e o verificador PKCE cifrado) e `payment_account` (uma conta Mercado Pago por loja, com tokens AES-256-GCM que só existem enquanto a conta está `CONNECTED`). Detalhes em [SC-012-VALIDATION.md](../quality/SC-012-VALIDATION.md).
+
+V18 (SC-013) cria `payment`, 1:1 com o pedido (`UNIQUE (order_id)` e FK composta pedido/tenant):
+- estado `CREATING` (linha reservada antes de chamar o provedor) ou `CREATED` (order do provedor criada);
+- valor em NUMERIC sem arredondamento e moeda `BRL`;
+- em `CREATED`, e só nele (CHECK): conta do vendedor usada, id da order no provedor (único por provedor), status do provedor, `checkout_url` HTTPS e vencimento da order.
+
+Não guarda CPF, cartão nem e-mail do pagador (ADR-0013 P11). Os estados de confirmação chegam na SC-014. [ADR-0013](adr/0013-mercado-pago-checkout-pro.md).

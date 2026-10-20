@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { StoreHeader } from "@/components/store-header";
 import { OrderSteps } from "@/components/order-steps";
 import { Arrow } from "@/components/arrow";
+import { PaymentForm } from "@/components/payment-form";
 import { loadCatalog } from "@/lib/public-store";
 import { orderCookieName, validOrderId, validOrderToken } from "@/lib/order-cookie";
 import { loadOrder, type OrderStatus } from "@/lib/orders";
@@ -16,7 +17,7 @@ export const metadata: Metadata = { title: "Seu pedido", robots: { index: false,
 type Props = { params: Promise<{ slug: string; orderId: string }> };
 
 const STATUS: Record<OrderStatus, { label: string; text: string }> = {
-  PENDING_PAYMENT: { label: "Aguardando pagamento", text: "Os itens estão reservados até o horário abaixo. O pagamento ainda não está disponível nesta etapa; a loja entrará em contato se necessário." },
+  PENDING_PAYMENT: { label: "Aguardando pagamento", text: "Os itens estão reservados até o horário abaixo. Conclua o pagamento antes desse prazo." },
   EXPIRED: { label: "Reserva expirada", text: "O prazo da reserva terminou e os itens foram liberados. Se ainda quiser comprar, monte o carrinho novamente." },
   CANCELLED: { label: "Pedido cancelado", text: "Este pedido foi cancelado pela loja e os itens foram liberados." },
 };
@@ -50,6 +51,10 @@ export default async function OrderPage({ params }: Props) {
           <p>{status.text}</p>
           {order.status === "PENDING_PAYMENT" ? (
             <p className="order-deadline">Reserva válida até <time dateTime={order.reservationExpiresAt}>{DEADLINE.format(new Date(order.reservationExpiresAt))}</time> (horário de Brasília).</p>
+          ) : null}
+          {order.payable ? <PaymentForm slug={store.slug} orderId={order.id} label="Ir para o pagamento" /> : null}
+          {order.status === "PENDING_PAYMENT" && !order.payable ? (
+            <p>O pagamento online não está disponível nesta loja agora. A loja entrará em contato se necessário.</p>
           ) : null}
         </section>
         <div className="checkout-layout">

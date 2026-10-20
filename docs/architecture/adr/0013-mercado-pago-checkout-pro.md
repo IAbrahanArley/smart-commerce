@@ -77,6 +77,17 @@ Detalhes e testes estão em [SC-012-VALIDATION.md](../../quality/SC-012-VALIDATI
 - **Retorno:** `GET /api/payments/mercado-pago/callback` na origem do admin, que deve ser a URL de redirecionamento cadastrada na aplicação.
 - **Tokens:** cifrados com AES-256-GCM, com dados associados por tenant. A renovação acontece sob lock da linha, a menos de 30 dias do vencimento, inclusive por uma rotina diária.
 
+## Implementação da SC-013 (2026-10-20)
+
+Detalhes, testes e hipóteses estão em [SC-013-VALIDATION.md](../../quality/SC-013-VALIDATION.md).
+
+- **Orders API (P1):** `POST /v1/orders` com `type=online`, `processing_mode=manual`, `external_reference` igual ao id do pedido, itens do snapshot (o frete entra como item "Frete") e `expiration_time=PT30M` (P2). Não envia dados do pagador (P11).
+- **Idempotência:** `X-Idempotency-Key` é um UUID derivado do id do pedido, igual em toda tentativa. A tabela `payment` reserva uma linha por pedido antes da chamada.
+- **Meios (P2):** `not_allowed_types` exclui `ticket`, `atm` e `digital_currency`. Os valores aceitos precisam ser confirmados em `GET /v1/payment_methods` no sandbox.
+- **Retorno:** uma única página da vitrine, `/lojas/{slug}/pedidos/{id}/pagamento`, para sucesso, falha e pendência. Ela não lê a query string. As URLs só são enviadas quando `STOREFRONT_PUBLIC_ORIGIN` é HTTPS, porque o provedor rejeita endereços locais.
+- **Pré-condição:** com a integração configurada, uma loja sem conta conectada não recebe pedidos novos (`PAYMENT_UNAVAILABLE`). Sem a integração (DEV, D6), o checkout continua sem pagamento, como antes.
+- **Vencimento:** a order é criada logo depois do pedido e vence em 30 min (o mínimo da API). Uma nova tentativa feita mais tarde reaproveita a mesma order. Se a primeira criação falhou e a order só nasce depois, ela pode vencer alguns minutos após a reserva; esse pagamento tardio é o caso P4 (SC-014).
+
 ## Consequências e riscos
 
 - **Cadeia de tempo do D1.** A reserva e a order expiram juntas. Um pagamento aprovado segundos depois do vencimento cai no P4. Pix pode creditar com atraso, e quem paga depois do vencimento é reembolsado pelo provedor; os dois casos precisam de teste.

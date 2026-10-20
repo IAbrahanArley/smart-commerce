@@ -42,6 +42,8 @@ Nenhuma tarefa começa sem autorização explícita do responsável.
 
 ## SC-013 — Pagar o pedido pelo Checkout Pro
 
+**Estado (2026-10-20):** autorizada e implementada, validada com um servidor falso da Orders API ([validação](../quality/SC-013-VALIDATION.md)). A criação de uma order real em sandbox fica pendente até a SC-012 ser validada com o usuário de teste vendedor.
+
 - **Criação da order:** no checkout, o backend cria a order no Mercado Pago com o token do lojista, `X-Idempotency-Key` derivado do pedido, `external_reference` (id do pedido), itens e total do snapshot, `expiration_time` igual ao fim da reserva (P2) e meios de pagamento restritos.
 - **Tabela `payment`:** id da order do provedor, status, valores, sem CPF ou cartão.
 - **Vitrine:** depois de "Confirmar pedido", redireciona para o `checkout_url`. As páginas de retorno mostram "pagamento em confirmação" e **não confiam** em parâmetros da URL.

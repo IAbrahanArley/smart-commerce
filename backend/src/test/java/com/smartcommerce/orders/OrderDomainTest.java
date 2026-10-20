@@ -120,7 +120,7 @@ class OrderDomainTest {
 
   @Test
   void checkoutIsUnavailableUnlessExplicitlyEnabled() {
-    var disabled = new OrderCheckoutService(false, null, null, null, Clock.systemUTC());
+    var disabled = new OrderCheckoutService(false, null, null, null, null, Clock.systemUTC());
     var command =
         parse(
             body(
