@@ -19,8 +19,8 @@ Data: 2026-10-19. Branch `feat/sc-011-integrated-review`, a partir da `main` em 
 | Backend | Menor | Anonimização limitada a 2.000 pedidos por dia; rotinas desligadas sem aviso | **Corrigido**: cada execução esvazia a fila dentro de um limite de tempo (30 s na expiração, 10 min na anonimização diária); aviso na inicialização com checkout ligado e rotinas desligadas; teste `OrderMaintenanceJobTest` |
 | Backend | Menor | `cancel_reason` (texto livre da loja) permanecia após a anonimização | **Corrigido**: substituído por texto fixo, mantendo as CHECKs da V15; teste em `OrderLifecycleIT` |
 | Backend | Menor | `cancelled_by` em RESTRICT impede apagar a identidade do lojista | **Registrado**: não existe exclusão de identidade hoje; decidir junto com a futura exclusão de conta |
-| Backend + frontends | Menor | Cotação revela o saldo exato até 10 unidades, sem limite de taxa | **Pendente de decisão humana** (R2) |
-| Backend | Menor | Número sequencial do pedido revela o volume da loja | **Pendente de confirmação** do aceite (R6) |
+| Backend + frontends | Menor | Cotação revela o saldo exato até 10 unidades, sem limite de taxa | **Aceito** em 2026-10-20 (R2, ADR-0012) |
+| Backend | Menor | Número sequencial do pedido revela o volume da loja | **Aceito** em 2026-10-20 (R6, ADR-0012) |
 | Frontends | Major | O teste de origem externa no checkout enviava um formulário vazio, então nunca executava a action | **Corrigido**: o smoke envia a action real com outra origem e verifica que nenhum pedido foi criado e nenhum cookie foi alterado |
 | Frontends | Menor | Foco perdido ao fechar o formulário de cancelamento | **Corrigido**: volta ao botão "Cancelar pedido" |
 | Frontends | Menor | Aviso do carrinho após o redirecionamento podia não ser anunciado | **Corrigido**: `FocusNotice` foca o aviso ao montar |
@@ -69,7 +69,7 @@ Data: 2026-10-19. Branch `feat/sc-011-integrated-review`, a partir da `main` em 
 
 ## Limitações e pendências
 
-- **Decisões humanas pendentes:** R2 (inferência de saldo pela cotação) e R6 (números sequenciais do pedido).
+- **Decisões humanas:** R2 (inferência de saldo pela cotação) e R6 (números sequenciais do pedido) foram aceitos em 2026-10-20, com revisão antes da produção comercial (ADR-0012).
 - **Antes de produção:** proxy confiável com `STOREFRONT_TRUST_FORWARDED_FOR=true` e segredo nas duas aplicações (R1), validação jurídica do D2 e pagamento (Sprint 4).
 - **Acessibilidade:** sem Axe nem leitor de tela automatizados, e o smoke do admin é raso. WCAG 2.2 AA é objetivo, não conformidade comprovada.
 - **CI remota:** depende do push desta branch.

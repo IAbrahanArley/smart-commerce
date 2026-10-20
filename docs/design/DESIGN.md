@@ -132,7 +132,7 @@ Aprovado em 2026-10-17 a partir da [proposta de referências de mercado](PROPOST
 
 ## Repaginação 2026-10 (referência Dashtail)
 
-Aprovada pelo responsável em 2026-10-20. O template comercial Dashtail v1.3.0 (ThemeForest; Next 14, Tailwind 3 e shadcn/Radix) foi usado **somente como referência visual e estrutural**. Nenhum código, ícone, ilustração, texto ou dependência foi copiado: a licença do ThemeForest (Regular/Extended) não deixa claro o uso num SaaS cobrado, e a adoção de Tailwind/Radix contrariaria a política de dependências. Paleta violeta, fonte Inter, tema escuro, customizador, RTL, busca, notificações, gráficos e toasts do template não foram adotados.
+Aprovada pelo responsável em 2026-10-20. O template comercial Dashtail v1.3.0 (ThemeForest; Next 14, Tailwind 3 e shadcn/Radix) foi usado **somente como referência visual e estrutural**. Nenhum código, ícone, ilustração, texto ou dependência foi copiado, porque a adoção de Tailwind/Radix contrariaria a política de dependências. **Licença (2026-10-20):** o responsável informou ter uma licença que permite usar o template em qualquer projeto, então copiar código ou recursos dele é permitido. Mesmo assim, uma cópia não pode trazer dependência nova sem aprovação e deve ser adaptada aos tokens e componentes locais. Paleta violeta, fonte Inter, tema escuro, customizador, RTL, busca, notificações, gráficos e toasts do template não foram adotados.
 
 Padrões adotados com CSS e componentes locais:
 

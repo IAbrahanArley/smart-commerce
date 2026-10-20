@@ -1,6 +1,6 @@
 # ADR-0012 — Reserva de estoque, carrinho e pedidos pendentes
 
-Status: **adotado** em 2026-10-17 para D1–D7, conforme as recomendações da seção 8, aprovadas pelo responsável. Proposto na mesma data; o plano incremental está em [SPRINT_03.md](../../product/SPRINT_03.md). **Implementado na Sprint 3 (SC-005 a SC-010) e revisado de forma integrada na SC-011** em 2026-10-19 ([modelo de ameaças](../../security/SC-011-CHECKOUT-THREAT-MODEL.md), [validação](../../quality/SC-011-VALIDATION.md)). Os riscos residuais R2 (inferência pela cotação) e R6 (números sequenciais) aguardam decisão humana.
+Status: **adotado** em 2026-10-17 para D1–D7, conforme as recomendações da seção 8, aprovadas pelo responsável. Proposto na mesma data; o plano incremental está em [SPRINT_03.md](../../product/SPRINT_03.md). **Implementado na Sprint 3 (SC-005 a SC-010) e revisado de forma integrada na SC-011** em 2026-10-19 ([modelo de ameaças](../../security/SC-011-CHECKOUT-THREAT-MODEL.md), [validação](../../quality/SC-011-VALIDATION.md)). Os riscos residuais R2 (inferência pela cotação) e R6 (números sequenciais) foram **aceitos** em 2026-10-20 (ver "Riscos residuais R2 e R6 da SC-011").
 
 ## Aprovação
 
@@ -189,6 +189,20 @@ Quantidade insuficiente responde sem revelar o saldo exato; o limite por linha r
 | D7 | Ajuste negativo do lojista abaixo do reservado | Bloquear com `409 RESERVED_STOCK`, informando o reservado ao lojista; alternativa é permitir e marcar pedidos como em risco | SC-005 |
 
 Cada aprovação deve ser registrada neste ADR (status passa a "adotado" somente para o que foi aprovado), sem inferir aprovação das demais.
+
+### Riscos residuais R2 e R6 da SC-011 (2026-10-20)
+
+O responsável aprovou em 2026-10-20 a recomendação de **aceitar** os dois riscos residuais da [SC-011](../../security/SC-011-CHECKOUT-THREAT-MODEL.md), com revisão antes da produção comercial:
+
+- **R2, inferência do saldo pela cotação: aceito.**
+  - **O que vaza:** a cotação honesta por linha (D5) revela o saldo exato quando ele é de 10 unidades ou menos.
+  - **Por que não limitar a taxa:** o limite mitigaria pouco. Uma busca binária entre 1 e 10 descobre o saldo com cerca de 4 cotações, menos do que um comprador legítimo faz ao montar o carrinho. O próprio checkout, limitado pelo D4, também revela disponibilidade.
+  - **Custo de limitar:** exigiria ligar o módulo da vitrine ao verificador de IP de pedidos e assinar o IP em toda cotação.
+  - **Gatilho de revisão:** lojista que precise esconder o saldo exato (por exemplo, "últimas unidades" sem número). A alternativa preferida é então uma cotação que só informe "disponível/indisponível" para a quantidade pedida, e não um limite de taxa.
+- **R6, número sequencial do pedido: aceito.**
+  - **O que vaza:** o número por loja é visível ao comprador e revela o volume aproximado de pedidos.
+  - **Por que aceitar:** é o padrão do varejo e facilita o atendimento e a conferência pelo lojista.
+  - **Gatilho de revisão:** antes da produção comercial, se algum lojista pedir. A alternativa é exibir ao comprador um código não sequencial e manter o número só no admin.
 
 ## 9. Fora desta etapa (Sprint 4 — Mercado Pago e além)
 
