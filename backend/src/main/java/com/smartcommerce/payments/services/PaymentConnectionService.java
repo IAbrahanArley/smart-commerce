@@ -5,6 +5,7 @@ import com.smartcommerce.payments.domain.PaymentAccountRecord;
 import com.smartcommerce.payments.domain.PaymentException;
 import com.smartcommerce.payments.domain.PendingAuthorization;
 import com.smartcommerce.payments.domain.Pkce;
+import com.smartcommerce.payments.domain.SellerCredentials;
 import com.smartcommerce.payments.dto.response.AuthorizationStartView;
 import com.smartcommerce.payments.dto.response.PaymentConnectionView;
 import com.smartcommerce.payments.provider.PaymentProviders;
@@ -153,9 +154,14 @@ public class PaymentConnectionService {
    * refreshed first when it is close to expiry. Never exposed through HTTP.
    */
   public String accessToken(UUID tenant) {
+    return sellerCredentials(tenant).accessToken();
+  }
+
+  /** {@link #accessToken} with the seller account it belongs to (SC-013 records it). */
+  public SellerCredentials sellerCredentials(UUID tenant) {
     TokenCipher cipher = providers.requireCipher();
     try {
-      return writes.execute(tx -> lockedAccessToken(tenant, cipher));
+      return writes.execute(tx -> lockedCredentials(tenant, cipher));
     } catch (PaymentException failure) {
       // The grant is gone at the provider: erase the tokens in a transaction of its own, since
       // the refresh transaction rolled back. The row lock serialized refreshes, so this was not a
@@ -170,16 +176,18 @@ public class PaymentConnectionService {
     }
   }
 
-  private String lockedAccessToken(UUID tenant, TokenCipher cipher) {
+  private SellerCredentials lockedCredentials(UUID tenant, TokenCipher cipher) {
     PaymentAccountRecord account =
         accounts
             .lock(tenant)
             .filter(found -> "CONNECTED".equals(found.status()))
             .orElseThrow(() -> new PaymentException(PaymentException.Reason.NOT_CONNECTED));
     Instant now = now();
-    if (account.accessExpiresAt().isAfter(now.plus(REFRESH_MARGIN)))
-      return cipher.decrypt(account.accessToken(), tenant, ACCESS);
-    return refreshLocked(tenant, account, cipher, now).accessToken();
+    String token =
+        account.accessExpiresAt().isAfter(now.plus(REFRESH_MARGIN))
+            ? cipher.decrypt(account.accessToken(), tenant, ACCESS)
+            : refreshLocked(tenant, account, cipher, now).accessToken();
+    return new SellerCredentials(account.providerUserId(), token);
   }
 
   /** Refreshes up to {@code limit} accounts near expiry; returns how many were processed. */

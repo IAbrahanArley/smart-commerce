@@ -12,13 +12,17 @@ export const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAA
 export const upstreamRequests = [];
 export const orderRequests = [];
 export const orderReads = [];
+export const paymentRequests = [];
+export const checkoutUrl = "https://sandbox.mercadopago.com.br/checkout/v1/redirect?id=ORD-7";
+// SC-013: answer of the synthetic payment start; smoke steps swap it to exercise failures.
+export const paymentReply = { status: 200, body: { checkoutUrl } };
 
 const store = { name: "Loja de teste da vitrine", slug: "loja-teste" };
 const item = { id, name: "Produto público de teste", price: "49.90", currency: "BRL", available: true, kind: "SIMPLE", descriptionHtml: "<p>Descrição <strong>segura</strong>.</p>", variants: [{ id, price: "49.90", currency: "BRL", available: true, options: [] }] };
 const variantItem = { ...item, id: nextId, name: "Camiseta com opções", kind: "VARIABLE", variants: [{ id, price: "59.90", currency: "BRL", available: false, options: [{ name: "Cor", value: "Azul" }, { name: "Tamanho", value: "M" }], sku: "PRIVATE_SKU_FIXTURE", cost: "PRIVATE_COST_FIXTURE", quantity: 784321 }] };
 const syntheticOrder = { id: orderId, number: 7, status: "PENDING_PAYMENT", currency: "BRL", subtotal: "99.80", shipping: "0.00", total: "99.80",
   items: [{ productName: "Produto público de teste", options: [], unitPrice: "49.90", quantity: 2, lineTotal: "99.80", sku: "PRIVATE_SKU_FIXTURE" }],
-  fulfillment: { type: "PICKUP", text: "Rua Sintética, 10" }, reservationExpiresAt: "2026-10-18T15:30:00Z", createdAt: "2026-10-18T15:00:00Z" };
+  fulfillment: { type: "PICKUP", text: "Rua Sintética, 10" }, reservationExpiresAt: "2026-10-18T15:30:00Z", createdAt: "2026-10-18T15:00:00Z", payable: true };
 // requestId -> payload fingerprint of the order the synthetic backend committed.
 const createdOrders = new Map();
 
@@ -79,6 +83,11 @@ export async function startUpstream() {
       orderReads.push(request.headers["x-order-token"]);
       if (request.headers["x-order-token"] !== orderToken) return json(response, 404, {});
       return json(response, 200, { ...syntheticOrder, buyerPhone: "PRIVATE_BUYER_FIXTURE", sku: "PRIVATE_SKU_FIXTURE" });
+    }
+    if (method === "POST" && url === `/api/public/stores/loja-teste/orders/${orderId}/payment`) {
+      paymentRequests.push({ token: request.headers["x-order-token"], body });
+      if (request.headers["x-order-token"] !== orderToken) return json(response, 404, {});
+      return json(response, paymentReply.status, paymentReply.body);
     }
     if (method !== "GET") return json(response, 403, { message: "Proibido" });
     if (url === `/api/public/stores/loja-teste/products/${id}/images/primary/content` || url === `/api/public/stores/loja-teste/products/${id}/images/${id}/content`) {

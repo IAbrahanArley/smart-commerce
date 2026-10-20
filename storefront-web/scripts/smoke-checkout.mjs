@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { forwardingSecret } from "./smoke-units.mjs";
-import { id, orderId, orderReads, orderRequests, orderToken, startNext } from "./smoke-upstream.mjs";
+import { checkoutUrl, id, orderId, orderReads, orderRequests, orderToken, paymentReply, paymentRequests, startNext } from "./smoke-upstream.mjs";
 
 const text = async response => (await response.text()).replaceAll("<!-- -->", "");
 const hiddenValue = (html, name) => html.match(new RegExp(`name="${name}" value="([^"]*)"`))?.[1];
 const decode = value => value.replaceAll("&quot;", '"').replaceAll("&#x27;", "'").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
 
 // Checkout (SC-009) against the synthetic upstream: no-JS server action, idempotent retries,
-// path-scoped order cookie, status page and visitor IP handling.
+// path-scoped order cookie, status page, Checkout Pro redirect and return page (SC-013) and
+// visitor IP handling.
 export async function checkoutSmoke({ base, page, cartCookie, port, upstreamPort }) {
   const buyable = cartCookie(JSON.stringify([{ variantId: id, quantity: 2 }]));
   const buyableCart = await page("/lojas/loja-teste/carrinho", buyable);
@@ -67,7 +68,10 @@ export async function checkoutSmoke({ base, page, cartCookie, port, upstreamPort
   // Without a declared trusted proxy, no visitor IP is signed: the backend limits by connection.
   assert.equal(sent.headers["x-sc-client-ip"], undefined, "Sem proxy confiável declarado, o IP não é repassado.");
   assert.equal(sent.headers["x-sc-client-ip-signature"], undefined);
-  assert.equal(retried.headers.get("location"), `/lojas/loja-teste/pedidos/${orderId}`);
+  // SC-013: a payable order goes straight to Checkout Pro, started server-side with the new token.
+  assert.equal(retried.headers.get("location"), checkoutUrl);
+  assert.equal(paymentRequests.at(-1)?.token, orderToken);
+  assert.equal(paymentRequests.at(-1)?.body, "", "O início do pagamento não envia corpo nem dados do comprador.");
   const cookiesSet = retried.headers.getSetCookie();
   const orderCookie = cookiesSet.find(cookie => cookie.startsWith(`sc-order-${orderId}=`));
   assert.ok(orderCookie, "Token do pedido fica em cookie próprio.");
@@ -104,7 +108,50 @@ export async function checkoutSmoke({ base, page, cartCookie, port, upstreamPort
   assert.match(status.html, /Aguardando pagamento/);
   assert.match(status.html, /<time dateTime="2026-10-18T15:30:00Z">18\/10\/2026,? 12:30<\/time>/);
   assert.match(status.html, /Rua Sintética, 10/);
+  assert.match(status.html, /Ir para o pagamento/);
   assert.equal(orderReads.at(-1), orderToken);
+
+  // Pay again from the order page (no JavaScript): the action redirects to the provider page only.
+  const tokenCookie = `sc-order-${orderId}=${orderToken}`;
+  const payFields = [...status.html.matchAll(/<input type="hidden" name="(\$ACTION_[^"]+)"(?: value="([^"]*)")?/g)].map(match => [match[1], decode(match[2] ?? "")]);
+  assert.ok(payFields.length > 0, "Pagar deve funcionar sem JavaScript pela server action.");
+  const payPost = (origin = base) => {
+    const form = new FormData();
+    for (const [name, value] of payFields) form.set(name, value);
+    form.set("slug", "loja-teste"); form.set("orderId", orderId);
+    return fetch(`${base}/lojas/loja-teste/pedidos/${orderId}`, { method: "POST", body: form, redirect: "manual", headers: { Origin: origin, Cookie: tokenCookie } });
+  };
+  const paid = await payPost();
+  assert.equal(paid.status, 303);
+  assert.equal(paid.headers.get("location"), checkoutUrl);
+  for (const [status, body, message] of [
+    [200, { checkoutUrl: "https://evil.example/checkout" }, /Não foi possível abrir o pagamento agora/],
+    [502, { code: "PAYMENT_FAILED" }, /Não foi possível abrir o pagamento agora/],
+    [409, { code: "PAYMENT_UNAVAILABLE" }, /O pagamento online não está disponível nesta loja agora/],
+    [409, { code: "NOT_PAYABLE" }, /não está mais aguardando pagamento/],
+  ]) {
+    Object.assign(paymentReply, { status, body });
+    const refused = await payPost();
+    assert.equal(refused.status, 200, `Pagamento ${status} não redireciona.`);
+    assert.match(await text(refused), message);
+  }
+  Object.assign(paymentReply, { status: 200, body: { checkoutUrl } });
+  const payments = paymentRequests.length;
+  const foreignPay = await payPost("https://foreign.example");
+  assert.notEqual(foreignPay.status, 303);
+  assert.equal(paymentRequests.length, payments, "Origem externa não inicia pagamento.");
+
+  // Return page: the provider's query string is never trusted; only the backend view is shown.
+  const returned = await page(`/lojas/loja-teste/pedidos/${orderId}/pagamento?status=approved&collection_status=approved&payment_id=1&external_reference=${orderId}`, tokenCookie);
+  assert.equal(returned.response.status, 200);
+  assert.match(returned.html, /Pagamento em confirmação/);
+  // Visible text only: Next serializes the requested URL (with its query) in the RSC payload.
+  const visible = returned.html.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ");
+  assert.ok(!/pagamento (foi )?aprovado|pagamento confirmado|approved/i.test(visible), "Retorno não declara pagamento aprovado pela URL.");
+  assert.match(returned.html, /Tentar pagar novamente/);
+  assert.match(returned.html, new RegExp(`href="/lojas/loja-teste/pedidos/${orderId}"`));
+  const anonymous = await page(`/lojas/loja-teste/pedidos/${orderId}/pagamento?status=approved`, undefined);
+  assert.match(anonymous.html, /Página não encontrada/, "Retorno sem o cookie do pedido é 404.");
   for (const [path, cookie] of [[`/lojas/loja-teste/pedidos/${orderId}`, undefined], [`/lojas/loja-teste/pedidos/${orderId}`, `sc-order-${orderId}=${"x".repeat(43)}`], [`/lojas/loja-vazia/pedidos/${orderId}`, `sc-order-${orderId}=${orderToken}`], ["/lojas/loja-teste/pedidos/invalido", undefined]]) {
     const missing = await page(path, cookie);
     assert.match(missing.html, /Página não encontrada/, `${path} ${cookie ? "com cookie" : "sem cookie"}`);

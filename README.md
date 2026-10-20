@@ -214,6 +214,8 @@ Publique produto e loja para consultar fotos, descrição e combinações na vit
 
 Em **Pagamentos**, no admin, o dono da loja conecta a própria conta Mercado Pago por OAuth com PKCE. O backend só ativa essa integração com as variáveis `MERCADO_PAGO_CLIENT_ID`, `MERCADO_PAGO_CLIENT_SECRET`, `MERCADO_PAGO_REDIRECT_URI` e `PAYMENTS_TOKEN_ENCRYPTION_KEY`; sem elas, a página informa que a conexão está indisponível. Os valores e a forma de gerar a chave estão em [SC-012-VALIDATION.md](docs/quality/SC-012-VALIDATION.md). Os testes usam um servidor OAuth falso, sem acessar o Mercado Pago.
 
+Com a conta conectada (SC-013), "Confirmar pedido" na vitrine cria a order do Checkout Pro e leva o comprador ao Mercado Pago. Sem conta conectada, a loja não recebe pedidos novos enquanto a integração estiver configurada. A página de retorno mostra "pagamento em confirmação" e nunca confia nos parâmetros da URL; a confirmação só vem do backend (SC-014/SC-015, ainda não implementadas). Defina `STOREFRONT_PUBLIC_ORIGIN` com a origem HTTPS da vitrine para o Mercado Pago devolver o comprador. Em localhost a variável fica vazia e o comprador volta pelo link do pedido. Detalhes em [SC-013-VALIDATION.md](docs/quality/SC-013-VALIDATION.md).
+
 ## Ambiente de teste hospedado (Render + Vercel)
 
 Para observar o sistema fora da máquina local, o [guia de deploy](docs/deploy/HOSTED-TEST-ENVIRONMENT.md) descreve o backend no Render (imagem `backend/Dockerfile`), o admin e a vitrine na Vercel e o e-mail de cadastro pelo Brevo, com todas as variáveis.

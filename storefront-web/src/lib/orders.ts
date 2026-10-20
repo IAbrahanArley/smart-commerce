@@ -4,6 +4,7 @@ import type { CartLine } from "@/lib/cart-cookie";
 import type { CheckoutPayload } from "@/lib/checkout-input";
 import { signedClientIp } from "@/lib/client-ip";
 import { validOrderId, validOrderToken } from "@/lib/order-cookie";
+import { checkoutPage } from "@/lib/payment-url";
 import { apiOrigin, slugPath, unavailable } from "@/lib/public-store";
 
 export type OrderStatus = "PENDING_PAYMENT" | "EXPIRED" | "CANCELLED";
@@ -17,8 +18,10 @@ export type OrderView = {
   total: string;
   fulfillment: { type: "PICKUP" | "FIXED_SHIPPING"; text: string };
   reservationExpiresAt: string;
+  // Pending and the store accepts payments now (SC-013): the Checkout Pro redirect is offered.
+  payable: boolean;
 };
-export type CheckoutConflict = "PRICE_CHANGED" | "INSUFFICIENT_STOCK" | "ITEM_UNAVAILABLE" | "FULFILLMENT_UNAVAILABLE" | "REQUEST_CONFLICT";
+export type CheckoutConflict = "PRICE_CHANGED" | "INSUFFICIENT_STOCK" | "ITEM_UNAVAILABLE" | "FULFILLMENT_UNAVAILABLE" | "REQUEST_CONFLICT" | "PAYMENT_UNAVAILABLE";
 export type CheckoutResult =
   | { kind: "created"; order: OrderView; token: string }
   | { kind: "replayed"; order: OrderView }
@@ -30,7 +33,7 @@ export type CheckoutResult =
   | { kind: "ambiguous" };
 
 const MONEY = /^\d{1,20}\.\d{2}$/;
-const CONFLICTS: CheckoutConflict[] = ["PRICE_CHANGED", "INSUFFICIENT_STOCK", "ITEM_UNAVAILABLE", "FULFILLMENT_UNAVAILABLE", "REQUEST_CONFLICT"];
+const CONFLICTS: CheckoutConflict[] = ["PRICE_CHANGED", "INSUFFICIENT_STOCK", "ITEM_UNAVAILABLE", "FULFILLMENT_UNAVAILABLE", "REQUEST_CONFLICT", "PAYMENT_UNAVAILABLE"];
 const STATUSES: OrderStatus[] = ["PENDING_PAYMENT", "EXPIRED", "CANCELLED"];
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -67,6 +70,7 @@ export function parseOrder(raw: unknown): OrderView | null {
     id: (order.id as string).toLowerCase(), number: order.number, status: order.status as OrderStatus, items,
     subtotal: order.subtotal as string, shipping: order.shipping as string, total: order.total as string,
     fulfillment: { type: fulfillment.type, text: fulfillment.text as string }, reservationExpiresAt: order.reservationExpiresAt,
+    payable: order.status === "PENDING_PAYMENT" && order.payable === true,
   };
 }
 
@@ -133,4 +137,47 @@ export async function loadOrder(slug: string, orderId: string, token: string): P
   const order = parseOrder(raw);
   if (!order || order.id !== orderId.toLowerCase()) unavailable();
   return order;
+}
+
+export type PaymentStart =
+  | { kind: "redirect"; url: string }
+  // The order no longer awaits payment (expired or cancelled).
+  | { kind: "closed" }
+  // The store cannot take payments now (not connected, or no integration in this environment).
+  | { kind: "unavailable" }
+  // Provider failure, timeout or unexpected answer: the order stays pending and the buyer may retry.
+  | { kind: "failed" };
+
+// Asks the backend for the Checkout Pro page of this order. Idempotent: a retry returns the same page.
+export async function startPayment(slug: string, orderId: string, token: string): Promise<PaymentStart> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiOrigin()}${slugPath(slug)}/orders/${encodeURIComponent(orderId)}/payment`, {
+      method: "POST",
+      cache: "no-store",
+      credentials: "omit",
+      redirect: "error",
+      headers: { Accept: "application/json", "X-Order-Token": token },
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    return { kind: "failed" };
+  }
+  if (response.status === 404) notFound();
+  let body: unknown = null;
+  try {
+    body = await response.json();
+  } catch {
+    body = null;
+  }
+  if (response.status === 200) {
+    const url = record(body)?.checkoutUrl;
+    return checkoutPage(url) ? { kind: "redirect", url } : { kind: "failed" };
+  }
+  if (response.status === 409) {
+    const code = record(body)?.code;
+    if (code === "NOT_PAYABLE") return { kind: "closed" };
+    if (code === "PAYMENT_UNAVAILABLE") return { kind: "unavailable" };
+  }
+  return { kind: "failed" };
 }

@@ -97,6 +97,9 @@ payments:
     redirect-uri: ${MERCADO_PAGO_REDIRECT_URI:}
     # P10: request test tokens. Production requires a separate approval.
     test-token: ${MERCADO_PAGO_TEST_TOKEN:true}
+    # SC-013: public HTTPS origin of storefront-web for the Checkout Pro return page. Empty or
+    # HTTP (local development) sends no return URLs: the provider rejects local addresses.
+    return-origin: ${STOREFRONT_PUBLIC_ORIGIN:}
   # AES-256-GCM key for provider tokens at rest: 32 random bytes in Base64.
   token-encryption-key: ${PAYMENTS_TOKEN_ENCRYPTION_KEY:}
   token-refresh:

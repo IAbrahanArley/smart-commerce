@@ -8,7 +8,7 @@ import { cartCookieName, cartCookieOptions, parseCart, validSlug } from "@/lib/c
 import { CHECKOUT_FIELDS, checkoutConfigured, emptyValues, type FulfillmentType, validateCheckout, validRequestId } from "@/lib/checkout-input";
 import type { CheckoutState } from "@/lib/checkout-state";
 import { orderCookieName, orderCookieOptions, orderPath } from "@/lib/order-cookie";
-import { createOrder } from "@/lib/orders";
+import { createOrder, startPayment } from "@/lib/orders";
 import { trustedClientIp } from "@/lib/client-ip";
 
 // Runs on the storefront origin (Next rejects cross-origin action posts). The cart comes from the
@@ -24,6 +24,7 @@ const MESSAGES = {
   limited: "Muitas tentativas ou pedidos pendentes para este e-mail nesta loja. Tente novamente mais tarde.",
   invalid: "Não foi possível validar os dados do pedido. Confira as informações e tente novamente.",
   missing: "Esta loja não está recebendo pedidos agora.",
+  PAYMENT_UNAVAILABLE: "Esta loja não está recebendo pagamentos online agora, então o pedido não foi registrado. Tente novamente mais tarde.",
   ambiguous: "Não foi possível confirmar o pedido agora. Tente novamente: a mesma tentativa será reaproveitada, sem criar pedido em dobro.",
 } as const;
 
@@ -56,6 +57,12 @@ export async function placeOrder(previous: CheckoutState, form: FormData): Promi
     case "created":
       jar.set(orderCookieName(result.order.id), result.token, orderCookieOptions(slug, result.order.id, production));
       clearCart();
+      // SC-013: go straight to Checkout Pro. On any failure the order page offers the payment again;
+      // the order stays pending and the retry reuses the same provider order.
+      if (result.order.payable) {
+        const payment = await startPayment(slug, result.order.id, result.token);
+        if (payment.kind === "redirect") redirect(payment.url);
+      }
       redirect(orderPath(encodeURIComponent(slug), result.order.id));
     case "replayed":
       // The order cookie is scoped to the status page, so it cannot be seen from here. The backend

@@ -158,12 +158,12 @@ try {
   assert.ok([200, 500].includes(unavailable.response.status));
   assert.ok(upstreamRequests.length >= 6, "Fluxos públicos precisam consultar o upstream.");
   for (const request of upstreamRequests) {
-    assert.ok(request.method === "GET" || (request.method === "POST" && /^\/api\/public\/stores\/[a-z0-9-]+\/(?:cart\/quote|orders)$/.test(request.url)), `${request.method} ${request.url}`);
+    assert.ok(request.method === "GET" || (request.method === "POST" && /^\/api\/public\/stores\/[a-z0-9-]+\/(?:cart\/quote|orders|orders\/[0-9a-f-]{36}\/payment)$/.test(request.url)), `${request.method} ${request.url}`);
     assert.ok(request.url.startsWith("/api/public/stores/"));
     assert.equal(request.cookie, undefined, "SSR não deve encaminhar cookies do visitante.");
     assert.equal(request.authorization, undefined, "SSR não deve encaminhar Authorization.");
   }
-  console.log("Smoke aprovado (checkout ligado): checkout sem JavaScript, validação por campo, PRICE_CHANGED, retry com a mesma chave após falha ambígua, replay sem novo token, REQUEST_CONFLICT sem chave nova, cookie do pedido por caminho, carrinho limpo, status com token e IP assinado só atrás de proxy confiável; catálogo/detalhe SSR, descrição HTML, variantes, fotos/proxy MIME, preços exatos, paginação, vazio, 404, projeção pública, no-store, carrinho (cookie saneado e por loja, cotação do backend, server action com cookie HttpOnly/SameSite/Secure/Path e rejeição de origem externa) e ausência de cookies/Authorization no upstream. Não substitui browser/API real.");
+  console.log("Smoke aprovado (checkout ligado): checkout sem JavaScript, redirecionamento ao Checkout Pro só para página HTTPS do Mercado Pago, nova tentativa pelo pedido, retorno sem confiar na URL, validação por campo, PRICE_CHANGED, retry com a mesma chave após falha ambígua, replay sem novo token, REQUEST_CONFLICT sem chave nova, cookie do pedido por caminho, carrinho limpo, status com token e IP assinado só atrás de proxy confiável; catálogo/detalhe SSR, descrição HTML, variantes, fotos/proxy MIME, preços exatos, paginação, vazio, 404, projeção pública, no-store, carrinho (cookie saneado e por loja, cotação do backend, server action com cookie HttpOnly/SameSite/Secure/Path e rejeição de origem externa) e ausência de cookies/Authorization no upstream. Não substitui browser/API real.");
   // D6: a production server with the flag but outside the hosted test environment has no checkout.
   const offPort = port + 1;
   const offBase = `http://127.0.0.1:${offPort}`;

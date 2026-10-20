@@ -259,6 +259,8 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
 .checkout-item-total { grid-column: 2; grid-row: 1; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 .order-status { margin-top: var(--store-space-6); padding: var(--store-space-6); background: var(--store-surface); border-left: 4px solid var(--store-action); border-radius: var(--store-radius-control); display: grid; gap: var(--store-space-3); }
 .order-status h2 { font-size: 1.25rem; }
+.payment-form { display: grid; gap: var(--store-space-3); justify-items: start; }
+.payment-form .cart-note { margin: 0; }
 .order-deadline { font-weight: 700; }
 .order-details { padding: var(--store-space-6); background: var(--store-surface); border-radius: var(--store-radius-surface); display: grid; gap: var(--store-space-4); min-width: 0; }
 .order-details h2 { font-size: 1.25rem; }

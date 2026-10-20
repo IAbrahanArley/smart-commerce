@@ -14,7 +14,13 @@ public final class OrderException extends RuntimeException {
     PENDING_LIMIT,
     RATE_LIMITED,
     /** Admin cancellation of an order whose reservation deadline already passed (SC-010). */
-    ORDER_EXPIRED
+    ORDER_EXPIRED,
+    /** Payment requested for an order that no longer awaits it: expired or cancelled (SC-013). */
+    NOT_PAYABLE,
+    /** The store cannot take payments now: integration off or account not connected (SC-013). */
+    PAYMENT_UNAVAILABLE,
+    /** The provider failed or answered unexpectedly; the order stays pending (SC-013). */
+    PAYMENT_FAILED
   }
 
   private final Reason reason;

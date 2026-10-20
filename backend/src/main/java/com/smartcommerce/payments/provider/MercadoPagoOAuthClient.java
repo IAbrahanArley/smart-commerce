@@ -183,7 +183,7 @@ public final class MercadoPagoOAuthClient {
     }
   }
 
-  private static URI endpoint(String configured, String fallback, String name) {
+  static URI endpoint(String configured, String fallback, String name) {
     String value = configured == null || configured.isBlank() ? fallback : configured.strip();
     if (value == null)
       throw new IllegalStateException("payments.mercado-pago." + name + " is required");
