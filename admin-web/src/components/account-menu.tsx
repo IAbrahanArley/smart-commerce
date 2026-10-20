@@ -38,7 +38,7 @@ export default function AccountMenu() {
   if (!email) return null;
   return <div ref={root} className="account-menu">
     <button ref={toggle} type="button" className="account-menu-toggle" aria-expanded={open} aria-controls="account-menu-items" onClick={() => setOpenAt(open ? null : pathname)}>
-      <span className="account-menu-label">Conta</span> <span className="account-menu-email">{email}</span>
+      <span className="account-avatar" aria-hidden="true">{email.charAt(0).toUpperCase()}</span> <span className="account-menu-label">Conta</span> <span className="account-menu-email">{email}</span>
     </button>
     <div id="account-menu-items" className="account-menu-panel" hidden={!open}>
       <p className="account-menu-signed">Conectado como <span className="account-email-text">{email}</span></p>

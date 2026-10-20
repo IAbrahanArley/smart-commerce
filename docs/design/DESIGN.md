@@ -1,6 +1,6 @@
 # Smart Commerce — Design system
 
-Versão: 1.3 · Atualizada em 2026-10-18. Direção escolhida pelo responsável: **profissional e confiável, com azul profundo, fundo claro e visual simples, evoluindo o padrão existente**. Este é o padrão da plataforma para as entregas autorizadas, com a exceção exclusiva da landing `/` descrita na governança abaixo.
+Versão: 1.4 · Atualizada em 2026-10-20. Direção escolhida pelo responsável: **profissional e confiável, com azul profundo, fundo claro e visual simples, evoluindo o padrão existente**. Este é o padrão da plataforma para as entregas autorizadas, com a exceção exclusiva da landing `/` descrita na governança abaixo.
 
 Este documento é a fonte oficial das decisões de design do Smart Commerce, subordinada ao escopo do [PRD](../product/PRD.md), à [Sprint 1](../product/SPRINT_01.md), à [arquitetura](../architecture/ARCHITECTURE.md) e aos ADRs aplicáveis. Decisões funcionais e de segurança da autenticação pertencem ao [ADR-0005](../architecture/adr/0005-identity-authentication.md), cujas D1–D6 foram aprovadas separadamente. Este documento não amplia esse escopo.
 
@@ -70,9 +70,9 @@ Não usar divisor decorativo como única borda de campo. O foco deve contrastar 
 | Dados numéricos | Algarismos tabulares em colunas/comparações; apresentação por Intl com moeda/fuso explícitos conforme contrato, sem cálculos financeiros em ponto flutuante no browser. |
 | Espaçamento | Escala de 4, 8, 12, 16, 24, 32, 48 e 64px, representada por tokens de espaçamento. |
 | Bordas | 1px para controles/divisores; função determina cor e contraste. |
-| Raios | 4px em controles; 8px em superfícies; outros raios exigem necessidade documentada. |
+| Raios | 4px em controles; 8px em superfícies; outros raios exigem necessidade documentada. Exceções documentadas: círculo do avatar de iniciais e dos marcadores (selo, etapas, linha do tempo) e contador do carrinho arredondado. |
 | Foco | Contorno inicial de 3px e afastamento de 3–4px, visível sem ser encoberto. |
-| Elevação | Superfícies estáticas simples; sombra somente quando necessária à compreensão de sobreposição. |
+| Elevação | Cards e superfícies usam a sombra sutil `--sc-shadow-surface`/`--store-shadow-surface` junto da borda de 1px. Sobreposições (menu de conta, diálogo) usam `--sc-shadow-overlay`. Sem sombras intensas. |
 
 Usar texto em sentence case natural ao português brasileiro, rótulos de ação específicos e hierarquia semântica de títulos. Não impor o limite editorial de duas linhas da skill de páginas públicas ao admin ou aos formulários.
 
@@ -91,9 +91,11 @@ Reutilizar componentes locais no admin conforme surgirem consumidores reais; nã
 | Tabela, quando necessária | Semântica de cabeçalhos e leitura preservada; scroll delimitado quando o conteúdo realmente exigir duas dimensões. |
 | Cabeçalho de página (`PageHeader`) | Trilha de navegação opcional, `h1`, descrição opcional e ação principal à direita; a ação desce para baixo do título em telas estreitas. |
 | Trilha de navegação | `nav` rotulada "Trilha de navegação" com `ol`; ancestrais como links, página atual em texto com `aria-current="page"`, separador "›" decorativo. Usada só em páginas abaixo de um item do menu (produto, novo produto, estoque). |
-| Menu de conta | Botão no cabeçalho global com `aria-expanded`, rótulo "Conta" e e-mail (oculto abaixo de 40rem). Revela e-mail, Minhas lojas, Minha conta e "Sair da conta"; fecha com Escape (foco volta ao botão), clique fora ou troca de página. Só aparece com sessão válida; não substitui verificação de sessão nas páginas. |
+| Menu de conta | Botão na barra superior com `aria-expanded`, inicial do e-mail em círculo (decorativa), rótulo "Conta" e e-mail (oculto abaixo de 40rem). Revela e-mail, Minhas lojas, Minha conta e "Sair da conta"; fecha com Escape (foco volta ao botão), clique fora ou troca de página. Só aparece com sessão válida; não substitui verificação de sessão nas páginas. |
 | Selo de status (`StatusBadge`) | Texto sempre visível; cor semântica apenas reforça. Positivo: sucesso sobre fundo de sucesso. Neutro: texto secundário sobre fundo desabilitado. |
-| Navegação lateral | `nav` rotulada, item atual com `aria-current="page"`, fundo selecionado e barra de 3px na cor de ação. |
+| Navegação lateral | `nav` rotulada, grupos com rótulo visível, ícone decorativo antes do texto; item atual preenchido (texto branco sobre a cor de ação, 8,85:1) com `aria-current="page"`; hover com fundo selecionado e sublinhado. |
+| Diálogo de confirmação (`useConfirm`) | `dialog` nativo modal com título e mensagem associados; "Cancelar" (secundário) vem antes da ação na ordem de foco; Escape cancela e o foco volta ao controle de origem. Ações destrutivas usam a variante destrutiva. |
+| Card de resumo | Ícone, rótulo, número e link de próxima ação, somente com dados que as APIs existentes devolvem; sem estimativas. |
 
 Definir e revisar padrão, hover, pressionado, foco visível, desabilitado, carregamento, inválido, sucesso e vazio conforme aplicabilidade. Não criar estado sem utilidade no componente. Durante submissão, impedir disparos duplicados sem bloquear desnecessariamente a navegação; após falha, permitir recuperação. Estado de UI não substitui validação, autorização ou idempotência do backend.
 
@@ -121,12 +123,25 @@ Objetivo: **WCAG 2.2 nível AA**, avaliado por automação e revisão manual. N�
 
 Aprovado em 2026-10-17 a partir da [proposta de referências de mercado](PROPOSTA-REFERENCIAS-MERCADO.md) (itens A1–A7).
 
-- **Moldura:** telas de uma loja (`/lojas/[id]/...`) e da conta (`/lojas`, `/conta`) têm navegação lateral fixa em superfície branca a partir de 64rem (1024 CSS px), com cerca de 15rem de largura. Abaixo disso, um botão "Menu" com `aria-expanded` revela a mesma lista. Na loja, o nome aparece como texto no topo e os itens são Visão geral, Produtos e Entrega, seguidos por um grupo separado com Minhas lojas e Minha conta; na conta, apenas Minhas lojas e Minha conta. Itens somente para funções existentes. A navegação não é prova de autorização; o backend continua validando cada acesso.
+- **Moldura:** telas de uma loja (`/lojas/[id]/...`) e da conta (`/lojas`, `/conta`) têm barra superior com o menu de conta e navegação lateral fixa em superfície branca a partir de 64rem (1024 CSS px), com 16rem de largura e a assinatura no topo. Abaixo disso, a barra superior mostra a assinatura e um botão "Menu" com `aria-expanded` que revela a mesma lista. Na loja, o nome aparece como texto no topo e o grupo "Gestão da loja" tem Visão geral, Produtos, Pedidos e Entrega, seguido pelo grupo "Conta" com Minhas lojas e Minha conta; na conta, apenas Minhas lojas e Minha conta. Itens somente para funções existentes. A navegação não é prova de autorização; o backend continua validando cada acesso.
 - **Áreas da conta (aprovado em 2026-10-18):** `/lojas` lista e cria lojas e é o destino após o login; `/conta` mostra a identidade e a saída. A entrega da loja tem página própria (`/lojas/[id]/entrega`); a visão geral mantém dados, publicação e um atalho para a entrega.
 - **Páginas:** conteúdo até cerca de 80rem ao lado do menu; formulários com no máximo 45rem por coluna.
 - **Listas operacionais:** tabela semântica com `caption` e cabeçalhos a partir de 48rem; abaixo disso, lista de linhas com os mesmos dados. Sem seleção em massa, filtros ou ordenação enquanto não houver funcionalidade.
 - **Criação em rota própria:** "Novo produto" é uma página (`/produtos/novo`) acionada pelo cabeçalho da lista; após cadastrar, o lojista segue para a edição do produto.
 - **Edição em duas colunas:** a partir de 64rem, coluna principal (identificação, descrição, fotos e variações) e lateral com publicação e estoque. Em telas menores, uma coluna na ordem do DOM.
+
+## Repaginação 2026-10 (referência Dashtail)
+
+Aprovada pelo responsável em 2026-10-20. O template comercial Dashtail v1.3.0 (ThemeForest; Next 14, Tailwind 3 e shadcn/Radix) foi usado **somente como referência visual e estrutural**. Nenhum código, ícone, ilustração, texto ou dependência foi copiado: a licença do ThemeForest (Regular/Extended) não deixa claro o uso num SaaS cobrado, e a adoção de Tailwind/Radix contrariaria a política de dependências. Paleta violeta, fonte Inter, tema escuro, customizador, RTL, busca, notificações, gráficos e toasts do template não foram adotados.
+
+Padrões adotados com CSS e componentes locais:
+
+- **Admin:** moldura com barra superior e navegação lateral agrupada, com ícones SVG próprios (`components/icons.tsx`) e item atual preenchido. Cards com cabeçalho separado por divisor e sombra sutil. Visão geral da loja com três cards de resumo: vitrine, produtos cadastrados/selecionados e pedidos aguardando pagamento. O último mostra "Mais de 20" quando a API indica outra página. Tabelas com hover de linha e selos com ponto e texto. Diálogo de confirmação nativo substitui `window.confirm` ao publicar/ocultar loja e produto, remover foto, mudar o tipo do produto e recarregar versões. As guardas de saída com alterações não salvas continuam nativas, porque precisam ser síncronas.
+- **Vitrine:** cabeçalho com borda e sombra, fixo ao rolar a partir de 40rem, com `scroll-padding-top` para não encobrir o foco; abaixo disso, não é fixo. O link do carrinho mostra a quantidade de unidades lida só do cookie da loja. Cards de produto com borda, sombra e elevação no hover, sem movimento com `prefers-reduced-motion`. Checkout e página do pedido com etapas Carrinho → Dados e entrega → Pedido registrado: `aria-current="step"` e "(concluída)" em texto. A situação do pedido tem uma linha do tempo curta (registro e situação atual), sem etapas futuras fictícias.
+
+Validação em 2026-10-20: lint, typecheck, build e test:smoke das duas aplicações. No navegador do app (Chromium), em 1024 CSS px e 375 CSS px, com backend sintético local: moldura, menu móvel, cards de resumo, tabelas, diálogo e fluxo da vitrine até o pedido. O diálogo foi conferido pelo DOM: abre centrado, foca "Cancelar", fecha com Escape e devolve o foco. Revisão com as Web Interface Guidelines atuais, consultadas na mesma data. Com 1024 CSS px, a tabela de produtos rola dentro do card, sem rolagem da página. Axe, leitor de tela e zoom manual não foram executados; não há alegação de conformidade WCAG completa.
+
+Tokens novos: `--sc-shadow-surface`, `--sc-shadow-overlay`, `--store-shadow-surface`, `--store-shadow-raised` e `--store-header-height`. Nenhuma cor, fonte ou raio-base mudou; o aviso "Ambiente de teste" e a separação admin/vitrine foram preservados.
 
 ## Plataforma e temas futuros das lojas
 

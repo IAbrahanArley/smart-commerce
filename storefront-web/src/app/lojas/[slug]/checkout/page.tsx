@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { StoreHeader } from "@/components/store-header";
+import { OrderSteps } from "@/components/order-steps";
 import { Arrow } from "@/components/arrow";
 import { CheckoutForm, type CheckoutOption } from "@/components/checkout-form";
 import { loadCatalog } from "@/lib/public-store";
@@ -39,6 +40,7 @@ export default async function CheckoutPage({ params }: Props) {
           <Link href={cartUrl} prefetch={false}><Arrow back /> Voltar ao carrinho</Link>
         </nav>
         <h1>Finalizar pedido</h1>
+        <OrderSteps current={1} cartUrl={cartUrl} />
         <div className="checkout-layout">
           {options.length > 0 ? (
             // A new key per page load: retries inside this page reuse it; a fresh visit starts a new attempt.

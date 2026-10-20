@@ -6,6 +6,8 @@ import { apiRequest, requestError } from "@/lib/auth-api";
 import { storefrontUrl, type TenantStore } from "@/lib/tenant-api";
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
+import { useConfirm } from "@/components/confirm-dialog";
+import StoreSummary from "@/components/store-summary";
 
 export default function StoreDetail({ tenantId }: { tenantId: string }) {
   const [store, setStore] = useState<TenantStore | null>(null);
@@ -16,15 +18,16 @@ export default function StoreDetail({ tenantId }: { tenantId: string }) {
   const submitting = useRef(false);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
   const publicUrl = store ? storefrontUrl(store.store.slug) : null;
+  const { confirm, dialog } = useConfirm();
 
   useEffect(() => { if (feedback) feedbackRef.current?.focus(); }, [feedback]);
 
   async function setPublication() {
     if (!store || submitting.current) return;
     const published = store.store.status !== "PUBLISHED";
-    if (!window.confirm(published
-      ? "Publicar a loja? Qualquer pessoa com o link poderá consultar o nome da loja e o nome, preço e disponibilidade dos produtos selecionados. Compras ainda não estão disponíveis."
-      : "Ocultar a loja? A vitrine e seus produtos deixarão de estar disponíveis para consulta pública.")) return;
+    if (!(await confirm(published
+      ? { title: "Publicar a loja?", message: "Qualquer pessoa com o link poderá consultar o nome da loja e o nome, preço e disponibilidade dos produtos selecionados. Compras ainda não estão disponíveis.", confirmLabel: "Publicar loja" }
+      : { title: "Ocultar a loja?", message: "A vitrine e seus produtos deixarão de estar disponíveis para consulta pública.", confirmLabel: "Ocultar loja" }))) return;
     submitting.current = true; setBusy(true); setFeedback(null);
     try {
       const response = await apiRequest(`/api/tenants/${encodeURIComponent(tenantId)}/publication`, { method: "PUT", body: { published } });
@@ -48,7 +51,7 @@ export default function StoreDetail({ tenantId }: { tenantId: string }) {
     return () => controller.abort();
   }, [tenantId, attempt]);
 
-  return <section className="page" aria-labelledby="store-title">
+  return <section className="page" aria-labelledby="store-title">{dialog}
     <PageHeader id="store-title" title={state === "ready" && store ? <span translate="no">{store.store.name}</span> : "Minha loja"}
       description={state === "ready" && store ? store.store.status === "PUBLISHED" ? <StatusBadge tone="positive">Vitrine publicada</StatusBadge> : <StatusBadge tone="neutral">Vitrine oculta</StatusBadge> : undefined}
       action={state === "ready" ? <Link className="button-link" href={`/lojas/${encodeURIComponent(tenantId)}/produtos`}>Gerenciar produtos</Link> : undefined} />
@@ -59,6 +62,8 @@ export default function StoreDetail({ tenantId }: { tenantId: string }) {
       <button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar loja novamente</button></> : null}
     {state === "ready" && store ? <>
       <p className="notice">{store.store.status === "PUBLISHED" ? "Vitrine publicada. Qualquer pessoa com o link pode consultar os produtos selecionados. Compras ainda não estão disponíveis." : "Vitrine oculta. Selecione os produtos e publique a loja quando estiver pronta."}</p>
+      <StoreSummary tenantId={tenantId} published={store.store.status === "PUBLISHED"} />
+      <div className="overview-grid">
       <section className="side-card store-summary" aria-labelledby="store-data-title"><h2 id="store-data-title">Dados da loja</h2><dl className="store-data"><dt>Empresa</dt><dd>{store.companyName}</dd><dt>Nome da loja</dt><dd>{store.store.name}</dd>
         <dt>Identificador da loja</dt><dd>{store.store.slug}</dd><dt>Seu acesso</dt><dd>Proprietário</dd></dl></section>
       <section className="side-card" aria-labelledby="publication-title"><h2 id="publication-title">Publicação da vitrine</h2>
@@ -73,6 +78,7 @@ export default function StoreDetail({ tenantId }: { tenantId: string }) {
       <section className="side-card" aria-labelledby="store-fulfillment-title"><h2 id="store-fulfillment-title">Entrega</h2>
         <p>Retirada na loja e frete fixo exibidos na vitrine publicada.</p>
         <Link className="back-link" href={`/lojas/${encodeURIComponent(tenantId)}/entrega`}>Configurar entrega</Link></section>
+      </div>
     </> : null}
   </section>;
 }

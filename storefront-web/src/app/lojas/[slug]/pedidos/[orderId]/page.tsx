@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { StoreHeader } from "@/components/store-header";
+import { OrderSteps } from "@/components/order-steps";
 import { Arrow } from "@/components/arrow";
 import { loadCatalog } from "@/lib/public-store";
 import { orderCookieName, validOrderId, validOrderToken } from "@/lib/order-cookie";
@@ -39,8 +40,13 @@ export default async function OrderPage({ params }: Props) {
           <Link href={`/lojas/${encodeURIComponent(store.slug)}`} prefetch={false}><Arrow back /> Voltar à loja</Link>
         </nav>
         <h1>Pedido nº {order.number}</h1>
+        <OrderSteps current={2} />
         <section className="order-status" aria-labelledby="order-status-title">
           <h2 id="order-status-title">Situação: {status.label}</h2>
+          <ol className="order-timeline">
+            <li data-state="done">Pedido registrado na loja</li>
+            <li data-state={order.status === "PENDING_PAYMENT" ? "current" : "closed"}>{status.label}</li>
+          </ol>
           <p>{status.text}</p>
           {order.status === "PENDING_PAYMENT" ? (
             <p className="order-deadline">Reserva válida até <time dateTime={order.reservationExpiresAt}>{DEADLINE.format(new Date(order.reservationExpiresAt))}</time> (horário de Brasília).</p>

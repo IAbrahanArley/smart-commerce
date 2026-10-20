@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { apiRequest } from "@/lib/auth-api";
+import { useConfirm } from "@/components/confirm-dialog";
 
 type Photo = { id: string; alt: string; width: number; height: number };
 type Images = { images: Photo[]; version: number };
@@ -21,6 +22,7 @@ export default function ProductImages({ tenantId, productId, version, locked, on
   const form = useRef<HTMLFormElement>(null);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
   const submitting = useRef(false);
+  const { confirm, dialog } = useConfirm();
   useEffect(() => {
     const controller = new AbortController();
     apiRequest(path, { signal: controller.signal }).then(async response => {
@@ -69,7 +71,7 @@ export default function ProductImages({ tenantId, productId, version, locked, on
     const [selected] = ids.splice(index, 1); ids.splice(target, 0, selected);
     void mutate(() => apiRequest(`${path}/order`, { method: "PUT", body: { imageIds: ids, version } }));
   }
-  return <section className="product-section" aria-labelledby="photos-title"><h2 id="photos-title">Fotos do produto</h2>
+  return <section className="product-section" aria-labelledby="photos-title"><h2 id="photos-title">Fotos do produto</h2>{dialog}
     <p>Até 6 fotos JPEG ou PNG, de até 5 MiB cada e entre 300 e 4.096 pixels por lado. A primeira é a capa. Descreva o conteúdo para quem não vê a imagem.</p>
     {locked ? <p className="notice">Salve as alterações do produto antes de modificar as fotos.</p> : null}
     {stale || uncertain ? <><p role="alert" className="feedback feedback-error">Atualize o produto para consultar a versão atual das fotos.</p><button type="button" disabled={busy || locked} onClick={onReload}>Carregar versão atual do produto</button></> : null}
@@ -79,7 +81,7 @@ export default function ProductImages({ tenantId, productId, version, locked, on
       <p>{index === 0 ? "Capa" : `Foto ${index + 1}`} — {photo.alt}</p>
       <div className="editor-tools">{index > 0 ? <><button type="button" disabled={disabled} onClick={() => move(index, 0)} aria-label={`Usar foto ${index + 1} como capa`}>Usar como capa</button><button type="button" disabled={disabled} onClick={() => move(index, index - 1)} aria-label={`Mover foto ${index + 1} para antes`}>Mover para antes</button></> : null}
         {index < data.images.length - 1 ? <button type="button" disabled={disabled} onClick={() => move(index, index + 1)} aria-label={`Mover foto ${index + 1} para depois`}>Mover para depois</button> : null}
-        <button type="button" disabled={disabled} onClick={() => { if (window.confirm(`Remover a foto ${index + 1}?`)) void mutate(() => apiRequest(`${path}/${encodeURIComponent(photo.id)}?version=${version}`, { method: "DELETE" })); }} aria-label={`Remover foto ${index + 1}`}>Remover foto</button>
+        <button type="button" disabled={disabled} onClick={() => void (async () => { if (await confirm({ title: `Remover a foto ${index + 1}?`, message: "A foto sai do produto e da vitrine. Para usá-la de novo, envie o arquivo outra vez.", confirmLabel: "Remover foto", tone: "danger" })) void mutate(() => apiRequest(`${path}/${encodeURIComponent(photo.id)}?version=${version}`, { method: "DELETE" })); })()} aria-label={`Remover foto ${index + 1}`}>Remover foto</button>
       </div>
     </li>)}</ol>}
     {data && data.images.length < 6 ? <form ref={form} onSubmit={upload} aria-busy={busy}>
