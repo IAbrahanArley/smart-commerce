@@ -82,16 +82,16 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
       </div> : null}
       {view === "list" ? <>
         <p className="notice">{store.store.status === "PUBLISHED" ? "Sua vitrine está publicada. Somente os produtos selecionados individualmente ficam visíveis para consulta pública." : "Sua vitrine está oculta. Você pode selecionar produtos agora; eles só ficarão visíveis quando publicar a loja."}</p>
-        {products.length ? <div className="data-table-wrap"><table className="data-table">
+        {products.length ? <div className="data-table-wrap"><table className="data-table data-table-wrapping" role="table">
           <caption>Produtos cadastrados ({new Intl.NumberFormat("pt-BR").format(products.length)})</caption>
-          <thead><tr><th scope="col">Produto</th><th scope="col">SKU</th><th scope="col" className="numeric">Preço</th><th scope="col" className="numeric">Custo</th><th scope="col">Vitrine</th><th scope="col">Estoque</th></tr></thead>
-          <tbody>{products.map(item => <tr key={item.id}>
-            <th scope="row"><Link href={`${storePath}/produtos/${encodeURIComponent(item.id)}`}>{item.name}</Link></th>
-            <td data-label="SKU">{item.kind === "VARIABLE" ? `${item.variants.length} combinações` : <span translate="no">{item.sku}</span>}</td>
-            <td data-label="Preço" className="numeric">{item.kind === "VARIABLE" ? <span className="cell-hint">a partir de </span> : null}{formatBRL(item.price)}</td>
-            <td data-label="Custo" className="numeric">{item.kind === "VARIABLE" ? <span className="cell-hint">por combinação</span> : item.cost === null ? "Não informado" : formatBRL(item.cost)}</td>
-            <td data-label="Vitrine">{visibility(item)}</td>
-            <td data-label="Estoque"><Link href={`${storePath}/produtos/${encodeURIComponent(item.id)}/estoque`} aria-label={`Estoque de ${item.name}`}>Estoque</Link></td>
+          <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Produto</th><th role="columnheader" scope="col">SKU</th><th role="columnheader" scope="col" className="numeric">Preço</th><th role="columnheader" scope="col" className="numeric">Custo</th><th role="columnheader" scope="col">Vitrine</th><th role="columnheader" scope="col">Estoque</th></tr></thead>
+          <tbody role="rowgroup">{products.map(item => <tr role="row" key={item.id}>
+            <th role="rowheader" scope="row"><Link href={`${storePath}/produtos/${encodeURIComponent(item.id)}`}>{item.name}</Link></th>
+            <td role="cell" data-label="SKU">{item.kind === "VARIABLE" ? `${item.variants.length} combinações` : <span translate="no">{item.sku}</span>}</td>
+            <td role="cell" data-label="Preço" className="numeric">{item.kind === "VARIABLE" ? <span className="cell-hint">a partir de </span> : null}{formatBRL(item.price)}</td>
+            <td role="cell" data-label="Custo" className="numeric">{item.kind === "VARIABLE" ? <span className="cell-hint">por combinação</span> : item.cost === null ? "Não informado" : formatBRL(item.cost)}</td>
+            <td role="cell" data-label="Vitrine">{visibility(item)}</td>
+            <td role="cell" data-label="Estoque"><Link href={`${storePath}/produtos/${encodeURIComponent(item.id)}/estoque`} aria-label={`Estoque de ${item.name}`}>Estoque</Link></td>
           </tr>)}</tbody>
         </table></div> : <div className="empty-panel"><h2>Nenhum produto cadastrado</h2><p>Cadastre o primeiro produto para montar o catálogo e escolher o que aparece na vitrine.</p><Link className="button-link" href={`${storePath}/produtos/novo`}>Cadastrar primeiro produto</Link></div>}
       </> : null}

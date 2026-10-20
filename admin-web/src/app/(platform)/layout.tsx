@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
-import AccountMenu from "@/components/account-menu";
 
+// Each area owns its chrome: (site) the authentication header, the account and store areas the admin frame.
 export default function PlatformLayout({ children }: { children: ReactNode }) {
-  return <><header className="site-header">
-    <p className="site-identity"><Link className="brand" href="/" translate="no">Smart Commerce</Link> <span>Administração</span></p>
-    <AccountMenu />
-  </header>{children}<footer>Smart Commerce · Ambiente de desenvolvimento</footer></>;
+  return children;
 }

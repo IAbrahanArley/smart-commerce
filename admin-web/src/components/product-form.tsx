@@ -6,6 +6,7 @@ import { decimalInput, type Product, type VariantDraft } from "@/lib/catalog";
 import DescriptionEditor from "@/components/description-editor";
 import VariantBuilder from "@/components/variant-builder";
 import StatusBadge from "@/components/status-badge";
+import { useConfirm } from "@/components/confirm-dialog";
 
 type Fields = { name: string; sku: string; price: string; cost: string; descriptionHtml: string };
 type Errors = Partial<Record<keyof Fields | "variants", string>>;
@@ -26,6 +27,7 @@ export default function ProductForm({ tenantId, product, storePublished = false,
   const pendingErrorFocus = useRef<keyof Fields | "variants" | null>(null);
   const [kind, setKind] = useState<"SIMPLE" | "VARIABLE">(product?.kind ?? "SIMPLE");
   const [variants, setVariants] = useState<VariantDraft[]>([]);
+  const { confirm, dialog } = useConfirm();
   const dirty = JSON.stringify(fields) !== baseline || (!product && (kind !== "SIMPLE" || variants.length > 0));
   const savedDescription = product?.descriptionHtml ?? "";
   const safeSavedDescription = [...savedDescription].length <= 20000 && new TextEncoder().encode(savedDescription).length <= 80000
@@ -53,8 +55,9 @@ export default function ProductForm({ tenantId, product, storePublished = false,
   async function publish() {
     if (!product || submitting.current || conflict || dirty) return;
     const published = !product.published;
-    if (!window.confirm(published ? "Publicar este produto? Quando a loja estiver publicada, qualquer pessoa com o link poderá consultar seu nome, preço e disponibilidade. SKU e custo não serão exibidos."
-      : "Ocultar este produto da vitrine pública?")) return;
+    if (!(await confirm(published
+      ? { title: "Publicar este produto?", message: "Quando a loja estiver publicada, qualquer pessoa com o link poderá consultar seu nome, preço e disponibilidade. SKU e custo não serão exibidos.", confirmLabel: "Publicar produto" }
+      : { title: "Ocultar este produto?", message: "Ele deixará de aparecer na vitrine pública.", confirmLabel: "Ocultar produto" }))) return;
     submitting.current = true; setBusy(true); setMessage("");
     try {
       const response = await apiRequest(`/api/tenants/${encodeURIComponent(tenantId)}/products/${encodeURIComponent(product.id)}/publication`, { method: "PUT", body: { published, version: product.version } });
@@ -123,7 +126,7 @@ export default function ProductForm({ tenantId, product, storePublished = false,
 
   const form = <form ref={formRef} className="workspace-main" onSubmit={(event) => void submit(event)} noValidate aria-busy={busy}>
     <h2>Identificação</h2>
-    {!product ? <div className="form-field"><label htmlFor="product-kind">Tipo de produto</label><select id="product-kind" value={kind} disabled={busy} onChange={event => { if (!variants.length || window.confirm("Mudar o tipo descarta as combinações ainda não salvas. Deseja continuar?")) { setKind(event.target.value as "SIMPLE" | "VARIABLE"); setVariants([]); } }}><option value="SIMPLE">Simples — um SKU e um estoque</option><option value="VARIABLE">Com variações — SKU e estoque por combinação</option></select><p className="field-help">O tipo não pode ser alterado depois do cadastro.</p></div> : <p className="field-help">{kind === "VARIABLE" ? "Produto com variações. Preços e estoque são gerenciados por combinação." : "Produto simples."}</p>}
+    {!product ? <div className="form-field"><label htmlFor="product-kind">Tipo de produto</label><select id="product-kind" value={kind} disabled={busy} onChange={event => { const next = event.target.value as "SIMPLE" | "VARIABLE"; void (async () => { if (!variants.length || await confirm({ title: "Mudar o tipo de produto?", message: "As combinações ainda não salvas serão descartadas.", confirmLabel: "Mudar tipo", tone: "danger" })) { setKind(next); setVariants([]); } })(); }}><option value="SIMPLE">Simples — um SKU e um estoque</option><option value="VARIABLE">Com variações — SKU e estoque por combinação</option></select><p className="field-help">O tipo não pode ser alterado depois do cadastro.</p></div> : <p className="field-help">{kind === "VARIABLE" ? "Produto com variações. Preços e estoque são gerenciados por combinação." : "Produto simples."}</p>}
     {([['name', 'Nome do produto', 'Até 120 caracteres.'], ['sku', 'SKU', 'Identificador único nesta loja. Letras maiúsculas e minúsculas são diferentes.'], ['price', 'Preço de venda (R$)', 'Maior que zero. Exemplo: 49,90. Sem separador de milhares.'], ['cost', 'Custo (R$) — opcional', 'Zero é permitido. Deixe em branco se ainda não souber.']] as const).filter(([field]) => field === "name" || kind === "SIMPLE").map(([field, label, hint]) => <div className="form-field" key={field}>
       <label htmlFor={`product-${field}`}>{label}</label>
       <input id={`product-${field}`} name={field} value={fields[field]} onChange={event => update(field, event.target.value)}
@@ -142,9 +145,9 @@ export default function ProductForm({ tenantId, product, storePublished = false,
     {!product && kind === "VARIABLE" ? <section className="product-section" aria-labelledby="variant-create-title"><h2 id="variant-create-title">Variações e preços</h2><VariantBuilder variants={variants} onChange={setVariants} disabled={busy || conflict} />{errors.variants ? <p role="alert" className="field-error">{errors.variants}</p> : null}</section> : null}
     {!product ? <p className="field-help">Após cadastrar, você seguirá para a edição do produto para incluir fotos e movimentar o estoque de cada SKU.</p> : null}
     {message ? <p ref={feedbackRef} tabIndex={-1} role="alert" className="feedback feedback-error">{message}</p> : null}
-    {conflict && onConflict ? <button type="button" onClick={() => { if (!dirty || window.confirm("Carregar a versão atual descartará suas alterações não salvas. Deseja continuar?")) onConflict(); }}>Carregar versão atual</button> : <button type="submit" disabled={busy}>{busy ? "Salvando produto…" : product ? "Salvar alterações" : "Cadastrar produto"}</button>}
+    {conflict && onConflict ? <button type="button" onClick={() => void (async () => { if (!dirty || await confirm({ title: "Carregar a versão atual?", message: "Suas alterações não salvas serão descartadas.", confirmLabel: "Descartar e carregar", tone: "danger" })) onConflict(); })()}>Carregar versão atual</button> : <button type="submit" disabled={busy}>{busy ? "Salvando produto…" : product ? "Salvar alterações" : "Cadastrar produto"}</button>}
   </form>;
-  return product || aside ? <>{form}<aside className="workspace-side" aria-label="Publicação e estoque">
+  return product || aside ? <>{form}{dialog}<aside className="workspace-side" aria-label="Publicação e estoque">
     {product ? <section className="side-card" aria-labelledby="product-publication-title"><h2 id="product-publication-title">Publicação do produto</h2>
       <p>{product.published ? storePublished ? <StatusBadge tone="positive">Visível na vitrine</StatusBadge> : <StatusBadge tone="neutral">Selecionado · Loja oculta</StatusBadge> : <StatusBadge tone="neutral">Oculto na vitrine</StatusBadge>}</p>
       <p className="field-help">A vitrine permite somente consulta. Nome, preço e disponibilidade são públicos quando produto e loja estão publicados.</p>
@@ -152,5 +155,5 @@ export default function ProductForm({ tenantId, product, storePublished = false,
       <button type="button" disabled={busy || conflict || dirty} onClick={() => void publish()}>{busy ? "Aguarde a atualização…" : product.published ? "Ocultar produto" : "Publicar produto"}</button>
     </section> : null}
     {aside}
-  </aside></> : form;
+  </aside></> : <>{form}{dialog}</>;
 }

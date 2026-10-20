@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState, useEffect, type FormEvent } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { apiRequest } from "@/lib/auth-api";
 import { decimalInput, type Product, type ProductVariant } from "@/lib/catalog";
 import { variantLabel } from "@/components/variant-builder";
@@ -19,6 +20,7 @@ function VariantForm({ tenantId, product, variant, locked, onSaved, onReload }: 
   const submitting = useRef(false);
   const feedback = useRef<HTMLParagraphElement>(null);
   const skuRef = useRef<HTMLInputElement>(null);
+  const { confirm, dialog } = useConfirm();
   const id = variant?.id ?? "new";
   const [baseline] = useState(JSON.stringify({ sku: variant?.sku ?? "", price: (variant?.price ?? product.price).replace(".", ","), cost: variant?.cost?.replace(".", ",") ?? "", values: (product.variants[0]?.options ?? []).map(() => "") }));
   const dirty = JSON.stringify({ sku, price, cost, values }) !== baseline;
@@ -58,16 +60,16 @@ function VariantForm({ tenantId, product, variant, locked, onSaved, onReload }: 
     } catch { setStale(true); setError("Não foi possível confirmar o salvamento. Carregue a versão atual antes de repetir."); }
     finally { submitting.current = false; setBusy(false); }
   }
-  return <form onSubmit={(event) => void submit(event)} className="variant-definition" aria-busy={busy}>
+  return <>{dialog}<form onSubmit={(event) => void submit(event)} className="variant-definition" aria-busy={busy}>
     <h3>{variant ? variantLabel(variant.options) : "Adicionar combinação"}</h3>
     {!variant ? product.variants[0]?.options.map((option, index) => <div className="form-field" key={option.name}><label htmlFor={`variant-${id}-option-${index}`}>{option.name}</label><input id={`variant-${id}-option-${index}`} value={values[index]} autoComplete="off" maxLength={80} required disabled={busy || locked || stale} onChange={event => setValues(current => current.map((value, position) => position === index ? event.target.value : value))} /></div>) : null}
     <div className="form-field"><label htmlFor={`variant-${id}-sku`}>SKU da combinação</label><input ref={skuRef} id={`variant-${id}-sku`} value={sku} autoComplete="off" spellCheck={false} maxLength={64} required disabled={busy || locked || stale} onChange={event => setSku(event.target.value)} /></div>
     <div className="form-field"><label htmlFor={`variant-${id}-price`}>Preço (R$)</label><input id={`variant-${id}-price`} value={price} inputMode="decimal" autoComplete="off" maxLength={20} required disabled={busy || locked || stale} onChange={event => setPrice(event.target.value)} /></div>
     <div className="form-field"><label htmlFor={`variant-${id}-cost`}>Custo (R$) — opcional</label><input id={`variant-${id}-cost`} value={cost} inputMode="decimal" autoComplete="off" maxLength={20} disabled={busy || locked || stale} onChange={event => setCost(event.target.value)} /></div>
     {error ? <p ref={feedback} role="alert" tabIndex={-1} className="feedback feedback-error">{error}</p> : null}
-    {stale ? <button type="button" disabled={busy || locked} onClick={() => { if (window.confirm("Carregar a versão atual descarta alterações não salvas nas combinações. Continuar?")) onReload(); }}>Carregar versão atual</button> : <button type="submit" disabled={busy || locked}>{busy ? "Salvando combinação…" : variant ? "Salvar combinação" : "Adicionar combinação"}</button>}
+    {stale ? <button type="button" disabled={busy || locked} onClick={() => void (async () => { if (await confirm({ title: "Carregar a versão atual?", message: "Alterações não salvas nas combinações serão descartadas.", confirmLabel: "Descartar e carregar", tone: "danger" })) onReload(); })()}>Carregar versão atual</button> : <button type="submit" disabled={busy || locked}>{busy ? "Salvando combinação…" : variant ? "Salvar combinação" : "Adicionar combinação"}</button>}
     {variant ? <p><Link className="back-link" href={`/lojas/${encodeURIComponent(tenantId)}/produtos/${encodeURIComponent(product.id)}/estoque?variantId=${encodeURIComponent(variant.id)}`}>Consultar e movimentar estoque de {variantLabel(variant.options)}</Link></p> : null}
-  </form>;
+  </form></>;
 }
 
 export default function ProductVariants(props: { tenantId: string; product: Product; locked: boolean; onSaved: (product: Product, message?: string) => void; onReload: () => void }) {

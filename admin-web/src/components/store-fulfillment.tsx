@@ -5,6 +5,7 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { apiRequest, requestError } from "@/lib/auth-api";
 import { formatBRL } from "@/lib/catalog";
 import PageHeader from "@/components/page-header";
+import { useConfirm } from "@/components/confirm-dialog";
 import { type Fulfillment, type FulfillmentErrors, type FulfillmentFields, FULFILLMENT_TEXT_LIMIT, fulfillmentFields, fulfillmentPayload } from "@/lib/fulfillment";
 
 type TextField = keyof FulfillmentErrors;
@@ -18,6 +19,7 @@ export default function StoreFulfillment({ tenantId }: { tenantId: string }) {
   const [conflict, setConflict] = useState(false);
   const [errors, setErrors] = useState<FulfillmentErrors>({});
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
+  const { confirm, dialog } = useConfirm();
   const submitting = useRef(false);
   const pendingErrorFocus = useRef<TextField | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -50,8 +52,8 @@ export default function StoreFulfillment({ tenantId }: { tenantId: string }) {
     setErrors(current => ({ ...current, [field]: undefined }));
   }
 
-  function reload() {
-    if (dirty && !window.confirm("Carregar a configuração atual descartará suas alterações não salvas. Deseja continuar?")) return;
+  async function reload() {
+    if (dirty && !(await confirm({ title: "Carregar a configuração atual?", message: "Suas alterações não salvas serão descartadas.", confirmLabel: "Descartar e carregar", tone: "danger" }))) return;
     setFeedback(null); setErrors({}); setState("loading"); setAttempt(current => current + 1);
   }
 
@@ -91,7 +93,7 @@ export default function StoreFulfillment({ tenantId }: { tenantId: string }) {
     {errors[field] ? <p id={`fulfillment-${field}-error`} className="field-error">{errors[field]}</p> : null}
   </div> : null;
 
-  return <section className="page page-panel" aria-labelledby="fulfillment-title" aria-busy={state === "loading" || busy}>
+  return <section className="page page-panel" aria-labelledby="fulfillment-title" aria-busy={state === "loading" || busy}>{dialog}
     <PageHeader id="fulfillment-title" title="Entrega" description="Escolha como o comprador recebe o pedido. Opções ativas, valor e textos ficam visíveis na vitrine publicada; opções inativas não aparecem." />
     {state === "loading" ? <p role="status">Consultando a configuração de entrega…</p> : null}
     {state === "signed-out" ? <><p role="status">Entre novamente para consultar a entrega. Sua sessão pode ter expirado.</p><Link href="/entrar">Entrar</Link></> : null}
@@ -122,9 +124,9 @@ export default function StoreFulfillment({ tenantId }: { tenantId: string }) {
         : "Nenhuma opção de entrega ativa salva."}</p>
       {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}
       <div className="publication-actions">
-        {conflict ? <button type="button" onClick={reload}>Carregar configuração atual</button>
+        {conflict ? <button type="button" onClick={() => void reload()}>Carregar configuração atual</button>
           : <button type="submit" disabled={busy}>{busy ? "Salvando entrega…" : "Salvar entrega"}</button>}
-        {!conflict ? <button type="button" disabled={busy} onClick={reload}>Recarregar entrega</button> : null}
+        {!conflict ? <button type="button" disabled={busy} onClick={() => void reload()}>Recarregar entrega</button> : null}
       </div>
     </form> : null}
   </section>;
