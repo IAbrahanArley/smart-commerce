@@ -67,6 +67,16 @@ Em 2026-10-19 o responsável aprovou:
 | P10 | Ambiente | **Somente sandbox na Sprint 4**: aplicação e usuários de teste criados **pelo responsável** no painel do Mercado Pago, segredos só em variáveis de ambiente, nunca no chat ou no Git. Produção exige aprovação separada (o D6 continua) | — | SC-012 |
 | P11 | Dados do pagador | **Não armazenar CPF nem dados de cartão**: o Checkout Pro coleta. Guardar só ids do provedor, status, valores, taxa e líquido (para a Sprint 5) | — | SC-013 |
 
+## Implementação da SC-012 (2026-10-20)
+
+Detalhes e testes estão em [SC-012-VALIDATION.md](../../quality/SC-012-VALIDATION.md).
+
+- **`state` (P3):** valor aleatório de 256 bits guardado no servidor só como SHA-256, de uso único, com validade de 10 min e ligado a usuário e loja. Equivale ao `state` assinado previsto, sem uma chave a mais.
+- **PKCE:** o verificador fica cifrado até o retorno.
+- **Sandbox (P10):** a troca envia `test_token=true`.
+- **Retorno:** `GET /api/payments/mercado-pago/callback` na origem do admin, que deve ser a URL de redirecionamento cadastrada na aplicação.
+- **Tokens:** cifrados com AES-256-GCM, com dados associados por tenant. A renovação acontece sob lock da linha, a menos de 30 dias do vencimento, inclusive por uma rotina diária.
+
 ## Consequências e riscos
 
 - **Cadeia de tempo do D1.** A reserva e a order expiram juntas. Um pagamento aprovado segundos depois do vencimento cai no P4. Pix pode creditar com atraso, e quem paga depois do vencimento é reembolsado pelo provedor; os dois casos precisam de teste.

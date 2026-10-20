@@ -86,6 +86,21 @@ identity:
     sender-name: ${IDENTITY_MAIL_SENDER_NAME:Smart Commerce}
     brevo:
       api-key: ${IDENTITY_MAIL_BREVO_API_KEY:}
+payments:
+  # SC-012 (ADR-0013 P3, P10): Mercado Pago OAuth with PKCE, sandbox only. Setting the client id
+  # enables the integration; then the secret, the redirect URI (admin origin +
+  # /api/payments/mercado-pago/callback, registered in the application) and the key are required.
+  # Never version any of these values.
+  mercado-pago:
+    client-id: ${MERCADO_PAGO_CLIENT_ID:}
+    client-secret: ${MERCADO_PAGO_CLIENT_SECRET:}
+    redirect-uri: ${MERCADO_PAGO_REDIRECT_URI:}
+    # P10: request test tokens. Production requires a separate approval.
+    test-token: ${MERCADO_PAGO_TEST_TOKEN:true}
+  # AES-256-GCM key for provider tokens at rest: 32 random bytes in Base64.
+  token-encryption-key: ${PAYMENTS_TOKEN_ENCRYPTION_KEY:}
+  token-refresh:
+    enabled: ${PAYMENTS_TOKEN_REFRESH_ENABLED:true}
 deployment:
   # ADR-0014 H2: "hosted-test" marks the hosted test environment, the only place outside dev
   # where checkout may be enabled without payments. Any other value keeps D6 strict.

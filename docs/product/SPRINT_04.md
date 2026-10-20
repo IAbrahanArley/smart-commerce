@@ -19,6 +19,8 @@ Nenhuma tarefa começa sem autorização explícita do responsável.
 
 ## SC-012 — Conexão da conta Mercado Pago (módulo `payments`)
 
+**Estado (2026-10-20):** autorizada e implementada, validada com um servidor OAuth falso ([validação](../quality/SC-012-VALIDATION.md)). A conexão com uma conta de teste real fica pendente até o responsável criar a aplicação e os usuários de teste.
+
 - **Credenciais da plataforma** em variáveis de ambiente: `client_id`, `client_secret`, segredo do webhook e chave de cifra. Nenhum valor versionado.
 - **OAuth** com PKCE S256 e `offline_access`, com `state` assinado, de uso único e ligado ao lojista e ao tenant.
 - **Tokens** cifrados com AES-256-GCM. Renovação antes do vencimento, gravando o novo refresh token na mesma transação.

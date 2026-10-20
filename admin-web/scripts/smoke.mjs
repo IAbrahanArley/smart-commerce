@@ -6,6 +6,7 @@ import { fulfillmentFields, fulfillmentPayload, fulfillmentText } from "../src/l
 import { reservedStockMessage, wholeQuantity } from "../src/lib/inventory.ts";
 import { storefrontUrl } from "../src/lib/tenant-api.ts";
 import { backendOrigin, hostedTestEnvironment } from "../src/lib/deployment.ts";
+import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
 
 // ADR-0014: the /api rewrite only targets HTTPS (or loopback HTTP); the notice needs the exact flag.
 assert.equal(backendOrigin(undefined), "http://127.0.0.1:8080");
@@ -57,6 +58,20 @@ for (const invalid of ["1,001", "1.000,00", "1e2", "-1", "NaN", "100000000000000
 }
 assert.equal(formatBRL("99999999999999999.99").replace(/\s/g, " "), "R$ 99.999.999.999.999.999,99");
 assert.equal(formatBRL("0.01").replace(/\s/g, " "), "R$ 0,01");
+
+// SC-012: only Mercado Pago's HTTPS authorization page is a navigation target; unknown data is dropped.
+assert.equal(authorizationTarget({ authorizationUrl: "https://auth.mercadopago.com/authorization?client_id=1&state=x" }), "https://auth.mercadopago.com/authorization?client_id=1&state=x");
+for (const url of ["http://auth.mercadopago.com/authorization", "https://auth.mercadopago.com.evil.test/authorization", "https://evil.test/authorization", "https://user:pw@auth.mercadopago.com/authorization", "https://auth.mercadopago.com/other", "javascript:alert(1)", 1])
+  assert.equal(authorizationTarget({ authorizationUrl: url }), null, String(url));
+assert.equal(authorizationTarget(null), null);
+assert.deepEqual(parseConnection({ status: "CONNECTED", accountId: "987654", connectedAt: "2026-10-20T13:00:00.123456Z", accessExpiresAt: "2027-04-18T13:00:00Z", refreshedAt: null, closedAt: null, accessToken: "APP_USR-x" }),
+  { status: "CONNECTED", accountId: "987654", connectedAt: "2026-10-20T13:00:00.123456Z", accessExpiresAt: "2027-04-18T13:00:00Z", refreshedAt: null, closedAt: null });
+assert.equal(parseConnection({ status: "OTHER" }), null);
+assert.equal(parseConnection({ status: "CONNECTED", accountId: "<b>1</b>" }).accountId, null);
+assert.equal(callbackMessage("conectado").error, false);
+for (const word of ["negado", "expirado", "indisponivel", "erro"]) assert.equal(callbackMessage(word).error, true, word);
+assert.equal(callbackMessage("<script>"), null);
+assert.equal(callbackMessage(null), null);
 
 const fulfillment = { pickupEnabled: true, pickupInstructions: "  Rua A, 10  ", fixedShippingEnabled: true, fixedShippingAmount: "12,5", fixedShippingArea: "Centro" };
 assert.deepEqual(fulfillmentPayload(fulfillment, 3), { body: { pickupEnabled: true, pickupInstructions: "Rua A, 10", fixedShippingEnabled: true, fixedShippingAmount: "12.50", fixedShippingArea: "Centro", version: 3 } });
@@ -134,6 +149,7 @@ try {
     ["/lojas", "Minhas lojas", "Consultando suas lojas"],
     ["/lojas/00000000-0000-0000-0000-000000000000", "Minha loja", "Consultando sua loja"],
     ["/lojas/00000000-0000-0000-0000-000000000000/entrega", "Entrega", "Consultando a configuração de entrega"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/pagamentos?mercadoPago=negado", "Pagamentos", "A autorização foi recusada no Mercado Pago"],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'name="situacao"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Consultando pedido", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Consultando catálogo"],
@@ -162,7 +178,7 @@ try {
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /Página não encontrada/);
-  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
+  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, pagamentos (Mercado Pago: destino da autorização, estados e retorno), pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
 } finally {
   server.kill();
 }
