@@ -210,6 +210,10 @@ A descrição aceita parágrafos, negrito, itálico e listas, com HTML básico s
 
 Publique produto e loja para consultar fotos, descrição e combinações na vitrine. [Contratos, limites e decisões](docs/architecture/adr/0011-catalog-media-description-variants.md) e [validação local](docs/quality/CATALOG-MEDIA-VARIANTS-VALIDATION.md). A evolução adiciona somente jsoup 1.23.2 no backend; frontend preserva dependências existentes. SEC-003 continua aberta e inalterada.
 
+## Conexão com o Mercado Pago (SC-012, sandbox)
+
+Em **Pagamentos**, no admin, o dono da loja conecta a própria conta Mercado Pago por OAuth com PKCE. O backend só ativa essa integração com as variáveis `MERCADO_PAGO_CLIENT_ID`, `MERCADO_PAGO_CLIENT_SECRET`, `MERCADO_PAGO_REDIRECT_URI` e `PAYMENTS_TOKEN_ENCRYPTION_KEY`; sem elas, a página informa que a conexão está indisponível. Os valores e a forma de gerar a chave estão em [SC-012-VALIDATION.md](docs/quality/SC-012-VALIDATION.md). Os testes usam um servidor OAuth falso, sem acessar o Mercado Pago.
+
 ## Ambiente de teste hospedado (Render + Vercel)
 
 Para observar o sistema fora da máquina local, o [guia de deploy](docs/deploy/HOSTED-TEST-ENVIRONMENT.md) descreve o backend no Render (imagem `backend/Dockerfile`), o admin e a vitrine na Vercel e o e-mail de cadastro pelo Brevo, com todas as variáveis.

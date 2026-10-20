@@ -5,6 +5,7 @@ const PATHS = {
   box: <><path d="m3 7 9-4 9 4v10l-9 4-9-4Z" /><path d="m3 7 9 4 9-4" /><path d="M12 11v10" /></>,
   receipt: <><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z" /><path d="M9 8h6M9 12h6M9 16h3" /></>,
   truck: <><path d="M2 6h12v10H2Z" /><path d="M14 10h4l3 3v3h-7" /><circle cx="6" cy="18" r="2" /><circle cx="17" cy="18" r="2" /></>,
+  card: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /><path d="M6 15h4" /></>,
   store: <><path d="m4 9 1-5h14l1 5" /><path d="M4 9h16" /><path d="M5 9v11h14V9" /><path d="M10 20v-5h4v5" /></>,
   user: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></>,
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,

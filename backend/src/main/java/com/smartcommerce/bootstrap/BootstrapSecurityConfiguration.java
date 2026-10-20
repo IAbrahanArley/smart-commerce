@@ -149,6 +149,19 @@ public class BootstrapSecurityConfiguration {
                     .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/tenants/*/orders/*/cancel")
                     .authenticated()
+                    // SC-012: Mercado Pago connection. The callback is a top-level GET from the
+                    // provider redirect: the session cookie (SameSite=Lax) identifies the user and
+                    // the single-use state stands in for CSRF, as in OAuth.
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/tenants/*/payments/mercado-pago",
+                        "/api/payments/mercado-pago/callback")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.POST, "/api/tenants/*/payments/mercado-pago/authorization")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/tenants/*/payments/mercado-pago")
+                    .authenticated()
                     .requestMatchers(
                         HttpMethod.GET, "/api/tenants/*/products", "/api/tenants/*/products/*")
                     .authenticated()

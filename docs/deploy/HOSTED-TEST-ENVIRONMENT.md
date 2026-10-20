@@ -60,6 +60,15 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `IDENTITY_MAIL_SENDER_EMAIL` | remetente verificado no Brevo |
 | `IDENTITY_MAIL_SENDER_NAME` | `Smart Commerce (teste)` |
 
+   **Mercado Pago (SC-012, opcional e só sandbox).** Sem estas variáveis, a página Pagamentos mostra "Indisponível neste ambiente":
+
+| Variável | Valor |
+| --- | --- |
+| `MERCADO_PAGO_CLIENT_ID` | APP_ID da aplicação de teste |
+| `MERCADO_PAGO_CLIENT_SECRET` | segredo da aplicação (segredo) |
+| `MERCADO_PAGO_REDIRECT_URI` | `https://<projeto-admin>.vercel.app/api/payments/mercado-pago/callback`, idêntica à cadastrada na aplicação |
+| `PAYMENTS_TOKEN_ENCRYPTION_KEY` | 32 bytes aleatórios em Base64 (segredo; comando em [SC-012-VALIDATION.md](../quality/SC-012-VALIDATION.md)) |
+
 3. **Não defina** `SPRING_PROFILES_ACTIVE=dev`. A `PORT` é definida pelo Render, e a imagem já escuta em `0.0.0.0`.
 4. **Primeiro deploy:** o build Maven dentro da imagem leva alguns minutos. Na simulação local com o mesmo limite do free (0,1 CPU e 512 MB), a aplicação levou **cerca de 4 minutos para ficar pronta**, aplicando as 16 migrações, e usou cerca de 230 MB.
 5. Anote a URL pública do backend, `https://<servico>.onrender.com`.
