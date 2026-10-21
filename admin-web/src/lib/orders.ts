@@ -38,7 +38,41 @@ export type OrderDetail = {
   // reservation ended without units to cover it (the store decides: restock or refund).
   paidAt: string | null;
   paidWithoutStock: boolean;
+  // SC-015: null when the buyer never started the payment. Fee and net are not reported by the
+  // provider's Orders API, so they are not shown as if known.
+  payment: OrderPayment | null;
 };
+
+export type OrderPayment = {
+  provider: "MERCADO_PAGO";
+  providerOrderId: string | null;
+  status: "CREATING" | "CREATED" | "APPROVED";
+  providerStatus: string | null;
+  providerStatusDetail: string | null;
+  amount: string;
+  paidAmount: string | null;
+  approvedAt: string | null;
+  checkedAt: string | null;
+  lastCheckError: string | null;
+};
+
+export const PAYMENT_STATUS_LABELS: Record<OrderPayment["status"], string> = {
+  CREATING: "Pagamento não iniciado no Mercado Pago",
+  CREATED: "Aguardando confirmação do Mercado Pago",
+  APPROVED: "Confirmado pelo Mercado Pago",
+};
+
+// Divergences recorded by the last provider query (SC-015); unknown codes get a generic text.
+export function paymentDivergence(code: string | null): string | null {
+  if (!code) return null;
+  switch (code) {
+    case "PROVIDER_ERROR": return "O Mercado Pago não respondeu ou informou dados diferentes dos do pedido. A consulta será repetida.";
+    case "ACCOUNT_CHANGED": return "A loja foi conectada a outra conta Mercado Pago depois deste pedido; a conta atual não pode consultá-lo.";
+    case "NOT_CONNECTED":
+    case "REVOKED": return "A conta Mercado Pago da loja não está conectada; reconecte em Pagamentos para a consulta voltar a funcionar.";
+    default: return "A última consulta ao Mercado Pago não pôde ser concluída. Ela será repetida.";
+  }
+}
 
 export const ORDER_STATUSES: OrderStatus[] = ["PENDING_PAYMENT", "PAID", "EXPIRED", "CANCELLED"];
 export const STATUS_LABELS: Record<OrderStatus, string> = {

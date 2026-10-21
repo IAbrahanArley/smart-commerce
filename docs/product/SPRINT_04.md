@@ -82,6 +82,8 @@ Nenhuma tarefa começa sem autorização explícita do responsável.
 
 ## SC-015 — Conciliação mínima
 
+**Estado (2026-10-21):** autorizada e implementada, validada com a Orders API falsa ([validação](../quality/SC-015-VALIDATION.md)). Taxa e líquido não são informados pela Orders API e ficam como decisão da Sprint 5.
+
 - **Rotina** com `SKIP LOCKED` que consulta orders sem confirmação, de pedidos pendentes e recém-expirados, e aplica a mesma transição do SC-014. É o caminho principal em DEV (P6).
 - **Admin:** no detalhe do pedido, situação do pagamento, id da order no provedor, valores, taxa e líquido.
 
