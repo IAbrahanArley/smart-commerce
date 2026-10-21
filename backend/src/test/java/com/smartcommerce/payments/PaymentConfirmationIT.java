@@ -289,6 +289,11 @@ class PaymentConfirmationIT {
     JsonNode buyer = JSON.readTree(get("confirma-a", order).body());
     assertThat(buyer.get("status").asString()).isEqualTo("PAID");
     assertThat(buyer.get("payable").asBoolean()).isFalse();
+    // SC-019: the sale and its cost entered the ledger once, despite the repeated events. The
+    // fixture variants have no cost: COGS 0 flagged incomplete (margin unavailable, F4).
+    assertThat(ledger(order))
+        .containsExactlyInAnyOrderEntriesOf(
+            Map.of("sale:" + order.id(), "SALE 20.00", "cogs:" + order.id(), "COGS 0 true"));
     assertThat(output.getAll()).doesNotContain(TOKEN_A, WEBHOOK_SECRET);
   }
 
@@ -765,6 +770,10 @@ class PaymentConfirmationIT {
               assertThat(reversal.get("actor_kind")).isEqualTo("SYSTEM");
               assertThat(reversal.get("reason").toString()).startsWith("Devolução do pedido nº ");
             });
+    assertThat(ledger(order))
+        .containsEntry("refund:" + order.id(), "REFUND -20.00")
+        .containsEntry("cogs-reversal:" + order.id(), "COGS_REVERSAL 0 true")
+        .hasSize(4);
     var refunded = admin.find(owner, tenantA, order.id());
     assertThat(refunded.refundedAt()).isNotNull();
     assertThat(refunded.payment().refund().status()).isEqualTo("CONFIRMED");
@@ -782,6 +791,9 @@ class PaymentConfirmationIT {
     var view =
         refunds.refund(owner(tenantA), tenantA, kept.id(), CancelReason.of("Defeito"), false);
     assertThat(view.status()).isEqualTo("REFUNDED");
+    // Kept by the buyer: refunded, and the cost stays as a loss (no reversal).
+    assertThat(ledger(kept))
+        .containsOnlyKeys("sale:" + kept.id(), "cogs:" + kept.id(), "refund:" + kept.id());
     assertThat(balance(tenantA, variantA)).isEqualTo(8);
 
     // Paid without stock (P4) and refunded with restock: nothing was deducted, nothing returns.
@@ -799,6 +811,7 @@ class PaymentConfirmationIT {
         .isTrue();
     refunds.refund(owner(tenantA), tenantA, stockless.id(), CancelReason.of("Sem estoque"), true);
     assertThat(orderStatus(stockless)).isEqualTo("REFUNDED");
+    assertThat(ledger(stockless)).containsKey("cogs-reversal:" + stockless.id());
     assertThat(balance(tenantA, variantA)).isEqualTo(8);
     assertThat(reservationStatuses(taker)).containsOnly("ACTIVE");
     assertThat(
@@ -1054,6 +1067,24 @@ class PaymentConfirmationIT {
   private static String refundKey(Order order) {
     return UUID.nameUUIDFromBytes(("sc-refund:" + order.id()).getBytes(StandardCharsets.UTF_8))
         .toString();
+  }
+
+  /** The order's ledger entries (SC-019) as key → "TYPE amount [cost incomplete]". */
+  private Map<String, String> ledger(Order order) {
+    Map<String, String> entries = new LinkedHashMap<>();
+    for (var row :
+        jdbc.queryForList(
+            "SELECT entry_key,type,amount,cost_incomplete FROM finance_entry WHERE order_id=?",
+            order.id()))
+      entries.put(
+          row.get("entry_key").toString(),
+          row.get("type")
+              + " "
+              + row.get("amount")
+              + (row.get("type").toString().startsWith("COGS")
+                  ? " " + row.get("cost_incomplete")
+                  : ""));
+    return entries;
   }
 
   /** Makes every waiting payment due for the reconciliation routine now. */

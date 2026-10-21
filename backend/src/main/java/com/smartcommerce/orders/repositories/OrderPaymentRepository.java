@@ -1,6 +1,7 @@
 package com.smartcommerce.orders.repositories;
 
 import com.smartcommerce.inventory.domain.ReservationLine;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -60,6 +61,27 @@ public class OrderPaymentRepository {
             order)
         == 1;
   }
+
+  /**
+   * The order's figures for the finance ledger (SC-019): total, known cost of its items and whether
+   * any item had no cost snapshot (ADR-0015 F4).
+   */
+  public SaleFigures saleFigures(UUID tenant, UUID order) {
+    return jdbc.queryForObject(
+        """
+        SELECT o.total_amount,
+          COALESCE(SUM(i.unit_cost_snapshot * i.quantity),0),
+          COALESCE(bool_or(i.unit_cost_snapshot IS NULL),false)
+        FROM sales_order o JOIN sales_order_item i ON i.order_id=o.id AND i.tenant_id=o.tenant_id
+        WHERE o.tenant_id=? AND o.id=? GROUP BY o.total_amount
+        """,
+        (row, index) ->
+            new SaleFigures(row.getBigDecimal(1), row.getBigDecimal(2), row.getBoolean(3)),
+        tenant,
+        order);
+  }
+
+  public record SaleFigures(BigDecimal total, BigDecimal knownCost, boolean costIncomplete) {}
 
   /** PAID to REFUNDED once (SC-016). */
   public boolean markRefunded(UUID tenant, UUID order, Instant now) {

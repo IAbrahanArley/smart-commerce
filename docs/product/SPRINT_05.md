@@ -32,6 +32,8 @@ Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dash
 
 ## SC-019 — Livro de lançamentos (módulo novo `finance`)
 
+**Estado (2026-10-21):** autorizada e implementada ([validação](../quality/SC-019-VALIDATION.md)).
+
 - Tabela `finance_entry`, só de acréscimo (F7), com tipos: venda, reembolso, taxa, CMV, estorno de CMV e despesa. Cada lançamento tem valor com sinal, competência, liquidação (quando houver), chave única derivada do fato e a origem (pedido, pagamento ou despesa).
 - Lançamentos gravados na mesma transação de `PAID`, `REFUNDED` e da taxa (SC-018), pela interface já existente entre `payments` e `orders`.
 - Migração com preenchimento inicial dos pedidos já pagos ou reembolsados.

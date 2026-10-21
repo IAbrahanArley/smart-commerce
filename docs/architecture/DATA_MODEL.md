@@ -81,6 +81,18 @@ V19 (SC-014), aditiva:
 
 As CHECKs antigas sem nome explícito são removidas pela definição, e a migração falha se não encontrar exatamente uma.
 
+## Financeiro (Sprint 5)
+
+V22 (SC-019), aditiva: `finance_entry`, livro só de acréscimo ([ADR-0015](adr/0015-finance-dashboard.md) F7):
+- **tipos:** `SALE`, `REFUND`, `FEE`, `COGS`, `COGS_REVERSAL` e `EXPENSE`;
+- **valores:** com sinal conferido por CHECK, em BRL;
+- **datas:** `competence_at` e `settled_at`;
+- **origem:** pedido, por FK composta com o tenant;
+- **custo:** `cost_incomplete` para CMV de itens sem custo;
+- **chave:** única por `(tenant_id, entry_key)`, derivada do fato.
+
+A migração cria os lançamentos dos pedidos já pagos ou reembolsados, com as mesmas chaves do código.
+
 V21 (SC-016), aditiva:
 - **`sales_order`:** estado `REFUNDED` com `refunded_at`. As CHECKs mantêm `paid_at` e o histórico de expiração e cancelamento também em `REFUNDED`.
 - **`payment`:** estado `REFUNDED`.
