@@ -1,6 +1,6 @@
 # ADR-0015 — Financeiro e dashboard do lojista (Sprint 5)
 
-Status: **proposto** em 2026-10-21. Nenhuma decisão abaixo está aprovada; cada tarefa da Sprint 5 exige aprovação das decisões que a bloqueiam e autorização própria. Plano incremental: [SPRINT_05.md](../../product/SPRINT_05.md).
+Status: **adotado** em 2026-10-21 para F1–F10, conforme as recomendações abaixo, aprovadas pelo responsável. Proposto na mesma data. Cada tarefa da Sprint 5 ainda exige autorização própria. Plano incremental: [SPRINT_05.md](../../product/SPRINT_05.md).
 
 ## Contexto
 
@@ -18,7 +18,7 @@ Status: **proposto** em 2026-10-21. Nenhuma decisão abaixo está aprovada; cada
   - movimentos `SALE` e `SALE_REVERSAL` no estoque.
 - **Lacuna conhecida (SC-015, H9):** a Orders API do Mercado Pago **não informa taxa nem valor líquido** de um pagamento.
 
-## Decisões propostas
+## Decisões (aprovadas em 2026-10-21)
 
 | ID | Decisão | Recomendação | Alternativas | Bloqueia |
 | --- | --- | --- | --- | --- |

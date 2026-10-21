@@ -1,6 +1,6 @@
 # Sprint 5 — Financeiro e dashboard (planejamento)
 
-Data: 2026-10-21. **Proposta: as decisões F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dashboard.md) ainda não foram aprovadas.** Cada tarefa exige autorização própria.
+Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dashboard.md) aprovadas em 2026-10-21.** Cada tarefa exige autorização própria; a SC-019 foi autorizada na mesma data.
 
 **Dependência:** a Sprint 4 está implementada e revisada, mas sua validação ponta a ponta no sandbox está pendente ([SPRINT_04.md](SPRINT_04.md)). As tarefas que não dependem de dados reais do Mercado Pago podem andar em paralelo; a SC-018 (taxas) precisa dessa validação para fechar.
 
