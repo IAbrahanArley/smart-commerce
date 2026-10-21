@@ -66,6 +66,22 @@ export const PAYMENT_STATUS_LABELS: Record<OrderPayment["status"], string> = {
   REFUNDED: "Reembolsado pelo Mercado Pago",
 };
 
+// Provider order states in Portuguese (SC-017 review); the raw code stays visible as secondary text.
+export function providerStatusLabel(status: string, detail: string | null): string {
+  if (detail === "refunded" || status === "refunded") return "Reembolsado";
+  if (detail === "partially_refunded") return "Reembolsado em parte";
+  switch (status) {
+    case "created": return "Aguardando o comprador";
+    case "processed": return detail === "accredited" ? "Pago" : "Processado";
+    case "action_required": return "Ação pendente no Mercado Pago";
+    case "expired": return "Expirado";
+    case "canceled":
+    case "cancelled": return "Cancelado";
+    case "failed": return "Recusado";
+    default: return "Situação informada pelo Mercado Pago";
+  }
+}
+
 // Divergences recorded by the last provider query (SC-015); unknown codes get a generic text.
 export function paymentDivergence(code: string | null): string | null {
   if (!code) return null;

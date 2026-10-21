@@ -114,6 +114,18 @@ Detalhes em [SC-016-VALIDATION.md](../../quality/SC-016-VALIDATION.md).
 - **Confirmação:** uma order `refunded`, lida com o token da loja (consulta imediata, conciliação a cada minuto ou webhook), leva pagamento e pedido a `REFUNDED` uma única vez. A devolução ao estoque usa `SALE_REVERSAL` de ator de sistema e só acontece se escolhida.
 - **Auditoria:** `payment_refund` guarda quem pediu, quando, o motivo e a escolha sobre o estoque.
 
+## Revisão integrada (SC-017, 2026-10-21)
+
+Modelo de ameaças e disposição dos achados em [SC-017-PAYMENTS-THREAT-MODEL.md](../../security/SC-017-PAYMENTS-THREAT-MODEL.md).
+- **Corrigido:**
+  - conciliação por 30 dias para erros de conexão, e fila de novo ao reconectar;
+  - `cannot_refund_order` e `idempotency_key_already_used` tratados como falha;
+  - consulta de reembolso limitada a 30 dias;
+  - `state` do OAuth consumido mesmo com vínculo perdido;
+  - roteamento do webhook só com correspondência única.
+- **Propostos como risco aceito:** R10 (renovação de token sob lock), R11 (sem revogação no provedor) e R12 (sem limite no início do pagamento).
+- **Pendente:** a validação ponta a ponta no sandbox.
+
 ## Consequências e riscos
 
 - **Cadeia de tempo do D1.** A reserva e a order expiram juntas. Um pagamento aprovado segundos depois do vencimento cai no P4. Pix pode creditar com atraso, e quem paga depois do vencimento é reembolsado pelo provedor; os dois casos precisam de teste.

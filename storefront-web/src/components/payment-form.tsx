@@ -17,7 +17,7 @@ export function PaymentForm({ slug, orderId, label }: Props) {
     <form action={action} className="payment-form">
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="orderId" value={orderId} />
-      {state.message ? <p ref={notice} className="checkout-alert" role="alert" tabIndex={-1}>{state.message}</p> : null}
+      {state.message ? <p ref={notice} className="checkout-alert" tabIndex={-1}>{state.message}</p> : null}
       <button type="submit" disabled={pending} aria-describedby="payment-note">{pending ? "Abrindo o Mercado Pago…" : label}</button>
       <p id="payment-note" className="cart-note">Você será levado ao Mercado Pago para pagar com cartão, Pix ou saldo da conta. A confirmação chega à loja pelo Mercado Pago, não por esta página.</p>
     </form>

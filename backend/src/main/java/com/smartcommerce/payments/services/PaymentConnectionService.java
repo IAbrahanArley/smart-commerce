@@ -109,6 +109,8 @@ public class PaymentConnectionService {
     } catch (PaymentException failure) {
       return Completion.failed(null, failure.reason());
     }
+    if (claimed.verifier() == null)
+      return Completion.failed(null, PaymentException.Reason.INVALID_STATE);
     if (denied) return Completion.failed(claimed.tenant(), PaymentException.Reason.DENIED);
     if (code == null || code.isBlank() || code.length() > 512 || !code.matches("[\\x21-\\x7e]+"))
       return Completion.failed(claimed.tenant(), PaymentException.Reason.PROVIDER_ERROR);
@@ -134,6 +136,7 @@ public class PaymentConnectionService {
               tokens.liveMode(),
               actor,
               now());
+          accounts.requeuePayments(tenant, now());
         });
     return new Completion(tenant, null);
   }
@@ -233,8 +236,8 @@ public class PaymentConnectionService {
         || !pending.user().equals(actor))
       throw new PaymentException(PaymentException.Reason.INVALID_STATE);
     accounts.markUsed(hash, now);
-    if (!accounts.ownsStore(actor, pending.tenant()))
-      throw new PaymentException(PaymentException.Reason.INVALID_STATE);
+    // Checked after consuming, and reported without rolling back, so the state stays used.
+    if (!accounts.ownsStore(actor, pending.tenant())) return new Claimed(pending.tenant(), null);
     return new Claimed(
         pending.tenant(),
         providers.requireCipher().decrypt(pending.codeVerifier(), pending.tenant(), VERIFIER));

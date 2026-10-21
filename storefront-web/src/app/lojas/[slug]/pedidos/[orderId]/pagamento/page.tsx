@@ -10,7 +10,7 @@ import { orderCookieName, orderPath, validOrderId, validOrderToken } from "@/lib
 import { loadOrder } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Pagamento em confirmação", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Retorno do pagamento", robots: { index: false, follow: false } };
 
 type Props = { params: Promise<{ slug: string; orderId: string }> };
 

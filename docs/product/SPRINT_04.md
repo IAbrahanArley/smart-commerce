@@ -112,6 +112,8 @@ Nenhuma tarefa começa sem autorização explícita do responsável.
 
 ## SC-017 — Revisão integrada e validação ponta a ponta em sandbox
 
+**Estado (2026-10-21):** revisão integrada concluída ([validação](../quality/SC-017-VALIDATION.md), [modelo de ameaças](../security/SC-017-PAYMENTS-THREAT-MODEL.md)), sem achado crítico ou alto e com os médios corrigidos. **A validação ponta a ponta em sandbox está bloqueada** até a conta nova no Mercado Pago (lembrete abaixo); a sprint só fecha depois dela.
+
 - **Revisão:** checklists de [SECURITY.md](../agents/SECURITY.md) e [QA.md](../agents/QA.md) e modelo de ameaças de webhook e OAuth (forja, replay, SSRF, vazamento de token, confusão de tenant).
 - **Validação ponta a ponta** com contas de teste: conectar, pagar com cartão de teste e com Pix, confirmar, baixar e reembolsar, conforme P6.
 - **Registro** em `docs/quality/` e atualização de ARCHITECTURE, DATA_MODEL e status do ADR-0013.

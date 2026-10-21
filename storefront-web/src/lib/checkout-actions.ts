@@ -62,6 +62,8 @@ export async function placeOrder(previous: CheckoutState, form: FormData): Promi
       if (result.order.payable) {
         const payment = await startPayment(slug, result.order.id, result.token);
         if (payment.kind === "redirect") redirect(payment.url);
+        // Only a hint for the page to explain why the buyer is here; it never states a payment.
+        redirect(`${orderPath(encodeURIComponent(slug), result.order.id)}?pagamento=nao-aberto`);
       }
       redirect(orderPath(encodeURIComponent(slug), result.order.id));
     case "replayed":

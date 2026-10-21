@@ -54,6 +54,7 @@ export default function StorePayments({ tenantId, result }: { tenantId: string; 
   }, [feedback]);
 
   async function connect() {
+    let navigating = false;
     if (busy) return;
     setBusy(true); setFeedback(null);
     try {
@@ -63,16 +64,18 @@ export default function StorePayments({ tenantId, result }: { tenantId: string; 
       if (!response.ok) { setFeedback({ text: requestError(response.status), error: true }); return; }
       const target = authorizationTarget(await response.json());
       if (!target) { setFeedback({ text: "Não foi possível iniciar a conexão. Tente novamente.", error: true }); return; }
+      // Keep the button disabled while the browser leaves for Mercado Pago (no second attempt).
+      navigating = true;
       window.location.assign(target);
       return;
     } catch { setFeedback({ text: "Não foi possível iniciar a conexão. Tente novamente.", error: true }); }
-    finally { setBusy(false); }
+    finally { if (!navigating) setBusy(false); }
   }
 
   async function disconnect() {
     if (busy || !(await confirm({
       title: "Desconectar o Mercado Pago?",
-      message: "A loja deixa de receber pagamentos por esta conta. Os acessos guardados são apagados e, para voltar, será preciso autorizar de novo no Mercado Pago.",
+      message: "A loja deixa de receber pagamentos por esta conta. Os acessos guardados são apagados e, para voltar, será preciso autorizar de novo no Mercado Pago. Pagamentos ainda em confirmação só são confirmados depois que a mesma conta for conectada de novo. Para encerrar também o acesso do lado do Mercado Pago, revogue a aplicação no painel da sua conta.",
       confirmLabel: "Desconectar", tone: "danger",
     }))) return;
     setBusy(true); setFeedback(null);

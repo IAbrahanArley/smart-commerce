@@ -100,15 +100,17 @@ public class PaymentRepository {
    * between instances. Each row keeps its own tenant.
    */
   public List<DueCheck> claimDueChecks(
-      Instant now, Instant horizon, Instant leaseUntil, int limit) {
+      Instant now, Instant horizon, Instant extendedHorizon, Instant leaseUntil, int limit) {
     return jdbc.query(
         """
         UPDATE payment SET next_check_at=?, check_attempts=check_attempts+1
         WHERE id IN (SELECT p.id FROM payment p
           WHERE p.next_check_at<=? AND (
-            (p.status='CREATED' AND p.provider_expires_at>?)
+            (p.status='CREATED' AND (p.provider_expires_at>?
+              OR (p.provider_expires_at>? AND p.last_check_error IN
+                ('NOT_CONNECTED','REVOKED','ACCOUNT_CHANGED'))))
             OR (p.status='APPROVED' AND EXISTS(SELECT 1 FROM payment_refund r
-              WHERE r.payment_id=p.id AND r.status='REQUESTED')))
+              WHERE r.payment_id=p.id AND r.status='REQUESTED' AND r.requested_at>?)))
           ORDER BY p.next_check_at LIMIT ? FOR UPDATE OF p SKIP LOCKED)
         RETURNING id,tenant_id,provider_order_id,provider_expires_at,status
         """,
@@ -122,6 +124,8 @@ public class PaymentRepository {
         utc(leaseUntil),
         utc(now),
         utc(horizon),
+        utc(extendedHorizon),
+        utc(extendedHorizon),
         limit);
   }
 
@@ -233,16 +237,16 @@ public class PaymentRepository {
    */
   public Optional<ProviderOrderOwner> ownerOfProviderOrder(String providerOrderId) {
     // Case-insensitive: the signature admits a lowercased id; the stored spelling is returned.
-    return jdbc
-        .query(
+    List<ProviderOrderOwner> found =
+        jdbc.query(
             """
             SELECT tenant_id,provider_order_id FROM payment
-            WHERE provider='MERCADO_PAGO' AND lower(provider_order_id)=lower(?)
+            WHERE provider='MERCADO_PAGO' AND lower(provider_order_id)=lower(?) LIMIT 2
             """,
             (row, index) -> new ProviderOrderOwner(row.getObject(1, UUID.class), row.getString(2)),
-            providerOrderId)
-        .stream()
-        .findFirst();
+            providerOrderId);
+    // Ids differing only by case in two stores would be ambiguous: route neither (SC-017 review).
+    return found.size() == 1 ? Optional.of(found.getFirst()) : Optional.empty();
   }
 
   public record ProviderOrderOwner(UUID tenant, String providerOrderId) {}
