@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { StoreHeader } from "@/components/store-header";
 import { OrderSteps } from "@/components/order-steps";
 import { Arrow } from "@/components/arrow";
+import { FocusNotice } from "@/components/focus-notice";
 import { PaymentForm } from "@/components/payment-form";
 import { loadCatalog } from "@/lib/public-store";
 import { orderCookieName, validOrderId, validOrderToken } from "@/lib/order-cookie";
@@ -14,7 +15,7 @@ import { formatBRL } from "@/lib/price";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Seu pedido", robots: { index: false, follow: false } };
 
-type Props = { params: Promise<{ slug: string; orderId: string }> };
+type Props = { params: Promise<{ slug: string; orderId: string }>; searchParams: Promise<{ pagamento?: string | string[] }> };
 
 const STATUS: Record<OrderStatus, { label: string; text: string }> = {
   PENDING_PAYMENT: { label: "Aguardando pagamento", text: "Os itens estão reservados até o horário abaixo. Conclua o pagamento antes desse prazo." },
@@ -26,8 +27,11 @@ const STATUS: Record<OrderStatus, { label: string; text: string }> = {
 
 const DEADLINE = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });
 
-export default async function OrderPage({ params }: Props) {
+export default async function OrderPage({ params, searchParams }: Props) {
   const { slug, orderId } = await params;
+  // Set by the checkout action when Checkout Pro could not be opened (SC-017 review). Only explains
+  // why the buyer is here; the payment state always comes from the backend.
+  const notOpened = (await searchParams).pagamento === "nao-aberto";
   const store = await loadCatalog(slug);
   if (!validOrderId(orderId)) notFound();
   // The token cookie is path-scoped to this order; without it the page is the uniform 404.
@@ -54,6 +58,7 @@ export default async function OrderPage({ params }: Props) {
           {order.status === "PENDING_PAYMENT" ? (
             <p className="order-deadline">Reserva válida até <time dateTime={order.reservationExpiresAt}>{DEADLINE.format(new Date(order.reservationExpiresAt))}</time> (horário de Brasília).</p>
           ) : null}
+          {notOpened && order.payable ? <FocusNotice className="checkout-alert">Não foi possível abrir o pagamento agora. O pedido está registrado e reservado: tente de novo pelo botão abaixo.</FocusNotice> : null}
           {order.payable ? <PaymentForm slug={store.slug} orderId={order.id} label="Ir para o pagamento" /> : null}
           {order.status === "PENDING_PAYMENT" && !order.payable ? (
             <p>O pagamento online não está disponível nesta loja agora. A loja entrará em contato se necessário.</p>

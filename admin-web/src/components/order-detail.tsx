@@ -4,7 +4,7 @@ import Link from "next/link";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { apiRequest, requestError } from "@/lib/auth-api";
 import { formatBRL } from "@/lib/catalog";
-import { CANCEL_REASON_MAX, FULFILLMENT_LABELS, type OrderDetail as Order, STATUS_LABELS, cancelReason, formatDateTime, formatPhone, formatPostalCode, PAYMENT_STATUS_LABELS, paymentDivergence } from "@/lib/orders";
+import { CANCEL_REASON_MAX, FULFILLMENT_LABELS, type OrderDetail as Order, STATUS_LABELS, cancelReason, formatDateTime, formatPhone, formatPostalCode, PAYMENT_STATUS_LABELS, paymentDivergence, providerStatusLabel } from "@/lib/orders";
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 import OrderRefund from "@/components/order-refund";
@@ -85,7 +85,7 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
           <h2 id="order-status-title">Situação</h2>
           <p><StatusBadge tone={order.status === "PENDING_PAYMENT" || order.status === "PAID" ? "positive" : "neutral"}>{STATUS_LABELS[order.status]}</StatusBadge></p>
           {order.status === "PAID" ? <p>Pagamento confirmado pelo Mercado Pago em {formatDateTime(order.paidAt)}.{order.paidWithoutStock ? "" : " As unidades foram baixadas do estoque."}</p> : null}
-          {order.paidWithoutStock ? <p role="alert" className="feedback feedback-error">Pago sem estoque: o pagamento chegou depois do fim da reserva e não havia unidades suficientes. Nada foi baixado do estoque. Reponha as unidades ou fale com o comprador; o reembolso não é automático.</p> : null}
+          {order.paidWithoutStock && order.status === "PAID" ? <p className="feedback feedback-error">Pago sem estoque: o pagamento chegou depois do fim da reserva e não havia unidades suficientes. Nada foi baixado do estoque. Reponha as unidades ou fale com o comprador; o reembolso não é automático.</p> : null}
           {order.status === "PENDING_PAYMENT" ? <p>Estoque reservado até {formatDateTime(order.reservationExpiresAt)}. Sem pagamento confirmado, a reserva termina sozinha nesse horário.</p> : null}
           {order.status === "EXPIRED" && !order.paidAt ? <p>A reserva terminou{order.expiredAt ? ` em ${formatDateTime(order.expiredAt)}` : ` às ${formatDateTime(order.reservationExpiresAt)}`} e as unidades voltaram ao estoque disponível.</p> : null}
           {order.cancellation ? <dl className="order-facts"><div><dt>Cancelado em</dt><dd>{formatDateTime(order.cancellation.cancelledAt)}</dd></div><div><dt>Motivo (visível só para a loja)</dt><dd>{order.cancellation.reason}</dd></div></dl> : null}
@@ -116,11 +116,11 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
           <h2 id="order-payment-title">Pagamento</h2>
           <p>{PAYMENT_STATUS_LABELS[order.payment.status] ?? "Situação desconhecida"}</p>
           <dl className="order-facts">
-            {order.payment.providerOrderId ? <div><dt>Order no Mercado Pago</dt><dd><span translate="no">{order.payment.providerOrderId}</span></dd></div> : null}
+            {order.payment.providerOrderId ? <div><dt>Pedido no Mercado Pago</dt><dd><span translate="no">{order.payment.providerOrderId}</span></dd></div> : null}
             <div><dt>Valor cobrado</dt><dd className="numeric">{formatBRL(order.payment.amount)}</dd></div>
             <div><dt>Valor pago</dt><dd className="numeric">{order.payment.paidAmount ? formatBRL(order.payment.paidAmount) : "—"}</dd></div>
             <div><dt>Taxa e líquido</dt><dd>Não informados pelo Mercado Pago</dd></div>
-            {order.payment.providerStatus ? <div><dt>Situação no Mercado Pago</dt><dd><span translate="no">{order.payment.providerStatus}{order.payment.providerStatusDetail ? ` / ${order.payment.providerStatusDetail}` : ""}</span></dd></div> : null}
+            {order.payment.providerStatus ? <div><dt>Situação no Mercado Pago</dt><dd>{providerStatusLabel(order.payment.providerStatus, order.payment.providerStatusDetail)} <span className="field-help" translate="no">({order.payment.providerStatus}{order.payment.providerStatusDetail ? ` / ${order.payment.providerStatusDetail}` : ""})</span></dd></div> : null}
             <div><dt>Última consulta</dt><dd>{formatDateTime(order.payment.checkedAt)}</dd></div>
           </dl>
           {paymentDivergence(order.payment.lastCheckError) ? <p className="feedback feedback-error">{paymentDivergence(order.payment.lastCheckError)}</p> : null}
@@ -135,7 +135,7 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
           <p><strong>{FULFILLMENT_LABELS[order.fulfillment.type]}:</strong> {order.fulfillment.text}</p>
           {order.address ? <address className="order-address">{order.address.line1}{order.address.line2 ? `, ${order.address.line2}` : ""}<br />{order.address.district} · {order.address.city}/{order.address.state}<br />CEP {formatPostalCode(order.address.postalCode)}</address> : null}
         </section>
-        <OrderRefund order={order} path={path} onChange={setOrder} onReload={() => setAttempt(current => current + 1)} />
+        <OrderRefund order={order} path={path} onChange={setOrder} onReload={() => setAttempt(current => current + 1)} onNotice={(text, error) => setFeedback({ text, error })} />
         {order.status === "PENDING_PAYMENT" ? <section className="side-card" aria-labelledby="order-cancel-title">
           <h2 id="order-cancel-title">Cancelar pedido</h2>
           {!cancelling ? <><p>O cancelamento libera as unidades reservadas na hora e não pode ser desfeito.</p>

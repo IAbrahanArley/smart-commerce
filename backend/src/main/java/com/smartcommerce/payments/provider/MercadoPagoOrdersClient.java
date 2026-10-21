@@ -179,13 +179,13 @@ public final class MercadoPagoOrdersClient {
     throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
   }
 
-  /** 409 answers that mean the refund was already asked for or done (Orders API reference). */
+  /**
+   * 409 answers that mean the refund was already done or is in process (Orders API reference).
+   * {@code cannot_refund_order} and {@code idempotency_key_already_used} are failures: the refund
+   * may not exist, so the store sees an error and may retry (SC-017 review).
+   */
   static final List<String> ALREADY_REFUNDING =
-      List.of(
-          "order_already_refunded",
-          "cannot_refund_order",
-          "order_refund_already_in_process",
-          "idempotency_key_already_used");
+      List.of("order_already_refunded", "order_refund_already_in_process");
 
   private static BigDecimal amount(String value) {
     if (value == null) return null;

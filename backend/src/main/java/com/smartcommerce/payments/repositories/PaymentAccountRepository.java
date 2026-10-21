@@ -147,6 +147,17 @@ public class PaymentAccountRepository {
         utc(now));
   }
 
+  /**
+   * After a (re)connection, payments of the store still waiting are due at once (SC-017 review), so
+   * those that failed while the account was gone are confirmed without waiting.
+   */
+  public void requeuePayments(UUID tenant, Instant now) {
+    jdbc.update(
+        "UPDATE payment SET next_check_at=? WHERE tenant_id=? AND status IN ('CREATED','APPROVED')",
+        utc(now),
+        tenant);
+  }
+
   /** Stores the rotated pair; only a CONNECTED row changes. */
   public boolean saveRefreshed(
       UUID tenant,

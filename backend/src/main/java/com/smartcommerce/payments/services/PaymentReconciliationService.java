@@ -33,6 +33,14 @@ public class PaymentReconciliationService {
   static final Duration OPEN_INTERVAL = Duration.ofMinutes(1);
   static final Duration LATE_INTERVAL = Duration.ofMinutes(15);
   static final Duration HORIZON = Duration.ofHours(24);
+
+  /**
+   * SC-017 review: a payment that could not be read because the store lost or changed its account,
+   * or a refund still waiting, is looked at for this long instead, so money taken by the provider
+   * is never silently left unconfirmed; a reconnection queues it again at once.
+   */
+  static final Duration EXTENDED_HORIZON = Duration.ofDays(30);
+
   static final Duration LEASE = Duration.ofMinutes(5);
   private static final Logger LOG = LoggerFactory.getLogger(PaymentReconciliationService.class);
   private final PaymentRepository payments;
@@ -58,7 +66,9 @@ public class PaymentReconciliationService {
     Instant now = now();
     List<PaymentRepository.DueCheck> due =
         writes.execute(
-            tx -> payments.claimDueChecks(now, now.minus(HORIZON), now.plus(LEASE), limit));
+            tx ->
+                payments.claimDueChecks(
+                    now, now.minus(HORIZON), now.minus(EXTENDED_HORIZON), now.plus(LEASE), limit));
     for (var check : due) reconcile(check);
     return due.size();
   }

@@ -239,6 +239,21 @@ class PaymentConnectionIT {
         .contains("mercadoPago=expirado");
     assertThat(a.get(callback("TG-code", second)).headers().firstValue("Location").orElseThrow())
         .contains("mercadoPago=conectado");
+
+    // SC-017 review: a state whose user lost the store is consumed anyway, so it cannot be
+    // replayed once the membership comes back, and nothing reaches the provider.
+    String orphan = startAuthorization(a, tenantA).get("state");
+    jdbc.update("DELETE FROM tenant_membership WHERE tenant_id=?", tenantA);
+    int exchanges = TOKEN_REQUESTS.size();
+    assertThat(a.get(callback("TG-code", orphan)).headers().firstValue("Location").orElseThrow())
+        .contains("mercadoPago=expirado");
+    jdbc.update(
+        "INSERT INTO tenant_membership (tenant_id, user_id, role, created_at) VALUES (?, ?, 'OWNER', now())",
+        tenantA,
+        ownerA);
+    assertThat(a.get(callback("TG-code", orphan)).headers().firstValue("Location").orElseThrow())
+        .contains("mercadoPago=expirado");
+    assertThat(TOKEN_REQUESTS).hasSize(exchanges);
   }
 
   @Test

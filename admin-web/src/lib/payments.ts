@@ -53,7 +53,7 @@ export function callbackMessage(result: string | null): { text: string; error: b
   switch (result) {
     case "conectado": return { text: "Conta Mercado Pago conectada.", error: false };
     case "negado": return { text: "A autorização foi recusada no Mercado Pago. Nada foi conectado.", error: true };
-    case "expirado": return { text: "A tentativa de conexão expirou ou já foi usada. Clique em \"Conectar Mercado Pago\" para começar de novo.", error: true };
+    case "expirado": return { text: "A tentativa de conexão expirou ou já foi usada. Clique em “Conectar Mercado Pago” para começar de novo.", error: true };
     case "indisponivel": return { text: "A conexão com o Mercado Pago não está disponível neste ambiente.", error: true };
     case "erro": return { text: "O Mercado Pago não confirmou a conexão. Tente novamente em instantes.", error: true };
     default: return null;

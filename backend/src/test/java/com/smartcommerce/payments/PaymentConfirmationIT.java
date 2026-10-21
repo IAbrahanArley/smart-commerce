@@ -139,6 +139,10 @@ class PaymentConfirmationIT {
                   status = 500;
                   reply = Map.of("message", "internal_error");
                 }
+                case "CANNOT" -> {
+                  status = 409;
+                  reply = Map.of("code", "cannot_refund_order", "message", "Cannot refund order.");
+                }
                 case "ALREADY" -> {
                   state.put("status_detail", "refunded");
                   status = 409;
@@ -832,6 +836,59 @@ class PaymentConfirmationIT {
     assertThat(view.payment().refund().lastError()).isNull();
     assertThat(REFUNDS).containsOnly(TOKEN_A + " " + refundKey(paidA));
     assertThat(balance(tenantA, variantA)).isEqualTo(10); // the paid unit came back to stock
+  }
+
+  @Test
+  void paymentsStuckByALostConnectionKeepBeingReconciledAndConfirmOnReconnection()
+      throws Exception {
+    Order order = paidLater("confirma-a", variantA, 1);
+    approve(order);
+    jdbc.update(
+        "UPDATE payment_account SET status='DISCONNECTED', access_token=NULL, refresh_token=NULL,"
+            + " access_expires_at=NULL, key_version=NULL, closed_at=now() WHERE tenant_id=?",
+        tenantA);
+    dueNow();
+    reconciliation.reconcileDue(20);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT last_check_error FROM payment WHERE order_id=?", String.class, order.id()))
+        .isEqualTo("NOT_CONNECTED");
+    assertThat(READS).isEmpty(); // no token, no provider call
+    // Two days past the provider expiry: beyond the normal 24 h, still within the extended horizon.
+    jdbc.update(
+        "UPDATE payment SET provider_expires_at=now()-interval '2 days' WHERE order_id=?",
+        order.id());
+    jdbc.execute("DELETE FROM payment_account");
+    connect(tenantA, "111111", TOKEN_A);
+    connect(tenantB, "222222", TOKEN_B);
+    dueNow();
+    assertThat(reconciliation.reconcileDue(20)).isEqualTo(1);
+    assertThat(orderStatus(order)).isEqualTo("PAID");
+  }
+
+  @Test
+  void aRefundTheProviderCannotDoIsAFailureNeverAnAcceptance() throws Exception {
+    Order order = paid("confirma-a", variantA, 1);
+    REFUND_MODE.set("CANNOT");
+    assertThat(refundFails(owner(tenantA), tenantA, order, false))
+        .isEqualTo(OrderException.Reason.PAYMENT_FAILED);
+    Map<String, Object> refund =
+        jdbc.queryForMap(
+            "SELECT status,provider_accepted_at,last_error FROM payment_refund WHERE order_id=?",
+            order.id());
+    assertThat(refund.get("status")).isEqualTo("REQUESTED");
+    assertThat(refund.get("provider_accepted_at")).isNull();
+    assertThat(refund.get("last_error")).isEqualTo("PROVIDER_ERROR");
+    assertThat(orderStatus(order)).isEqualTo("PAID");
+    // A refund still waiting after 30 days is no longer polled (left for manual review).
+    jdbc.update(
+        "UPDATE payment_refund SET requested_at=now()-interval '31 days' WHERE order_id=?",
+        order.id());
+    dueNow();
+    jdbc.update("UPDATE payment SET next_check_at=now()-interval '1 second'");
+    READS.clear();
+    reconciliation.reconcileDue(20);
+    assertThat(READS).isEmpty();
   }
 
   // --- helpers -----------------------------------------------------------------------------
