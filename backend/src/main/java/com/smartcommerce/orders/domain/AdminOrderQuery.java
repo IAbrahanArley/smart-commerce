@@ -12,7 +12,8 @@ public record AdminOrderQuery(String status, Long after) {
     if (filter != null
         && !filter.equals("PENDING_PAYMENT")
         && !filter.equals("EXPIRED")
-        && !filter.equals("CANCELLED")) throw new IllegalArgumentException("Invalid status");
+        && !filter.equals("CANCELLED")
+        && !filter.equals("PAID")) throw new IllegalArgumentException("Invalid status");
     Long cursor = null;
     if (after != null && !after.isBlank()) {
       if (!after.matches("[1-9][0-9]{0,17}")) throw new IllegalArgumentException("Invalid cursor");

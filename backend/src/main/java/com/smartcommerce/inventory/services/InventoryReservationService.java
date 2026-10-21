@@ -4,6 +4,7 @@ import com.smartcommerce.inventory.domain.InventoryException;
 import com.smartcommerce.inventory.domain.ReservationLine;
 import com.smartcommerce.inventory.domain.ReservationPolicy;
 import com.smartcommerce.inventory.domain.ReservationResult;
+import com.smartcommerce.inventory.domain.SaleResult;
 import com.smartcommerce.inventory.domain.StockLevel;
 import com.smartcommerce.inventory.repositories.InventoryRepository;
 import com.smartcommerce.inventory.repositories.InventoryReservationRepository;
@@ -110,11 +111,63 @@ public class InventoryReservationService {
   }
 
   /**
-   * Sprint 4 stub: consuming a reservation on confirmed payment must also append an outbound ledger
-   * movement, which needs a new movement type (e.g. SALE) and a system actor decision (ADR-0012
-   * §9). Not implemented until then.
+   * Deducts a paid order's stock, all lines or none (SC-014, ADR-0013 P4, P7). Joins the caller's
+   * READ COMMITTED transaction, which holds the order lock. Balances are locked in variant order,
+   * as in {@link #reserve}. A line is covered by the order's own reservation still in force plus
+   * what is available to anyone; this covers the normal case (reservation in force) and the late
+   * payment one (reservation expired or released: reserve again). Covered: each balance goes down,
+   * a SALE movement by the system actor is appended and the order's reservations become CONSUMED.
+   * Not covered: nothing is deducted and the order's reservations are released, so the store
+   * decides (P4: never an automatic refund).
    */
-  public void consume(UUID tenant, UUID order) {
-    throw new UnsupportedOperationException("Reservation consumption is planned for Sprint 4");
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public SaleResult sell(UUID tenant, UUID order, List<ReservationLine> lines, String reason) {
+    if (tenant == null || order == null || lines == null || lines.isEmpty())
+      throw new IllegalArgumentException("Invalid sale");
+    var ordered = lines.stream().sorted(Comparator.comparing(ReservationLine::variantId)).toList();
+    var ids = ordered.stream().map(ReservationLine::variantId).toList();
+    if (new HashSet<>(ids).size() != ids.size())
+      throw new IllegalArgumentException("Duplicated variant");
+    var now = ReservationPolicy.now(clock);
+    var levels =
+        inventory.lockLevels(tenant, ids, now).stream()
+            .collect(Collectors.toMap(StockLevel::variantId, Function.identity()));
+    var own = reservations.activeQuantities(tenant, order, now);
+    boolean covered =
+        ordered.stream()
+            .allMatch(
+                line -> {
+                  StockLevel level = levels.get(line.variantId());
+                  return level != null
+                      && line.quantity() <= level.onHand()
+                      && line.quantity()
+                          <= (long) level.available() + own.getOrDefault(line.variantId(), 0);
+                });
+    if (!covered) {
+      reservations.release(tenant, order, now);
+      return new SaleResult(false);
+    }
+    for (var line : ordered) {
+      int after =
+          inventory
+              .deduct(tenant, line.variantId(), line.quantity())
+              .orElseThrow(() -> new IllegalStateException("Locked balance changed"));
+      inventory.appendSale(
+          tenant,
+          line.variantId(),
+          order,
+          saleRequest(order, line.variantId()),
+          -line.quantity(),
+          after,
+          reason,
+          now);
+    }
+    reservations.consume(tenant, order, now);
+    return new SaleResult(true);
+  }
+
+  static UUID saleRequest(UUID order, UUID variant) {
+    return UUID.nameUUIDFromBytes(
+        ("sale:" + order + ":" + variant).getBytes(java.nio.charset.StandardCharsets.UTF_8));
   }
 }

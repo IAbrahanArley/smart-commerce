@@ -1,0 +1,68 @@
+package com.smartcommerce.orders.repositories;
+
+import com.smartcommerce.inventory.domain.ReservationLine;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+/** Payment confirmation writes on orders (SC-014); always scoped by the payment's own tenant. */
+@Repository
+public class OrderPaymentRepository {
+  private final JdbcTemplate jdbc;
+
+  public OrderPaymentRepository(JdbcTemplate jdbc) {
+    this.jdbc = jdbc;
+  }
+
+  /** The order row, locked: number, state and whether its personal data was already removed. */
+  public Optional<Locked> lock(UUID tenant, UUID order) {
+    return jdbc
+        .query(
+            """
+            SELECT number,status,anonymized_at IS NOT NULL FROM sales_order
+            WHERE tenant_id=? AND id=? FOR UPDATE
+            """,
+            (row, index) -> new Locked(row.getLong(1), row.getString(2), row.getBoolean(3)),
+            tenant,
+            order)
+        .stream()
+        .findFirst();
+  }
+
+  /** What each item takes out of stock. */
+  public List<ReservationLine> lines(UUID tenant, UUID order) {
+    return jdbc.query(
+        "SELECT variant_id,quantity FROM sales_order_item WHERE tenant_id=? AND order_id=?",
+        (row, index) -> new ReservationLine(row.getObject(1, UUID.class), row.getInt(2)),
+        tenant,
+        order);
+  }
+
+  /** PENDING_PAYMENT, EXPIRED or CANCELLED to PAID once (P4, P8). */
+  public boolean markPaid(UUID tenant, UUID order, boolean withoutStock, Instant now) {
+    return jdbc.update(
+            """
+            UPDATE sales_order SET status='PAID', paid_at=?, paid_without_stock=?, updated_at=?,
+              version=version+1
+            WHERE tenant_id=? AND id=? AND anonymized_at IS NULL
+              AND status IN ('PENDING_PAYMENT','EXPIRED','CANCELLED')
+            """,
+            utc(now),
+            withoutStock,
+            utc(now),
+            tenant,
+            order)
+        == 1;
+  }
+
+  public record Locked(long number, String status, boolean anonymized) {}
+
+  private static OffsetDateTime utc(Instant value) {
+    return value.atOffset(ZoneOffset.UTC);
+  }
+}

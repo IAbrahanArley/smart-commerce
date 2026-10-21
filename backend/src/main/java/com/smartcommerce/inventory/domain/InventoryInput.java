@@ -3,14 +3,21 @@ package com.smartcommerce.inventory.domain;
 import java.util.UUID;
 
 public record InventoryInput(UUID requestId, MovementType type, int delta, String reason) {
+  /**
+   * SALE and SALE_REVERSAL are written only by the system for orders (SC-014, ADR-0013 P7); a
+   * manual movement is always ENTRY or ADJUSTMENT.
+   */
   public enum MovementType {
     ENTRY,
-    ADJUSTMENT
+    ADJUSTMENT,
+    SALE,
+    SALE_REVERSAL
   }
 
   public InventoryInput {
     if (requestId == null
         || type == null
+        || (type != MovementType.ENTRY && type != MovementType.ADJUSTMENT)
         || delta == 0
         || (type == MovementType.ENTRY && delta < 0))
       throw new IllegalArgumentException("Invalid movement");

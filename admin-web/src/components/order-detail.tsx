@@ -82,9 +82,11 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
       <div className="order-main">
         <section className="side-card" aria-labelledby="order-status-title">
           <h2 id="order-status-title">Situação</h2>
-          <p><StatusBadge tone={order.status === "PENDING_PAYMENT" ? "positive" : "neutral"}>{STATUS_LABELS[order.status]}</StatusBadge></p>
+          <p><StatusBadge tone={order.status === "PENDING_PAYMENT" || order.status === "PAID" ? "positive" : "neutral"}>{STATUS_LABELS[order.status]}</StatusBadge></p>
+          {order.status === "PAID" ? <p>Pagamento confirmado pelo Mercado Pago em {formatDateTime(order.paidAt)}.{order.paidWithoutStock ? "" : " As unidades foram baixadas do estoque."}</p> : null}
+          {order.paidWithoutStock ? <p role="alert" className="feedback feedback-error">Pago sem estoque: o pagamento chegou depois do fim da reserva e não havia unidades suficientes. Nada foi baixado do estoque. Reponha as unidades ou fale com o comprador; o reembolso não é automático.</p> : null}
           {order.status === "PENDING_PAYMENT" ? <p>Estoque reservado até {formatDateTime(order.reservationExpiresAt)}. Sem pagamento confirmado, a reserva termina sozinha nesse horário.</p> : null}
-          {order.status === "EXPIRED" ? <p>A reserva terminou{order.expiredAt ? ` em ${formatDateTime(order.expiredAt)}` : ` às ${formatDateTime(order.reservationExpiresAt)}`} e as unidades voltaram ao estoque disponível.</p> : null}
+          {order.status === "EXPIRED" && !order.paidAt ? <p>A reserva terminou{order.expiredAt ? ` em ${formatDateTime(order.expiredAt)}` : ` às ${formatDateTime(order.reservationExpiresAt)}`} e as unidades voltaram ao estoque disponível.</p> : null}
           {order.cancellation ? <dl className="order-facts"><div><dt>Cancelado em</dt><dd>{formatDateTime(order.cancellation.cancelledAt)}</dd></div><div><dt>Motivo (visível só para a loja)</dt><dd>{order.cancellation.reason}</dd></div></dl> : null}
         </section>
         <div className="data-table-wrap"><table className="data-table data-table-wrapping" role="table">

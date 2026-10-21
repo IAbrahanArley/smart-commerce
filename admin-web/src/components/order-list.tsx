@@ -51,7 +51,7 @@ export default function OrderList({ tenantId, status, after }: { tenantId: strin
         <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Pedido</th><th role="columnheader" scope="col">Situação</th><th role="columnheader" scope="col">Comprador</th><th role="columnheader" scope="col">Entrega</th><th role="columnheader" scope="col" className="numeric">Total</th></tr></thead>
         <tbody role="rowgroup">{page.orders.map(order => <tr role="row" key={order.id}>
           <th role="rowheader" scope="row"><Link href={`${storePath}/pedidos/${encodeURIComponent(order.id)}`}>Pedido nº {order.number}</Link><span className="cell-hint order-created">Criado em {formatDateTime(order.createdAt)}</span></th>
-          <td role="cell" data-label="Situação"><StatusBadge tone={order.status === "PENDING_PAYMENT" ? "positive" : "neutral"}>{STATUS_LABELS[order.status]}</StatusBadge></td>
+          <td role="cell" data-label="Situação"><StatusBadge tone={order.status === "PENDING_PAYMENT" || order.status === "PAID" ? "positive" : "neutral"}>{STATUS_LABELS[order.status]}</StatusBadge></td>
           <td role="cell" data-label="Comprador">{order.buyerName ?? "Dados removidos"}</td>
           <td role="cell" data-label="Entrega">{SHORT_FULFILLMENT[order.fulfillmentType]} · {order.units === 1 ? "1 unidade" : `${new Intl.NumberFormat("pt-BR").format(order.units)} unidades`}</td>
           <td role="cell" data-label="Total" className="numeric">{formatBRL(order.total)}</td>

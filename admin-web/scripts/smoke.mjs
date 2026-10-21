@@ -19,7 +19,8 @@ import { cancelReason, formatDateTime, formatPhone, formatPostalCode, orderCurso
 
 // Orders (SC-010): URL values are validated before reaching the API; the reason mirrors the backend.
 assert.equal(orderStatus("EXPIRED"), "EXPIRED");
-for (const invalid of [undefined, "", "PAID", "expired"]) assert.equal(orderStatus(invalid), null, String(invalid));
+assert.equal(orderStatus("PAID"), "PAID");
+for (const invalid of [undefined, "", "REFUNDED", "paid", "expired"]) assert.equal(orderStatus(invalid), null, String(invalid));
 assert.equal(orderCursor("21"), "21");
 for (const invalid of [undefined, "0", "-1", "01", "1e3", "1234567890123456789"]) assert.equal(orderCursor(invalid), null, String(invalid));
 assert.equal(ordersApiPath("t/1", "CANCELLED", "21"), "/api/tenants/t%2F1/orders?status=CANCELLED&after=21");

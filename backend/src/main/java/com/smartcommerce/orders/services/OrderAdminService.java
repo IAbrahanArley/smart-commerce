@@ -129,7 +129,9 @@ public class OrderAdminService {
         order.cancelledAt() == null
             ? null
             : new AdminOrderView.Cancellation(order.cancelReason(), order.cancelledAt()),
-        order.anonymizedAt());
+        order.anonymizedAt(),
+        order.paidAt(),
+        order.paidWithoutStock());
   }
 
   private static OrderException missing() {

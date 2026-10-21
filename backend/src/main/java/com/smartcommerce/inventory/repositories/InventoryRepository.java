@@ -129,6 +129,56 @@ public class InventoryRepository {
     return command.getResultList();
   }
 
+  /**
+   * Takes {@code quantity} units out of a balance the caller already locked; empty when the balance
+   * is missing or would go negative, in which case nothing changes.
+   */
+  public Optional<Integer> deduct(UUID tenant, UUID variant, int quantity) {
+    return jdbc
+        .queryForList(
+            """
+            UPDATE inventory_balance SET quantity=quantity-?
+            WHERE tenant_id=? AND product_id=? AND quantity>=? RETURNING quantity
+            """,
+            Integer.class,
+            quantity,
+            tenant,
+            variant,
+            quantity)
+        .stream()
+        .findFirst();
+  }
+
+  /**
+   * Appends a SALE movement by the system actor (ADR-0013 P7). The request key is derived from the
+   * order and the variant, so the ledger itself rejects a second deduction for the same line.
+   */
+  public void appendSale(
+      UUID tenant,
+      UUID variant,
+      UUID order,
+      UUID requestId,
+      int delta,
+      int balanceAfter,
+      String reason,
+      Instant now) {
+    jdbc.update(
+        """
+        INSERT INTO inventory_movement(id,tenant_id,product_id,actor_id,actor_kind,request_id,type,
+          delta,balance_after,reason,created_at,order_id)
+        VALUES (?,?,?,NULL,'SYSTEM',?,'SALE',?,?,?,?,?)
+        """,
+        UUID.randomUUID(),
+        tenant,
+        variant,
+        requestId,
+        delta,
+        balanceAfter,
+        reason,
+        InventoryReservationRepository.utc(now),
+        order);
+  }
+
   public void append(InventoryMovement movement) {
     entities.persist(movement);
     entities.flush();

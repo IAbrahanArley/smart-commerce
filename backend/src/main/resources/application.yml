@@ -100,10 +100,17 @@ payments:
     # SC-013: public HTTPS origin of storefront-web for the Checkout Pro return page. Empty or
     # HTTP (local development) sends no return URLs: the provider rejects local addresses.
     return-origin: ${STOREFRONT_PUBLIC_ORIGIN:}
+    # SC-014: secret of the application's webhook (panel > Webhooks). Empty turns the webhook
+    # endpoint off; payments are then confirmed by querying the provider (SC-015).
+    webhook-secret: ${MERCADO_PAGO_WEBHOOK_SECRET:}
   # AES-256-GCM key for provider tokens at rest: 32 random bytes in Base64.
   token-encryption-key: ${PAYMENTS_TOKEN_ENCRYPTION_KEY:}
   token-refresh:
     enabled: ${PAYMENTS_TOKEN_REFRESH_ENABLED:true}
+  events:
+    # SC-014: processes stored notifications (query the provider, confirm, deduct stock).
+    enabled: ${PAYMENTS_EVENTS_ENABLED:true}
+    interval: PT10S
 deployment:
   # ADR-0014 H2: "hosted-test" marks the hosted test environment, the only place outside dev
   # where checkout may be enabled without payments. Any other value keeps D6 strict.

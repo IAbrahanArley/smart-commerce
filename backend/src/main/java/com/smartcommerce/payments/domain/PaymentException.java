@@ -16,7 +16,13 @@ public final class PaymentException extends RuntimeException {
     /** The provider says the grant is no longer valid (revoked or expired). */
     REVOKED,
     /** No connected account for this store. */
-    NOT_CONNECTED
+    NOT_CONNECTED,
+    /** The store is now connected to another seller account than the one the order used. */
+    ACCOUNT_CHANGED,
+    /** Webhook signature missing, malformed, stale or wrong (SC-014). */
+    INVALID_SIGNATURE,
+    /** Authenticated notification that cannot be read (SC-014). */
+    INVALID_NOTIFICATION
   }
 
   private final Reason reason;

@@ -39,6 +39,11 @@ export default async function PaymentReturnPage({ params }: Props) {
               <p>Se você desistiu ou o pagamento não foi aprovado, ainda dá para pagar enquanto a reserva estiver válida.</p>
               {order.payable ? <PaymentForm slug={store.slug} orderId={order.id} label="Tentar pagar novamente" /> : null}
             </>
+          ) : order.status === "PAID" ? (
+            <>
+              <h2 id="payment-return-title">Pagamento confirmado</h2>
+              <p>O Mercado Pago confirmou o pagamento à loja.</p>
+            </>
           ) : (
             <>
               <h2 id="payment-return-title">Este pedido não está mais aguardando pagamento</h2>
