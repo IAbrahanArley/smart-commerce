@@ -169,8 +169,9 @@ public class BootstrapSecurityConfiguration {
                     .authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/tenants/*/payments/mercado-pago")
                     .authenticated()
-                    // SC-020: manual expenses (OWNER checked in the query).
-                    .requestMatchers(HttpMethod.GET, "/api/tenants/*/expenses")
+                    // SC-020/SC-021: expenses and financial report (OWNER checked in the query).
+                    .requestMatchers(
+                        HttpMethod.GET, "/api/tenants/*/expenses", "/api/tenants/*/finance")
                     .authenticated()
                     .requestMatchers(
                         HttpMethod.POST,

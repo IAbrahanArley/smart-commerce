@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /** Finance errors: foreign and absent stores or expenses are the same 404 (SC-020). */
-@RestControllerAdvice(assignableTypes = ExpenseController.class)
+@RestControllerAdvice(assignableTypes = {ExpenseController.class, FinanceReportController.class})
 public final class FinanceErrorHandler {
   @ExceptionHandler(FinanceException.class)
   ResponseEntity<Map<String, String>> finance(FinanceException error) {
@@ -37,7 +37,7 @@ public final class FinanceErrorHandler {
   ResponseEntity<Map<String, String>> invalid() {
     return ResponseEntity.badRequest()
         .cacheControl(CacheControl.noStore())
-        .body(Map.of("message", "Confira os dados da despesa."));
+        .body(Map.of("message", "Confira os dados enviados."));
   }
 
   @ExceptionHandler(DataAccessException.class)

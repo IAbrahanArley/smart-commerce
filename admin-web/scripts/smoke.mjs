@@ -16,7 +16,15 @@ for (const invalid of ["http://api.example.test", "https://user:pw@api.example.t
 assert.equal(hostedTestEnvironment("hosted-test"), true);
 for (const value of [undefined, "", "production", "HOSTED-TEST"]) assert.equal(hostedTestEnvironment(value), false);
 import { cancelReason, formatDateTime, formatPhone, formatPostalCode, orderCursor, orderStatus, ordersApiPath, ordersPagePath, paymentDivergence } from "../src/lib/orders.ts";
+import { missingText, percentText, reportPeriod } from "../src/lib/finance.ts";
 import { expenseMonth, formatDay, lineText, monthLabel, monthOf, parseAmount, shiftMonth } from "../src/lib/expenses.ts";
+
+// Finance report (SC-021): period from the URL, missing data and percentages in Portuguese.
+assert.equal(reportPeriod("LAST_MONTH"), "LAST_MONTH");
+for (const invalid of [undefined, "", "last_month", "FOREVER"]) assert.equal(reportPeriod(invalid), "THIS_MONTH");
+assert.equal(missingText({ code: "FEES_UNAVAILABLE", count: 1 }), "1 venda sem a taxa do Mercado Pago informada");
+assert.equal(missingText({ code: "COST_MISSING", count: 2 }), "2 pedidos com produto sem custo cadastrado");
+assert.equal(percentText("15.00"), "15,00%"); assert.equal(percentText(null), "—");
 
 // Expenses (SC-020): month from the URL, Brazilian amounts and one-line texts mirror the backend.
 assert.equal(expenseMonth("2026-10", new Date()), "2026-10");
@@ -171,6 +179,7 @@ try {
     ["/lojas/00000000-0000-0000-0000-000000000000/entrega", "Entrega", "Consultando a configuração de entrega"],
     ["/lojas/00000000-0000-0000-0000-000000000000/pagamentos?mercadoPago=negado", "Pagamentos", "A autorização foi recusada no Mercado Pago"],
     ["/lojas/00000000-0000-0000-0000-000000000000/despesas?mes=2026-09", "Despesas", "Setembro de 2026"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/financeiro?periodo=LAST_7_DAYS", "Financeiro", 'value="LAST_7_DAYS" selected'],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'name="situacao"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Consultando pedido", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Consultando catálogo"],
@@ -199,7 +208,7 @@ try {
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /Página não encontrada/);
-  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, pagamentos (Mercado Pago: destino da autorização, estados e retorno), despesas (mês na URL, valores e textos), pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
+  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, pagamentos (Mercado Pago: destino da autorização, estados e retorno), despesas (mês na URL, valores e textos), financeiro (período na URL e margem parcial), pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
 } finally {
   server.kill();
 }

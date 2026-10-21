@@ -64,6 +64,8 @@ Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dash
 
 ## SC-021 — Relatório financeiro do período
 
+**Estado (2026-10-21):** autorizada e implementada ([validação](../quality/SC-021-VALIDATION.md)). Até a SC-018, todo relatório com vendas aparece como parcial por falta das taxas.
+
 - `GET /api/tenants/{id}/finance?period=…`: receita bruta, reembolsos, taxas, CMV, despesas fixas e variáveis, margem de contribuição (F5), a receber (por data de liberação) e caixa simplificado (F3), todos derivados do livro.
 - Indicação "parcial" com o motivo (taxas indisponíveis, N pedidos sem custo).
 - Admin: página "Financeiro" com o resumo, os componentes da margem e a lista do que falta.
