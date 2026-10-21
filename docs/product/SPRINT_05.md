@@ -49,6 +49,8 @@ Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dash
 
 ## SC-020 — Despesas manuais (módulo `finance`)
 
+**Estado (2026-10-21):** autorizada e implementada ([validação](../quality/SC-020-VALIDATION.md)).
+
 - Admin: lista, cadastro e correção (cancelar com motivo e lançar de novo, F6); categoria da lista fixa, tipo fixa ou variável, competência e pagamento.
 - Cada despesa gera seus lançamentos (competência e, se paga, caixa).
 

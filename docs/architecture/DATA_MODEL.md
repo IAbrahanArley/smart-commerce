@@ -93,6 +93,10 @@ V22 (SC-019), aditiva: `finance_entry`, livro só de acréscimo ([ADR-0015](adr/
 
 A migração cria os lançamentos dos pedidos já pagos ou reembolsados, com as mesmas chaves do código.
 
+V23 (SC-020), aditiva:
+- **`expense`:** categoria de lista fixa, tipo fixa ou variável, descrição, valor positivo, competência e pagamento como datas de São Paulo, `request_id` único por tenant, autor e cancelamento (quem, quando e motivo, juntos). Nunca é apagada.
+- **`finance_entry`:** ganha `expense_id` (FK composta) e o tipo `EXPENSE_REVERSAL` (positivo), com CHECK que liga os tipos de despesa à coluna.
+
 V21 (SC-016), aditiva:
 - **`sales_order`:** estado `REFUNDED` com `refunded_at`. As CHECKs mantêm `paid_at` e o histórico de expiração e cancelamento também em `REFUNDED`.
 - **`payment`:** estado `REFUNDED`.

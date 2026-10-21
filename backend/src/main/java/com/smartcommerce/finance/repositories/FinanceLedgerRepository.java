@@ -52,6 +52,38 @@ public class FinanceLedgerRepository {
         == 1;
   }
 
+  /**
+   * Records an expense fact once (SC-020): EXPENSE (negative) or its EXPENSE_REVERSAL (positive),
+   * with the expense's competence and, when paid, its settlement.
+   */
+  public boolean appendExpense(
+      UUID tenant,
+      String key,
+      String type,
+      BigDecimal amount,
+      Instant competenceAt,
+      Instant settledAt,
+      UUID expense,
+      Instant now) {
+    return jdbc.update(
+            """
+            INSERT INTO finance_entry(id,tenant_id,entry_key,type,amount,currency,competence_at,
+              settled_at,expense_id,created_at)
+            VALUES (?,?,?,?,?,'BRL',?,?,?,?)
+            ON CONFLICT (tenant_id, entry_key) DO NOTHING
+            """,
+            UUID.randomUUID(),
+            tenant,
+            key,
+            type,
+            amount,
+            utc(competenceAt),
+            settledAt == null ? null : utc(settledAt),
+            expense,
+            utc(now))
+        == 1;
+  }
+
   public Optional<FinanceEntry> find(UUID tenant, String key) {
     return jdbc
         .query(
