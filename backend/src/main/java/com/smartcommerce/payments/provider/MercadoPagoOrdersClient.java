@@ -3,6 +3,7 @@ package com.smartcommerce.payments.provider;
 import com.smartcommerce.payments.domain.CheckoutPaymentRequest;
 import com.smartcommerce.payments.domain.PaymentException;
 import com.smartcommerce.payments.domain.ProviderOrder;
+import com.smartcommerce.payments.domain.ProviderOrderStatus;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -88,6 +89,64 @@ public final class MercadoPagoOrdersClient {
     if (response.statusCode() != 200 && response.statusCode() != 201)
       throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
     return order(parse(response.body()), request, now);
+  }
+
+  /**
+   * Reads a provider order with the seller's token (SC-014, ADR-0013 P5): the only way a payment is
+   * confirmed. {@code id} must be a stored provider id; it is validated again before it becomes
+   * part of the path.
+   */
+  public ProviderOrderStatus fetchOrder(String accessToken, String id) {
+    if (id == null || !id.matches("[A-Za-z0-9_-]{1,64}"))
+      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    HttpResponse<String> response;
+    try {
+      response =
+          http.send(
+              HttpRequest.newBuilder(ordersUrl.resolve("/v1/orders/" + id))
+                  .timeout(TIMEOUT)
+                  .header("Accept", "application/json")
+                  .header("Authorization", "Bearer " + accessToken)
+                  .GET()
+                  .build(),
+              HttpResponse.BodyHandlers.ofString());
+    } catch (IOException failure) {
+      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    }
+    if (response.statusCode() != 200)
+      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    JsonNode json = parse(response.body());
+    if (json == null) throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    String status = text(json, "status", 40);
+    String detail = text(json, "status_detail", 60);
+    if (!id.equals(text(json, "id", 64))
+        || status == null
+        || !status.matches("[a-z_]{1,40}")
+        || (detail != null && !detail.matches("[a-z_]{1,60}")))
+      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    JsonNode user = json.get("user_id");
+    String userId = user == null || user.isNull() ? null : user.asString();
+    if (userId != null && !userId.matches("[0-9]{1,40}"))
+      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    return new ProviderOrderStatus(
+        id,
+        status,
+        detail,
+        amount(text(json, "total_amount", 40)),
+        amount(text(json, "total_paid_amount", 40)),
+        text(json, "external_reference", 64),
+        userId,
+        text(json, "currency", 3));
+  }
+
+  private static BigDecimal amount(String value) {
+    if (value == null) return null;
+    if (!value.matches("[0-9]{1,18}(\\.[0-9]{1,2})?"))
+      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    return new BigDecimal(value);
   }
 
   Map<String, Object> body(CheckoutPaymentRequest request) {

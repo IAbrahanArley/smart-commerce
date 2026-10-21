@@ -88,8 +88,16 @@ class InventoryReservationServiceTest {
     assertThatThrownBy(() -> service.reserve(null, ORDER, List.of(new ReservationLine(LOW, 1))))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> service.expireDue(0)).isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> service.consume(TENANT, ORDER))
-        .isInstanceOf(UnsupportedOperationException.class);
+    assertThatThrownBy(() -> service.sell(TENANT, ORDER, List.of(), "Venda"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                service.sell(
+                    TENANT,
+                    ORDER,
+                    List.of(new ReservationLine(LOW, 1), new ReservationLine(LOW, 2)),
+                    "Venda"))
+        .isInstanceOf(IllegalArgumentException.class);
     assertThat(service.release(TENANT, ORDER)).isZero();
   }
 }

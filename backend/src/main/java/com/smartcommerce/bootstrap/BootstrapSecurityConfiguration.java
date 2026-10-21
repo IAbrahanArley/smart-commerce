@@ -46,7 +46,8 @@ public class BootstrapSecurityConfiguration {
                         HttpMethod.POST,
                         "/api/public/stores/*/cart/quote",
                         "/api/public/stores/*/orders",
-                        "/api/public/stores/*/orders/*/payment")
+                        "/api/public/stores/*/orders/*/payment",
+                        "/api/public/webhooks/mercado-pago")
                     .permitAll()
                     .anyRequest()
                     .denyAll())
@@ -54,7 +55,8 @@ public class BootstrapSecurityConfiguration {
         .securityContext(
             config -> config.securityContextRepository(new NullSecurityContextRepository()))
         // Reads, the side-effect-free cart quote, the checkout (SC-008) and the payment start
-        // (SC-013, buyer token in a header): no ambient authority
+        // (SC-013, buyer token in a header) and the provider webhook (SC-014, HMAC signature):
+        // no ambient authority
         // exists on this chain (no cookie or session; the buyer token travels in a header), so
         // CSRF does not apply; administrative mutations retain their CSRF protection.
         .csrf(AbstractHttpConfigurer::disable)

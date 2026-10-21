@@ -4,7 +4,9 @@ import com.smartcommerce.inventory.domain.ReservationLine;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -102,6 +104,35 @@ public class InventoryReservationRepository {
         utc(now),
         utc(now),
         limit);
+  }
+
+  /** The order's own ACTIVE units per variant that still count toward availability. */
+  public Map<UUID, Integer> activeQuantities(UUID tenant, UUID order, Instant now) {
+    Map<UUID, Integer> quantities = new HashMap<>();
+    jdbc.query(
+        """
+        SELECT variant_id,quantity FROM inventory_reservation
+        WHERE tenant_id=? AND order_id=? AND status='ACTIVE' AND expires_at>?
+        """,
+        row -> {
+          quantities.put(row.getObject(1, UUID.class), row.getInt(2));
+        },
+        tenant,
+        order,
+        utc(now));
+    return quantities;
+  }
+
+  /** Closes the order's ACTIVE rows as CONSUMED: the units left through a SALE (SC-014). */
+  public int consume(UUID tenant, UUID order, Instant now) {
+    return jdbc.update(
+        """
+        UPDATE inventory_reservation SET status='CONSUMED', closed_at=?
+        WHERE tenant_id=? AND order_id=? AND status='ACTIVE'
+        """,
+        utc(now),
+        tenant,
+        order);
   }
 
   static OffsetDateTime utc(Instant instant) {

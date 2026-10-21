@@ -18,6 +18,7 @@ type Props = { params: Promise<{ slug: string; orderId: string }> };
 
 const STATUS: Record<OrderStatus, { label: string; text: string }> = {
   PENDING_PAYMENT: { label: "Aguardando pagamento", text: "Os itens estão reservados até o horário abaixo. Conclua o pagamento antes desse prazo." },
+  PAID: { label: "Pagamento confirmado", text: "O Mercado Pago confirmou o pagamento à loja. Acompanhe a retirada ou a entrega com a loja." },
   EXPIRED: { label: "Reserva expirada", text: "O prazo da reserva terminou e os itens foram liberados. Se ainda quiser comprar, monte o carrinho novamente." },
   CANCELLED: { label: "Pedido cancelado", text: "Este pedido foi cancelado pela loja e os itens foram liberados." },
 };
@@ -46,7 +47,7 @@ export default async function OrderPage({ params }: Props) {
           <h2 id="order-status-title">Situação: {status.label}</h2>
           <ol className="order-timeline">
             <li data-state="done">Pedido registrado na loja</li>
-            <li data-state={order.status === "PENDING_PAYMENT" ? "current" : "closed"}>{status.label}</li>
+            <li data-state={order.status === "PENDING_PAYMENT" ? "current" : order.status === "PAID" ? "done" : "closed"}>{status.label}</li>
           </ol>
           <p>{status.text}</p>
           {order.status === "PENDING_PAYMENT" ? (

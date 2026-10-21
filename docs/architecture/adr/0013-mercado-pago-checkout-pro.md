@@ -88,6 +88,16 @@ Detalhes, testes e hipóteses estão em [SC-013-VALIDATION.md](../../quality/SC-
 - **Pré-condição:** com a integração configurada, uma loja sem conta conectada não recebe pedidos novos (`PAYMENT_UNAVAILABLE`). Sem a integração (DEV, D6), o checkout continua sem pagamento, como antes.
 - **Vencimento:** a order é criada logo depois do pedido e vence em 30 min (o mínimo da API). Uma nova tentativa feita mais tarde reaproveita a mesma order. Se a primeira criação falhou e a order só nasce depois, ela pode vencer alguns minutos após a reserva; esse pagamento tardio é o caso P4 (SC-014).
 
+## Implementação da SC-014 (2026-10-21)
+
+Detalhes, testes e hipóteses estão em [SC-014-VALIDATION.md](../../quality/SC-014-VALIDATION.md).
+
+- **Webhook (P5):** `POST /api/public/webhooks/mercado-pago`, na cadeia pública sem sessão nem CSRF. Limite de 16 KB e de falhas de assinatura por processo. Valida o HMAC-SHA256 de `id:[data.id];request-id:[x-request-id];ts:[ts];` com `MERCADO_PAGO_WEBHOOK_SECRET` (401 se inválido, `ts` com tolerância de 10 min). Grava o evento uma vez e responde 200; sem o segredo, a rota responde 404.
+- **Confirmação (P5):** uma rotina (`payments.events`, a cada 10 s, `SKIP LOCKED`) consulta a order com o token da loja que a criou. Exige referência e total iguais aos guardados e confere conta do vendedor e moeda quando informadas. Só `processed`/`accredited` com o total pago aprova; outros estados ficam registrados.
+- **Transição (P8):** sob o lock do pagamento, `payment` vai a `APPROVED` e o pedido a `PAID` (de `PENDING_PAYMENT`, `EXPIRED` ou `CANCELLED`), uma única vez.
+- **Baixa (P4, P7):** consome a reserva em vigor ou reserva de novo o disponível. Grava um movimento `SALE` por linha, de ator de sistema, com chave de requisição derivada do pedido e da variante. Sem estoque, o pedido fica `PAID` com `paid_without_stock` e nada é baixado nem reembolsado.
+- **Conta trocada:** se a loja foi reconectada a outra conta Mercado Pago, o token novo nunca consulta a order antiga; o evento fica `FAILED`.
+
 ## Consequências e riscos
 
 - **Cadeia de tempo do D1.** A reserva e a order expiram juntas. Um pagamento aprovado segundos depois do vencimento cai no P4. Pix pode creditar com atraso, e quem paga depois do vencimento é reembolsado pelo provedor; os dois casos precisam de teste.

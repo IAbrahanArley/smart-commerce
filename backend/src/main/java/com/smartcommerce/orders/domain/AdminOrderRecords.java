@@ -50,7 +50,9 @@ public final class AdminOrderRecords {
       Instant expiredAt,
       Instant cancelledAt,
       String cancelReason,
-      Instant anonymizedAt) {}
+      Instant anonymizedAt,
+      Instant paidAt,
+      boolean paidWithoutStock) {}
 
   /** Item snapshot with the private fields the OWNER may see (SKU and unit cost). */
   public record Item(

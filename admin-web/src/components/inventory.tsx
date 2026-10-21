@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { apiRequest } from "@/lib/auth-api";
 import type { Product } from "@/lib/catalog";
-import { reservedStockMessage, wholeQuantity, type InventorySnapshot, type MovementRequest } from "@/lib/inventory";
+import { MOVEMENT_LABELS, reservedStockMessage, wholeQuantity, type InventorySnapshot, type MovementRequest } from "@/lib/inventory";
 import { variantLabel } from "@/components/variant-builder";
 import PageHeader from "@/components/page-header";
 
@@ -172,7 +172,7 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
       </section>
       <section className="store-create" aria-labelledby="history-title"><h2 id="history-title">Histórico de movimentações</h2><p className="field-help">Mais recentes primeiro. Datas no fuso de São Paulo (America/Sao_Paulo).</p>
         {snapshot.movements.length ? <ol className="movement-list">{snapshot.movements.map(movement => <li className="product-card" key={movement.id}>
-          <h3>{movement.type === "ENTRY" ? "Entrada" : "Ajuste"}: {movement.delta > 0 ? "+" : "−"}{integer.format(Math.abs(movement.delta))} unidades</h3>
+          <h3>{MOVEMENT_LABELS[movement.type] ?? "Movimentação"}: {movement.delta > 0 ? "+" : "−"}{integer.format(Math.abs(movement.delta))} unidades</h3>
           <p><time dateTime={movement.createdAt}>{date.format(new Date(movement.createdAt))}</time> — São Paulo</p><p>Saldo após: <strong>{integer.format(movement.balanceAfter)} unidades</strong></p><p className="movement-reason">{movement.reason}</p>
         </li>)}</ol> : <p>Nenhuma movimentação registrada. O saldo inicial é zero.</p>}
         {pageError ? <p role="alert" className="feedback feedback-error">{pageError}</p> : null}

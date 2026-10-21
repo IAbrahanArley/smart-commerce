@@ -1,6 +1,6 @@
 // Store OWNER orders (SC-010). Pure helpers, free of React and Next imports for the smoke test.
 
-export type OrderStatus = "PENDING_PAYMENT" | "EXPIRED" | "CANCELLED";
+export type OrderStatus = "PENDING_PAYMENT" | "PAID" | "EXPIRED" | "CANCELLED";
 
 export type OrderSummary = {
   id: string;
@@ -34,11 +34,16 @@ export type OrderDetail = {
   expiredAt: string | null;
   cancellation: { reason: string; cancelledAt: string } | null;
   anonymizedAt: string | null;
+  // SC-014: confirmed by the backend with the provider; paidWithoutStock = paid after the
+  // reservation ended without units to cover it (the store decides: restock or refund).
+  paidAt: string | null;
+  paidWithoutStock: boolean;
 };
 
-export const ORDER_STATUSES: OrderStatus[] = ["PENDING_PAYMENT", "EXPIRED", "CANCELLED"];
+export const ORDER_STATUSES: OrderStatus[] = ["PENDING_PAYMENT", "PAID", "EXPIRED", "CANCELLED"];
 export const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING_PAYMENT: "Aguardando pagamento",
+  PAID: "Pago",
   EXPIRED: "Reserva expirada",
   CANCELLED: "Cancelado",
 };

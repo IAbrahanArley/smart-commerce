@@ -4,6 +4,7 @@ import com.smartcommerce.payments.provider.MercadoPagoOAuthClient;
 import com.smartcommerce.payments.provider.MercadoPagoOrdersClient;
 import com.smartcommerce.payments.provider.PaymentProviders;
 import com.smartcommerce.payments.security.TokenCipher;
+import com.smartcommerce.payments.security.WebhookSignature;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,12 +28,16 @@ public class PaymentsConfiguration {
       @Value("${payments.mercado-pago.test-token:true}") boolean testToken,
       @Value("${payments.mercado-pago.api-url:}") String apiUrl,
       @Value("${payments.mercado-pago.return-origin:}") String returnOrigin,
+      @Value("${payments.mercado-pago.webhook-secret:}") String webhookSecret,
       @Value("${payments.token-encryption-key:}") String encryptionKey) {
     if (clientId == null || clientId.isBlank()) return PaymentProviders.unavailable();
     return new PaymentProviders(
         new MercadoPagoOAuthClient(
             clientId, clientSecret, redirectUri, authorizationUrl, tokenUrl, testToken),
         new MercadoPagoOrdersClient(apiUrl, returnOrigin),
-        TokenCipher.fromBase64(encryptionKey));
+        TokenCipher.fromBase64(encryptionKey),
+        webhookSecret == null || webhookSecret.isBlank()
+            ? null
+            : new WebhookSignature(webhookSecret));
   }
 }

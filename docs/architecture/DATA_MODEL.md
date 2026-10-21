@@ -71,4 +71,12 @@ V18 (SC-013) cria `payment`, 1:1 com o pedido (`UNIQUE (order_id)` e FK composta
 - valor em NUMERIC sem arredondamento e moeda `BRL`;
 - em `CREATED`, e só nele (CHECK): conta do vendedor usada, id da order no provedor (único por provedor), status do provedor, `checkout_url` HTTPS e vencimento da order.
 
-Não guarda CPF, cartão nem e-mail do pagador (ADR-0013 P11). Os estados de confirmação chegam na SC-014. [ADR-0013](adr/0013-mercado-pago-checkout-pro.md).
+Não guarda CPF, cartão nem e-mail do pagador (ADR-0013 P11). [ADR-0013](adr/0013-mercado-pago-checkout-pro.md).
+
+V19 (SC-014), aditiva:
+- **`sales_order`:** estado `PAID`, `paid_at` e `paid_without_stock` (P4). As CHECKs de cancelamento e expiração passam a admitir `PAID` depois desses estados, mantendo os dados como histórico. A anonimização (D2) continua só em `EXPIRED`/`CANCELLED`.
+- **`payment`:** estado `APPROVED` (com `approved_at` e `paid_amount = amount`), `provider_status_detail` e `checked_at`.
+- **`payment_event`:** notificações do provedor, únicas por `(provider, event_key)`, só com dados de roteamento (nunca o corpo), tenant resolvido pelo pagamento guardado, estado `PENDING`/`PROCESSED`/`IGNORED`/`FAILED`, tentativas e próximo horário.
+- **`inventory_movement` (P7):** `actor_kind` USER/SYSTEM (`actor_id` obrigatório só para USER), tipos `SALE` (negativo) e `SALE_REVERSAL` (positivo, SC-016) e `order_id` com FK composta para o pedido, obrigatório exatamente nesses tipos e só com ator de sistema.
+
+As CHECKs antigas sem nome explícito são removidas pela definição, e a migração falha se não encontrar exatamente uma.

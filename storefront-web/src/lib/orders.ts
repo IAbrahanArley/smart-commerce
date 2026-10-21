@@ -7,7 +7,7 @@ import { validOrderId, validOrderToken } from "@/lib/order-cookie";
 import { checkoutPage } from "@/lib/payment-url";
 import { apiOrigin, slugPath, unavailable } from "@/lib/public-store";
 
-export type OrderStatus = "PENDING_PAYMENT" | "EXPIRED" | "CANCELLED";
+export type OrderStatus = "PENDING_PAYMENT" | "PAID" | "EXPIRED" | "CANCELLED";
 export type OrderView = {
   id: string;
   number: number;
@@ -34,7 +34,7 @@ export type CheckoutResult =
 
 const MONEY = /^\d{1,20}\.\d{2}$/;
 const CONFLICTS: CheckoutConflict[] = ["PRICE_CHANGED", "INSUFFICIENT_STOCK", "ITEM_UNAVAILABLE", "FULFILLMENT_UNAVAILABLE", "REQUEST_CONFLICT", "PAYMENT_UNAVAILABLE"];
-const STATUSES: OrderStatus[] = ["PENDING_PAYMENT", "EXPIRED", "CANCELLED"];
+const STATUSES: OrderStatus[] = ["PENDING_PAYMENT", "PAID", "EXPIRED", "CANCELLED"];
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;

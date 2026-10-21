@@ -60,6 +60,8 @@ Nenhuma tarefa começa sem autorização explícita do responsável.
 
 ## SC-014 — Webhook, confirmação e baixa de estoque
 
+**Estado (2026-10-21):** autorizada e implementada, validada com webhook assinado e Orders API falsos ([validação](../quality/SC-014-VALIDATION.md)). O formato exato da assinatura e os estados do provedor ainda precisam ser confirmados com o "Simular" do painel (ver o lembrete abaixo).
+
 - **Endpoint público** de webhook com limite de tamanho e taxa e validação de `x-signature`, rejeitando com 401 quando inválida.
 - **`payment_event`** idempotente pela chave do evento; resposta 200 rápida e processamento assíncrono.
 - **Confirmação:** `GET /v1/orders/{id}` com o token do lojista dono do pedido e transição condicional `PENDING_PAYMENT → PAID`.
@@ -111,6 +113,17 @@ Nenhuma tarefa começa sem autorização explícita do responsável.
 - **Registro** em `docs/quality/` e atualização de ARCHITECTURE, DATA_MODEL e status do ADR-0013.
 
 **Aceite:** fluxo de teste ponta a ponta concluído e nenhum achado crítico aberto.
+
+## Lembrete: validação real pendente (SC-012 e SC-013)
+
+**Aberto desde 2026-10-21.** Os dois itens foram validados só com servidores falsos, porque o responsável tinha uma única conta Mercado Pago, e a conta dona da aplicação não pode autorizar a si mesma. Fazer antes ou junto com a SC-017:
+
+- [ ] No painel de desenvolvedores, em **Suas integrações → aplicação → Contas de teste**, criar um usuário de teste **vendedor** e um **comprador**.
+- [ ] Em janela anônima, logado como o vendedor de teste, conectar a loja em **Pagamentos** no admin (SC-012); desconectar e conectar de novo.
+- [ ] Fazer um pedido na vitrine e conferir no Checkout Pro o total, os itens e os meios oferecidos (SC-013, hipótese H4: sem boleto).
+- [ ] Pagar com o comprador de teste e conferir o retorno à vitrine com `STOREFRONT_PUBLIC_ORIGIN` em HTTPS (hipótese H3).
+- [ ] Configurar o webhook da aplicação (evento "Order (Mercado Pago)") e `MERCADO_PAGO_WEBHOOK_SECRET`; usar o "Simular" do painel e conferir que a assinatura é aceita e o pedido passa a `PAID` (SC-014).
+- [ ] Registrar o resultado em [SC-012-VALIDATION.md](../quality/SC-012-VALIDATION.md) [SC-013-VALIDATION.md](../quality/SC-013-VALIDATION.md) e [SC-014-VALIDATION.md](../quality/SC-014-VALIDATION.md), inclusive o `live_mode` e o domínio do `checkout_url`.
 
 ## Definition of Done
 

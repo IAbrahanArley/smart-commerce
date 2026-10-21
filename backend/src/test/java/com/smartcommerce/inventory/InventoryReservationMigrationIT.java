@@ -17,6 +17,9 @@ import org.testcontainers.utility.DockerImageName;
 /** V11 is additive: balances and ledger rows written under V10 survive unchanged. */
 @Testcontainers
 class InventoryReservationMigrationIT {
+  private static final String LEDGER =
+      "SELECT sequence,id,tenant_id,product_id,actor_id,request_id,type,delta,balance_after,reason,created_at FROM inventory_movement ORDER BY sequence";
+
   @Container
   static final PostgreSQLContainer POSTGRES =
       new PostgreSQLContainer(
@@ -71,7 +74,8 @@ class InventoryReservationMigrationIT {
           movement[1]);
     List<Map<String, Object>> balances = jdbc.queryForList("SELECT * FROM inventory_balance");
     List<Map<String, Object>> ledger =
-        jdbc.queryForList("SELECT * FROM inventory_movement ORDER BY sequence");
+        // Original V7 columns only: later migrations add columns (SC-014) without changing rows.
+        jdbc.queryForList(LEDGER);
 
     flyway(source, "latest").migrate();
 
@@ -80,8 +84,7 @@ class InventoryReservationMigrationIT {
                 "SELECT success FROM flyway_schema_history WHERE version='11'", Boolean.class))
         .isTrue();
     assertThat(jdbc.queryForList("SELECT * FROM inventory_balance")).isEqualTo(balances);
-    assertThat(jdbc.queryForList("SELECT * FROM inventory_movement ORDER BY sequence"))
-        .isEqualTo(ledger);
+    assertThat(jdbc.queryForList(LEDGER)).isEqualTo(ledger);
     assertThat(jdbc.queryForObject("SELECT count(*) FROM inventory_reservation", Long.class))
         .isZero();
     assertThat(

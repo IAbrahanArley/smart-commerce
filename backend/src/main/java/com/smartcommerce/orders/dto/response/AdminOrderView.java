@@ -8,6 +8,8 @@ import java.util.UUID;
 /**
  * Order as seen by its store OWNER (SC-010): snapshots with SKU and unit cost, delivery, values,
  * buyer contact and address. {@code buyer} and {@code address} are null once anonymized (D2).
+ * {@code paidWithoutStock}: paid after the reservation ended without stock to cover it (SC-014,
+ * P4); the store decides between restocking and a refund.
  */
 public record AdminOrderView(
     UUID id,
@@ -25,7 +27,9 @@ public record AdminOrderView(
     Instant createdAt,
     Instant expiredAt,
     Cancellation cancellation,
-    Instant anonymizedAt) {
+    Instant anonymizedAt,
+    Instant paidAt,
+    boolean paidWithoutStock) {
   public record Item(
       String productName,
       List<VariantOption> options,
