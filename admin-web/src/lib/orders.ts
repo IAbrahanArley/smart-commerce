@@ -1,6 +1,6 @@
 // Store OWNER orders (SC-010). Pure helpers, free of React and Next imports for the smoke test.
 
-export type OrderStatus = "PENDING_PAYMENT" | "PAID" | "EXPIRED" | "CANCELLED";
+export type OrderStatus = "PENDING_PAYMENT" | "PAID" | "REFUNDED" | "EXPIRED" | "CANCELLED";
 
 export type OrderSummary = {
   id: string;
@@ -38,6 +38,7 @@ export type OrderDetail = {
   // reservation ended without units to cover it (the store decides: restock or refund).
   paidAt: string | null;
   paidWithoutStock: boolean;
+  refundedAt: string | null;
   // SC-015: null when the buyer never started the payment. Fee and net are not reported by the
   // provider's Orders API, so they are not shown as if known.
   payment: OrderPayment | null;
@@ -46,7 +47,7 @@ export type OrderDetail = {
 export type OrderPayment = {
   provider: "MERCADO_PAGO";
   providerOrderId: string | null;
-  status: "CREATING" | "CREATED" | "APPROVED";
+  status: "CREATING" | "CREATED" | "APPROVED" | "REFUNDED";
   providerStatus: string | null;
   providerStatusDetail: string | null;
   amount: string;
@@ -54,12 +55,15 @@ export type OrderPayment = {
   approvedAt: string | null;
   checkedAt: string | null;
   lastCheckError: string | null;
+  // SC-016: the store's full refund; REQUESTED until the provider confirms it.
+  refund: { status: "REQUESTED" | "CONFIRMED"; reason: string; restock: boolean; requestedAt: string; providerAcceptedAt: string | null; confirmedAt: string | null; lastError: string | null } | null;
 };
 
 export const PAYMENT_STATUS_LABELS: Record<OrderPayment["status"], string> = {
   CREATING: "Pagamento não iniciado no Mercado Pago",
   CREATED: "Aguardando confirmação do Mercado Pago",
   APPROVED: "Confirmado pelo Mercado Pago",
+  REFUNDED: "Reembolsado pelo Mercado Pago",
 };
 
 // Divergences recorded by the last provider query (SC-015); unknown codes get a generic text.
@@ -74,10 +78,11 @@ export function paymentDivergence(code: string | null): string | null {
   }
 }
 
-export const ORDER_STATUSES: OrderStatus[] = ["PENDING_PAYMENT", "PAID", "EXPIRED", "CANCELLED"];
+export const ORDER_STATUSES: OrderStatus[] = ["PENDING_PAYMENT", "PAID", "REFUNDED", "EXPIRED", "CANCELLED"];
 export const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING_PAYMENT: "Aguardando pagamento",
   PAID: "Pago",
+  REFUNDED: "Reembolsado",
   EXPIRED: "Reserva expirada",
   CANCELLED: "Cancelado",
 };

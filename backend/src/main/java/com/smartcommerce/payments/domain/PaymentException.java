@@ -22,7 +22,11 @@ public final class PaymentException extends RuntimeException {
     /** Webhook signature missing, malformed, stale or wrong (SC-014). */
     INVALID_SIGNATURE,
     /** Authenticated notification that cannot be read (SC-014). */
-    INVALID_NOTIFICATION
+    INVALID_NOTIFICATION,
+    /** Refund asked for a payment that is not approved (SC-016). */
+    NOT_REFUNDABLE,
+    /** A refund already exists for this payment with another stock choice (SC-016). */
+    REFUND_CONFLICT
   }
 
   private final Reason reason;

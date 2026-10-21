@@ -138,6 +138,7 @@ public class OrderAdminService {
         order.anonymizedAt(),
         order.paidAt(),
         order.paidWithoutStock(),
+        order.refundedAt(),
         payments
             .summary(tenant, id)
             .map(
@@ -154,7 +155,17 @@ public class OrderAdminService {
                             : OrderViews.money(payment.paidAmount()),
                         payment.approvedAt(),
                         payment.checkedAt(),
-                        payment.lastCheckError()))
+                        payment.lastCheckError(),
+                        payment.refund() == null
+                            ? null
+                            : new AdminOrderView.Refund(
+                                payment.refund().status(),
+                                payment.refund().reason(),
+                                payment.refund().restock(),
+                                payment.refund().requestedAt(),
+                                payment.refund().providerAcceptedAt(),
+                                payment.refund().confirmedAt(),
+                                payment.refund().lastError())))
             .orElse(null));
   }
 

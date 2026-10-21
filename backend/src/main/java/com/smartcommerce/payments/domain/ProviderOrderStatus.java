@@ -19,6 +19,11 @@ public record ProviderOrderStatus(
    * Paid in full: processed and accredited, with the whole amount paid. Hypothesis to confirm in
    * the sandbox (SC-014 validation): other combinations are recorded but never confirm a payment.
    */
+  /** Fully refunded (SC-016): the order or its detail says {@code refunded}. */
+  public boolean refunded() {
+    return "refunded".equals(status) || "refunded".equals(statusDetail);
+  }
+
   public boolean paidInFull(BigDecimal expected) {
     return "processed".equals(status)
         && "accredited".equals(statusDetail)

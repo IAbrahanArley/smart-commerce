@@ -41,6 +41,7 @@ public final class OrderErrorHandler {
           case NOT_PAYABLE -> "Este pedido não está mais aguardando pagamento.";
           case PAYMENT_UNAVAILABLE -> "Esta loja não está recebendo pagamentos agora.";
           case PAYMENT_FAILED -> "Não foi possível iniciar o pagamento. Tente novamente.";
+          case NOT_REFUNDABLE, REFUND_CONFLICT -> "Pedido ou loja não encontrado.";
         });
     if (status == 409 || status == 502) body.put("code", error.reason().name());
     if (error.currentTotal() != null)

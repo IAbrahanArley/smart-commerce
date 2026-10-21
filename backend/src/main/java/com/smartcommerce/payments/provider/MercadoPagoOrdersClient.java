@@ -142,6 +142,51 @@ public final class MercadoPagoOrdersClient {
         text(json, "currency", 3));
   }
 
+  /**
+   * Asks for the full refund of a provider order (SC-016, ADR-0013 P9): no amount in the body means
+   * the whole order. The idempotency key is the same on every attempt, so a retry or a double click
+   * never refunds twice; answers saying the order is already refunded, or that a refund is in
+   * process, are an accepted request too. The refund is confirmed later by reading the order, never
+   * by this answer alone.
+   */
+  public void refundOrder(String accessToken, String id, String idempotencyKey) {
+    if (id == null || !id.matches("[A-Za-z0-9_-]{1,64}"))
+      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    HttpResponse<String> response;
+    try {
+      response =
+          http.send(
+              HttpRequest.newBuilder(ordersUrl.resolve("/v1/orders/" + id + "/refund"))
+                  .timeout(TIMEOUT)
+                  .header("Content-Type", "application/json")
+                  .header("Accept", "application/json")
+                  .header("Authorization", "Bearer " + accessToken)
+                  .header("X-Idempotency-Key", idempotencyKey)
+                  .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                  .build(),
+              HttpResponse.BodyHandlers.ofString());
+    } catch (IOException failure) {
+      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    }
+    if (response.statusCode() == 200 || response.statusCode() == 201) return;
+    JsonNode json = parse(response.body());
+    String code = json == null ? null : text(json, "code", 60);
+    if (code == null && json != null) code = text(json, "error", 60);
+    if (response.statusCode() == 409 && ALREADY_REFUNDING.contains(code)) return;
+    throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+  }
+
+  /** 409 answers that mean the refund was already asked for or done (Orders API reference). */
+  static final List<String> ALREADY_REFUNDING =
+      List.of(
+          "order_already_refunded",
+          "cannot_refund_order",
+          "order_refund_already_in_process",
+          "idempotency_key_already_used");
+
   private static BigDecimal amount(String value) {
     if (value == null) return null;
     if (!value.matches("[0-9]{1,18}(\\.[0-9]{1,2})?"))

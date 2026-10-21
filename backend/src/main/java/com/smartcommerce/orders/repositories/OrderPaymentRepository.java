@@ -24,10 +24,11 @@ public class OrderPaymentRepository {
     return jdbc
         .query(
             """
-            SELECT number,status,anonymized_at IS NOT NULL FROM sales_order
+            SELECT number,status,anonymized_at IS NOT NULL,paid_without_stock FROM sales_order
             WHERE tenant_id=? AND id=? FOR UPDATE
             """,
-            (row, index) -> new Locked(row.getLong(1), row.getString(2), row.getBoolean(3)),
+            (row, index) ->
+                new Locked(row.getLong(1), row.getString(2), row.getBoolean(3), row.getBoolean(4)),
             tenant,
             order)
         .stream()
@@ -60,7 +61,22 @@ public class OrderPaymentRepository {
         == 1;
   }
 
-  public record Locked(long number, String status, boolean anonymized) {}
+  /** PAID to REFUNDED once (SC-016). */
+  public boolean markRefunded(UUID tenant, UUID order, Instant now) {
+    return jdbc.update(
+            """
+            UPDATE sales_order SET status='REFUNDED', refunded_at=?, updated_at=?,
+              version=version+1
+            WHERE tenant_id=? AND id=? AND status='PAID'
+            """,
+            utc(now),
+            utc(now),
+            tenant,
+            order)
+        == 1;
+  }
+
+  public record Locked(long number, String status, boolean anonymized, boolean paidWithoutStock) {}
 
   private static OffsetDateTime utc(Instant value) {
     return value.atOffset(ZoneOffset.UTC);

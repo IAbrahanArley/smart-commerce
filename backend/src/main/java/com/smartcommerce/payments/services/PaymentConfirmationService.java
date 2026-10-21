@@ -5,6 +5,7 @@ import com.smartcommerce.payments.domain.PaymentRecord;
 import com.smartcommerce.payments.domain.ProviderOrderStatus;
 import com.smartcommerce.payments.domain.SellerCredentials;
 import com.smartcommerce.payments.provider.PaymentProviders;
+import com.smartcommerce.payments.repositories.PaymentRefundRepository;
 import com.smartcommerce.payments.repositories.PaymentRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -21,7 +22,10 @@ import org.springframework.transaction.support.TransactionTemplate;
  * the browser: the provider order is read with the token of the tenant that created it, checked
  * against what we stored (reference, seller account, amount), and only a paid-in-full order moves
  * the payment to APPROVED. That transition happens once, under the payment row lock, together with
- * the order transition and the stock deduction done by {@link PaymentApprovalListener}.
+ * the order transition and the stock deduction done by {@link PaymentListener}. The same query
+ * confirms a refund the store asked for (SC-016): only a provider order reported refunded moves an
+ * APPROVED payment with a pending refund to REFUNDED, once, with the order and the optional
+ * restock.
  */
 @Service
 public class PaymentConfirmationService {
@@ -33,25 +37,34 @@ public class PaymentConfirmationService {
     /** The provider does not report a full payment yet: recorded, nothing changed. */
     NOT_PAID,
     /** No payment of ours has this provider order in this tenant. */
-    UNKNOWN
+    UNKNOWN,
+    /** This call confirmed the store's refund. */
+    REFUNDED,
+    /** Already refunded before: nothing changed. */
+    ALREADY_REFUNDED,
+    /** The refund was asked for but the provider does not report it done yet. */
+    REFUND_PENDING
   }
 
   private final PaymentRepository payments;
+  private final PaymentRefundRepository refunds;
   private final PaymentConnectionService connections;
   private final PaymentProviders providers;
-  private final PaymentApprovalListener listener;
+  private final PaymentListener listener;
   private final Clock clock;
   private final TransactionTemplate writes;
   private final TransactionTemplate reads;
 
   public PaymentConfirmationService(
       PaymentRepository payments,
+      PaymentRefundRepository refunds,
       PaymentConnectionService connections,
       PaymentProviders providers,
-      PaymentApprovalListener listener,
+      PaymentListener listener,
       Clock clock,
       PlatformTransactionManager transactions) {
     this.payments = payments;
+    this.refunds = refunds;
     this.connections = connections;
     this.providers = providers;
     this.listener = listener;
@@ -68,7 +81,17 @@ public class PaymentConfirmationService {
         reads.execute(tx -> payments.findByProviderOrder(tenant, providerOrderId));
     if (stored.isEmpty()) return Outcome.UNKNOWN;
     PaymentRecord payment = stored.get();
-    if (payment.approved()) return Outcome.ALREADY_APPROVED;
+    if (payment.refunded()) return Outcome.ALREADY_REFUNDED;
+    boolean refundPending =
+        payment.approved()
+            && Boolean.TRUE.equals(
+                reads.execute(
+                    tx ->
+                        refunds
+                            .find(tenant, payment.id())
+                            .map(PaymentRefundRepository.Refund::pending)
+                            .orElse(false)));
+    if (payment.approved() && !refundPending) return Outcome.ALREADY_APPROVED;
 
     SellerCredentials seller = connections.sellerCredentials(tenant);
     // Reconnected to another seller: that token must never read this order (A/B by account).
@@ -87,8 +110,9 @@ public class PaymentConfirmationService {
         tx -> {
           PaymentRecord locked =
               payments.lockByProviderOrder(tenant, providerOrderId).orElseThrow();
-          if (locked.approved()) return Outcome.ALREADY_APPROVED;
+          if (locked.refunded()) return Outcome.ALREADY_REFUNDED;
           Instant now = now();
+          if (locked.approved()) return settleRefund(tenant, locked, order, now);
           if (!order.paidInFull(locked.amount())) {
             payments.recordCheck(
                 tenant,
@@ -105,6 +129,18 @@ public class PaymentConfirmationService {
           listener.approved(tenant, locked.orderId(), now);
           return Outcome.APPROVED;
         });
+  }
+
+  private Outcome settleRefund(
+      UUID tenant, PaymentRecord locked, ProviderOrderStatus order, Instant now) {
+    var refund = refunds.find(tenant, locked.id()).filter(PaymentRefundRepository.Refund::pending);
+    if (refund.isEmpty()) return Outcome.ALREADY_APPROVED;
+    if (!order.refunded()) return Outcome.REFUND_PENDING;
+    if (!payments.markRefunded(tenant, locked.id(), order.status(), order.statusDetail(), now)
+        || !refunds.confirm(tenant, locked.id(), now))
+      throw new IllegalStateException("Refund changed while locked");
+    listener.refunded(tenant, locked.orderId(), refund.get().restock(), now);
+    return Outcome.REFUNDED;
   }
 
   private Instant now() {

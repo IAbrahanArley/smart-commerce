@@ -74,8 +74,12 @@ public class PaymentReconciliationService {
       error = "INTERNAL";
     }
     Instant now = now();
+    // A refund waiting for confirmation is looked at every minute (SC-016).
     Instant next =
-        now.plus(now.isBefore(check.providerExpiresAt()) ? OPEN_INTERVAL : LATE_INTERVAL);
+        now.plus(
+            check.refund() || now.isBefore(check.providerExpiresAt())
+                ? OPEN_INTERVAL
+                : LATE_INTERVAL);
     String recorded = error;
     // A confirmed payment is no longer CREATED, so this changes nothing for it.
     writes.executeWithoutResult(

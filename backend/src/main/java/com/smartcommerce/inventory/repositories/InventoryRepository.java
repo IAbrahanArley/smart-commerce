@@ -150,10 +150,12 @@ public class InventoryRepository {
   }
 
   /**
-   * Appends a SALE movement by the system actor (ADR-0013 P7). The request key is derived from the
-   * order and the variant, so the ledger itself rejects a second deduction for the same line.
+   * Appends a SALE or SALE_REVERSAL movement by the system actor (ADR-0013 P7). The request key is
+   * derived from the order and the variant, so the ledger itself rejects a second movement of the
+   * same kind for the same line.
    */
-  public void appendSale(
+  public void appendSystem(
+      String type,
       UUID tenant,
       UUID variant,
       UUID order,
@@ -162,21 +164,53 @@ public class InventoryRepository {
       int balanceAfter,
       String reason,
       Instant now) {
+    if (!"SALE".equals(type) && !"SALE_REVERSAL".equals(type))
+      throw new IllegalArgumentException("Not a system movement");
     jdbc.update(
         """
         INSERT INTO inventory_movement(id,tenant_id,product_id,actor_id,actor_kind,request_id,type,
           delta,balance_after,reason,created_at,order_id)
-        VALUES (?,?,?,NULL,'SYSTEM',?,'SALE',?,?,?,?,?)
+        VALUES (?,?,?,NULL,'SYSTEM',?,?,?,?,?,?,?)
         """,
         UUID.randomUUID(),
         tenant,
         variant,
         requestId,
+        type,
         delta,
         balanceAfter,
         reason,
         InventoryReservationRepository.utc(now),
         order);
+  }
+
+  /** Units each variant left the stock with through the order's SALE movements (SC-016). */
+  public Map<UUID, Integer> soldUnits(UUID tenant, UUID order) {
+    Map<UUID, Integer> units = new TreeMap<>();
+    jdbc.query(
+        """
+        SELECT product_id,-delta FROM inventory_movement
+        WHERE tenant_id=? AND order_id=? AND type='SALE'
+        """,
+        row -> {
+          units.put(row.getObject(1, UUID.class), row.getInt(2));
+        },
+        tenant,
+        order);
+    return units;
+  }
+
+  /** Puts units back into a balance the caller already locked; returns the new quantity. */
+  public int restore(UUID tenant, UUID variant, int quantity) {
+    return jdbc.queryForObject(
+        """
+        UPDATE inventory_balance SET quantity=quantity+?
+        WHERE tenant_id=? AND product_id=? RETURNING quantity
+        """,
+        Integer.class,
+        quantity,
+        tenant,
+        variant);
   }
 
   public void append(InventoryMovement movement) {

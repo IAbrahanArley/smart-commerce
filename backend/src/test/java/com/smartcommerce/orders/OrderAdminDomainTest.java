@@ -14,7 +14,9 @@ class OrderAdminDomainTest {
     assertThat(AdminOrderQuery.of(" ", "")).isEqualTo(new AdminOrderQuery(null, null));
     assertThat(AdminOrderQuery.of("EXPIRED", "21")).isEqualTo(new AdminOrderQuery("EXPIRED", 21L));
     assertThat(AdminOrderQuery.of("PAID", null)).isEqualTo(new AdminOrderQuery("PAID", null));
-    for (String status : new String[] {"REFUNDED", "paid", "expired", "PENDING_PAYMENT;"})
+    assertThat(AdminOrderQuery.of("REFUNDED", null))
+        .isEqualTo(new AdminOrderQuery("REFUNDED", null));
+    for (String status : new String[] {"CHARGEBACK", "paid", "expired", "PENDING_PAYMENT;"})
       assertThatThrownBy(() -> AdminOrderQuery.of(status, null))
           .isInstanceOf(IllegalArgumentException.class);
     for (String cursor : new String[] {"0", "-1", "01", "1.5", "9999999999999999999", "abc"})

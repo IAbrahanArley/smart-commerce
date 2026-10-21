@@ -295,7 +295,7 @@ class OrderLifecycleIT {
     String payload = JSON.writeValueAsString(Map.of("reason", "Sem CSRF"));
     assertThat(a.send("POST", cancel(tenantA, orderA), payload, null).statusCode()).isEqualTo(403);
     assertThat(new Browser().get(path(tenantA)).statusCode()).isEqualTo(401);
-    assertThat(a.get(path(tenantA) + "?status=REFUNDED").statusCode()).isEqualTo(400);
+    assertThat(a.get(path(tenantA) + "?status=CHARGEBACK").statusCode()).isEqualTo(400);
     assertThat(a.get(path(tenantA) + "?after=-1").statusCode()).isEqualTo(400);
     assertThat(a.get(path(tenantA) + "/not-a-uuid").statusCode()).isEqualTo(400);
     jdbc.update("DELETE FROM tenant_membership WHERE tenant_id=? AND user_id=?", tenantA, ownerA);

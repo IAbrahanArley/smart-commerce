@@ -106,6 +106,14 @@ Detalhes em [SC-015-VALIDATION.md](../../quality/SC-015-VALIDATION.md).
 - **Divergências:** falhas ficam em `payment.last_check_error` e aparecem no card "Pagamento" do admin.
 - **Taxa e líquido:** não são informados pela Orders API; o admin mostra "não informados", sem estimativa. Fica para a Sprint 5.
 
+## Implementação da SC-016 (2026-10-21)
+
+Detalhes em [SC-016-VALIDATION.md](../../quality/SC-016-VALIDATION.md).
+
+- **Pedido (P9):** só o OWNER, em pedido `PAID`, com motivo e escolha explícita de devolver ao estoque. O admin pede confirmação em duas etapas. `POST /v1/orders/{id}/refund` com corpo `{}` e `X-Idempotency-Key` derivado do pedido.
+- **Confirmação:** uma order `refunded`, lida com o token da loja (consulta imediata, conciliação a cada minuto ou webhook), leva pagamento e pedido a `REFUNDED` uma única vez. A devolução ao estoque usa `SALE_REVERSAL` de ator de sistema e só acontece se escolhida.
+- **Auditoria:** `payment_refund` guarda quem pediu, quando, o motivo e a escolha sobre o estoque.
+
 ## Consequências e riscos
 
 - **Cadeia de tempo do D1.** A reserva e a order expiram juntas. Um pagamento aprovado segundos depois do vencimento cai no P4. Pix pode creditar com atraso, e quem paga depois do vencimento é reembolsado pelo provedor; os dois casos precisam de teste.

@@ -30,6 +30,7 @@ public record AdminOrderView(
     Instant anonymizedAt,
     Instant paidAt,
     boolean paidWithoutStock,
+    Instant refundedAt,
     Payment payment) {
   public record Item(
       String productName,
@@ -63,5 +64,19 @@ public record AdminOrderView(
       String paidAmount,
       Instant approvedAt,
       Instant checkedAt,
-      String lastCheckError) {}
+      String lastCheckError,
+      Refund refund) {}
+
+  /**
+   * SC-016: the store's full refund. {@code status} is REQUESTED until the provider confirms it
+   * (then CONFIRMED); {@code lastError} tells the store to retry.
+   */
+  public record Refund(
+      String status,
+      String reason,
+      boolean restock,
+      Instant requestedAt,
+      Instant providerAcceptedAt,
+      Instant confirmedAt,
+      String lastError) {}
 }

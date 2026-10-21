@@ -81,4 +81,9 @@ V19 (SC-014), aditiva:
 
 As CHECKs antigas sem nome explícito são removidas pela definição, e a migração falha se não encontrar exatamente uma.
 
+V21 (SC-016), aditiva:
+- **`sales_order`:** estado `REFUNDED` com `refunded_at`. As CHECKs mantêm `paid_at` e o histórico de expiração e cancelamento também em `REFUNDED`.
+- **`payment`:** estado `REFUNDED`.
+- **`payment_refund`:** um reembolso total por pagamento, com motivo (3–300), `restock`, `requested_by` (FK `identity_user`), `requested_at`, aceite do provedor, último erro e `confirmed_at`, que existe exatamente em `CONFIRMED`.
+
 V20 (SC-015), aditiva: `payment.next_check_at` (próxima consulta da conciliação), `check_attempts` e `last_check_error` (divergência mostrada ao lojista), com índice parcial dos pagamentos `CREATED`. Taxa e líquido não são guardados, porque a Orders API não os informa.
