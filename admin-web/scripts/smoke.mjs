@@ -15,11 +15,17 @@ assert.equal(backendOrigin(" https://api.example.test/ "), "https://api.example.
 for (const invalid of ["http://api.example.test", "https://user:pw@api.example.test", "https://api.example.test/v1", "https://api.example.test?x=1", "javascript:alert(1)", "not a url"]) assert.throws(() => backendOrigin(invalid), invalid);
 assert.equal(hostedTestEnvironment("hosted-test"), true);
 for (const value of [undefined, "", "production", "HOSTED-TEST"]) assert.equal(hostedTestEnvironment(value), false);
-import { cancelReason, formatDateTime, formatPhone, formatPostalCode, orderCursor, orderStatus, ordersApiPath, ordersPagePath } from "../src/lib/orders.ts";
+import { cancelReason, formatDateTime, formatPhone, formatPostalCode, orderCursor, orderStatus, ordersApiPath, ordersPagePath, paymentDivergence } from "../src/lib/orders.ts";
 
 // Orders (SC-010): URL values are validated before reaching the API; the reason mirrors the backend.
 assert.equal(orderStatus("EXPIRED"), "EXPIRED");
 assert.equal(orderStatus("PAID"), "PAID");
+// SC-015: divergences recorded by the reconciliation become plain explanations, never raw codes.
+assert.equal(paymentDivergence(null), null);
+assert.match(paymentDivergence("PROVIDER_ERROR"), /consulta será repetida/);
+assert.match(paymentDivergence("ACCOUNT_CHANGED"), /outra conta Mercado Pago/);
+assert.match(paymentDivergence("NOT_CONNECTED"), /reconecte/);
+assert.ok(!paymentDivergence("SOMETHING_ELSE").includes("SOMETHING_ELSE"));
 for (const invalid of [undefined, "", "REFUNDED", "paid", "expired"]) assert.equal(orderStatus(invalid), null, String(invalid));
 assert.equal(orderCursor("21"), "21");
 for (const invalid of [undefined, "0", "-1", "01", "1e3", "1234567890123456789"]) assert.equal(orderCursor(invalid), null, String(invalid));

@@ -29,7 +29,8 @@ public record AdminOrderView(
     Cancellation cancellation,
     Instant anonymizedAt,
     Instant paidAt,
-    boolean paidWithoutStock) {
+    boolean paidWithoutStock,
+    Payment payment) {
   public record Item(
       String productName,
       List<VariantOption> options,
@@ -45,4 +46,22 @@ public record AdminOrderView(
       String line1, String line2, String district, String city, String state, String postalCode) {}
 
   public record Cancellation(String reason, Instant cancelledAt) {}
+
+  /**
+   * SC-015: provider order and its last known state; null when no payment was started. {@code
+   * lastCheckError} is the divergence found by the last query (provider down, account changed,
+   * answer not matching the order). Fee and net are not reported by the Orders API, so they are
+   * absent rather than guessed.
+   */
+  public record Payment(
+      String provider,
+      String providerOrderId,
+      String status,
+      String providerStatus,
+      String providerStatusDetail,
+      String amount,
+      String paidAmount,
+      Instant approvedAt,
+      Instant checkedAt,
+      String lastCheckError) {}
 }

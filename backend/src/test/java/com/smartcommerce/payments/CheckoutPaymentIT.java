@@ -63,7 +63,9 @@ import tools.jackson.databind.json.JsonMapper;
       "deployment.environment=hosted-test",
       "orders.client-ip.secret=synthetic-forwarding-secret-for-tests-only-0013",
       "orders.maintenance.enabled=false",
-      "payments.token-refresh.enabled=false"
+      "payments.token-refresh.enabled=false",
+      "payments.events.enabled=false",
+      "payments.reconciliation.enabled=false"
     })
 class CheckoutPaymentIT {
   @Container @ServiceConnection

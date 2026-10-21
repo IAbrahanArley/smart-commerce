@@ -98,6 +98,14 @@ Detalhes, testes e hipóteses estão em [SC-014-VALIDATION.md](../../quality/SC-
 - **Baixa (P4, P7):** consome a reserva em vigor ou reserva de novo o disponível. Grava um movimento `SALE` por linha, de ator de sistema, com chave de requisição derivada do pedido e da variante. Sem estoque, o pedido fica `PAID` com `paid_without_stock` e nada é baixado nem reembolsado.
 - **Conta trocada:** se a loja foi reconectada a outra conta Mercado Pago, o token novo nunca consulta a order antiga; o evento fica `FAILED`.
 
+## Implementação da SC-015 (2026-10-21)
+
+Detalhes em [SC-015-VALIDATION.md](../../quality/SC-015-VALIDATION.md).
+
+- **Rotina (P5, P6):** `payments.reconciliation`, a cada minuto, com `SKIP LOCKED`, sobre pagamentos `CREATED`. Consulta a cada 1 min enquanto a order está aberta e a cada 15 min por 24 h depois do vencimento (P4). Usa o mesmo `PaymentConfirmationService` do webhook.
+- **Divergências:** falhas ficam em `payment.last_check_error` e aparecem no card "Pagamento" do admin.
+- **Taxa e líquido:** não são informados pela Orders API; o admin mostra "não informados", sem estimativa. Fica para a Sprint 5.
+
 ## Consequências e riscos
 
 - **Cadeia de tempo do D1.** A reserva e a order expiram juntas. Um pagamento aprovado segundos depois do vencimento cai no P4. Pix pode creditar com atraso, e quem paga depois do vencimento é reembolsado pelo provedor; os dois casos precisam de teste.

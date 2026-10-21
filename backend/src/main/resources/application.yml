@@ -111,6 +111,10 @@ payments:
     # SC-014: processes stored notifications (query the provider, confirm, deduct stock).
     enabled: ${PAYMENTS_EVENTS_ENABLED:true}
     interval: PT10S
+  reconciliation:
+    # SC-015: queries the provider for orders still waiting; the main path without a webhook (P6).
+    enabled: ${PAYMENTS_RECONCILIATION_ENABLED:true}
+    interval: PT1M
 deployment:
   # ADR-0014 H2: "hosted-test" marks the hosted test environment, the only place outside dev
   # where checkout may be enabled without payments. Any other value keeps D6 strict.

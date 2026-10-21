@@ -2,10 +2,13 @@ package com.smartcommerce.payments;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.smartcommerce.orders.dto.response.AdminOrderView;
+import com.smartcommerce.orders.services.OrderAdminService;
 import com.smartcommerce.orders.services.OrderLifecycleService;
 import com.smartcommerce.payments.provider.PaymentProviders;
 import com.smartcommerce.payments.security.TokenCipher;
 import com.smartcommerce.payments.services.PaymentEventService;
+import com.smartcommerce.payments.services.PaymentReconciliationService;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -27,6 +30,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,7 +68,8 @@ import tools.jackson.databind.json.JsonMapper;
       "orders.client-ip.secret=synthetic-forwarding-secret-for-tests-only-0014",
       "orders.maintenance.enabled=false",
       "payments.token-refresh.enabled=false",
-      "payments.events.enabled=false"
+      "payments.events.enabled=false",
+      "payments.reconciliation.enabled=false"
     })
 class PaymentConfirmationIT {
   @Container @ServiceConnection
@@ -83,6 +88,8 @@ class PaymentConfirmationIT {
   // Provider-side state of each order, by id; tests change status to simulate the buyer paying.
   private static final Map<String, Map<String, Object>> ORDERS = new ConcurrentHashMap<>();
   private static final AtomicInteger SEQUENCE = new AtomicInteger();
+  // Simulates the provider being down for order reads (SC-015).
+  private static final AtomicBoolean DOWN = new AtomicBoolean();
   private static final HttpServer PROVIDER = provider();
 
   private final HttpClient client =
@@ -92,6 +99,8 @@ class PaymentConfirmationIT {
   @Autowired PaymentProviders providers;
   @Autowired PaymentEventService events;
   @Autowired OrderLifecycleService lifecycle;
+  @Autowired PaymentReconciliationService reconciliation;
+  @Autowired OrderAdminService admin;
   UUID tenantA;
   UUID tenantB;
   UUID variantA;
@@ -129,6 +138,10 @@ class PaymentConfirmationIT {
               String id = exchange.getRequestURI().getPath().substring("/v1/orders/".length());
               READS.add(token + " " + id);
               reply = ORDERS.get(id);
+              if (DOWN.get()) {
+                status = 500;
+                reply = Map.of("message", "internal_error");
+              } else
               // Another seller's token cannot read the order.
               if (reply == null || !SELLERS.get(token).equals(reply.get("user_id"))) {
                 status = 404;
@@ -176,6 +189,7 @@ class PaymentConfirmationIT {
     jdbc.execute("TRUNCATE tenant, identity_user, order_rate_limit, payment_event CASCADE");
     READS.clear();
     ORDERS.clear();
+    DOWN.set(false);
     tenantA = store("confirma-a");
     tenantB = store("confirma-b");
     variantA = variant(tenantA, "10.00", 10);
@@ -534,6 +548,135 @@ class PaymentConfirmationIT {
     assertThat(balance(tenantA, variantA)).isEqualTo(10);
   }
 
+  @Test
+  void reconciliationConfirmsWithoutAnyWebhookOnceWithEachStoresToken() throws Exception {
+    Order a = paidLater("confirma-a", variantA, 2);
+    Order b = paidLater("confirma-b", variantB, 1);
+    Order unpaid = paidLater("confirma-a", variantA, 1);
+    approve(a);
+    approve(b);
+    assertThat(reconciliation.reconcileDue(20)).isZero(); // first look only after a minute
+    dueNow();
+    assertThat(reconciliation.reconcileDue(20)).isEqualTo(3);
+    assertThat(orderStatus(a)).isEqualTo("PAID");
+    assertThat(orderStatus(b)).isEqualTo("PAID");
+    assertThat(orderStatus(unpaid)).isEqualTo("PENDING_PAYMENT");
+    assertThat(READS)
+        .containsExactlyInAnyOrder(
+            TOKEN_A + " " + a.provider(),
+            TOKEN_B + " " + b.provider(),
+            TOKEN_A + " " + unpaid.provider());
+    assertThat(balance(tenantA, variantA)).isEqualTo(8);
+    assertThat(balance(tenantB, variantB)).isEqualTo(9);
+    // Approved payments leave the queue; the unpaid one comes back a minute later.
+    assertThat(reconciliation.reconcileDue(20)).isZero();
+    dueNow();
+    READS.clear();
+    assertThat(reconciliation.reconcileDue(20)).isEqualTo(1);
+    assertThat(READS).containsExactly(TOKEN_A + " " + unpaid.provider());
+    assertThat(sales(a)).hasSize(1);
+  }
+
+  @Test
+  void concurrentReconciliationWebhookAndExpirationDeductExactlyOnce() throws Exception {
+    List<Order> orders = new ArrayList<>();
+    for (int i = 0; i < 4; i++) orders.add(paidLater("confirma-a", variantA, 1));
+    for (Order order : orders) {
+      approve(order);
+      webhook(order.provider(), "evt-c" + order.provider(), "req-c" + order.provider());
+    }
+    dueNow();
+    CyclicBarrier barrier = new CyclicBarrier(4);
+    List<Callable<Integer>> work = new ArrayList<>();
+    for (int i = 0; i < 2; i++)
+      work.add(
+          () -> {
+            barrier.await(10, TimeUnit.SECONDS);
+            return reconciliation.reconcileDue(2);
+          });
+    work.add(
+        () -> {
+          barrier.await(10, TimeUnit.SECONDS);
+          return events.processDue(4);
+        });
+    work.add(
+        () -> {
+          barrier.await(10, TimeUnit.SECONDS);
+          return lifecycle.expireDue(10);
+        });
+    try (var executor = Executors.newFixedThreadPool(4)) {
+      for (var result : executor.invokeAll(work)) result.get();
+    }
+    events.processDue(20);
+    for (Order order : orders) {
+      assertThat(orderStatus(order)).isEqualTo("PAID");
+      assertThat(sales(order)).hasSize(1);
+    }
+    assertThat(balance(tenantA, variantA)).isEqualTo(6);
+  }
+
+  @Test
+  void providerOutagesAreRecordedAsDivergenceRetriedLaterAndShownToTheOwner() throws Exception {
+    Order order = paidLater("confirma-a", variantA, 1);
+    approve(order);
+    DOWN.set(true);
+    dueNow();
+    assertThat(reconciliation.reconcileDue(20)).isEqualTo(1);
+    assertThat(orderStatus(order)).isEqualTo("PENDING_PAYMENT");
+    Map<String, Object> row =
+        jdbc.queryForMap(
+            "SELECT status,last_check_error,check_attempts FROM payment WHERE order_id=?",
+            order.id());
+    assertThat(row.get("status")).isEqualTo("CREATED");
+    assertThat(row.get("last_check_error")).isEqualTo("PROVIDER_ERROR");
+    assertThat(row.get("check_attempts")).isEqualTo(1);
+    assertThat(reconciliation.reconcileDue(20)).isZero(); // retried later, not in a hot loop
+
+    AdminOrderView pending = admin.find(owner(tenantA), tenantA, order.id());
+    assertThat(pending.payment().status()).isEqualTo("CREATED");
+    assertThat(pending.payment().providerOrderId()).isEqualTo(order.provider());
+    assertThat(pending.payment().lastCheckError()).isEqualTo("PROVIDER_ERROR");
+    assertThat(pending.payment().amount()).isEqualTo("10.00");
+    assertThat(
+            admin
+                .find(owner(tenantA), tenantA, paidLater("confirma-a", variantA, 1).id())
+                .payment()
+                .status())
+        .isEqualTo("CREATED");
+
+    DOWN.set(false);
+    dueNow();
+    reconciliation.reconcileDue(20);
+    AdminOrderView paid = admin.find(owner(tenantA), tenantA, order.id());
+    assertThat(paid.status()).isEqualTo("PAID");
+    assertThat(paid.payment().status()).isEqualTo("APPROVED");
+    assertThat(paid.payment().paidAmount()).isEqualTo("10.00");
+    assertThat(paid.payment().providerStatus()).isEqualTo("processed");
+    assertThat(paid.payment().approvedAt()).isNotNull();
+    assertThat(paid.toString()).doesNotContain(TOKEN_A);
+  }
+
+  @Test
+  void latePaymentsAreReconciledForADayAfterExpiryThenLeftAlone() throws Exception {
+    Order late = paidLater("confirma-a", variantA, 1);
+    expire(late);
+    jdbc.update(
+        "UPDATE payment SET provider_expires_at=now()-interval '2 hours' WHERE order_id=?",
+        late.id());
+    Order abandoned = paidLater("confirma-a", variantA, 1);
+    expire(abandoned);
+    jdbc.update(
+        "UPDATE payment SET provider_expires_at=now()-interval '25 hours' WHERE order_id=?",
+        abandoned.id());
+    approve(late);
+    approve(abandoned);
+    dueNow();
+    assertThat(reconciliation.reconcileDue(20)).isEqualTo(1);
+    assertThat(orderStatus(late)).isEqualTo("PAID"); // P4: reserved again and deducted
+    assertThat(orderStatus(abandoned)).isEqualTo("EXPIRED");
+    assertThat(READS).containsExactly(TOKEN_A + " " + late.provider());
+  }
+
   // --- helpers -----------------------------------------------------------------------------
 
   record Order(UUID id, String token, String provider) {}
@@ -675,6 +818,17 @@ class PaymentConfirmationIT {
   }
 
   /** The admin read model's paid fields, read straight from the table the admin view uses. */
+  /** Makes every waiting payment due for the reconciliation routine now. */
+  private void dueNow() {
+    jdbc.update(
+        "UPDATE payment SET next_check_at=now()-interval '1 second' WHERE status='CREATED'");
+  }
+
+  private UUID owner(UUID tenant) {
+    return jdbc.queryForObject(
+        "SELECT user_id FROM tenant_membership WHERE tenant_id=?", UUID.class, tenant);
+  }
+
   private String adminDetailJson(Order order) throws Exception {
     return JSON.writeValueAsString(
         jdbc.queryForMap(

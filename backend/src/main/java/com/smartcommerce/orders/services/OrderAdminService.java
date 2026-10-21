@@ -11,6 +11,7 @@ import com.smartcommerce.orders.dto.response.AdminOrderPage;
 import com.smartcommerce.orders.dto.response.AdminOrderView;
 import com.smartcommerce.orders.dto.response.OrderView;
 import com.smartcommerce.orders.repositories.OrderAdminRepository;
+import com.smartcommerce.payments.services.PaymentCheckoutService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -27,12 +28,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderAdminService {
   private final OrderAdminRepository orders;
   private final InventoryReservationService reservations;
+  private final PaymentCheckoutService payments;
   private final Clock clock;
 
   public OrderAdminService(
-      OrderAdminRepository orders, InventoryReservationService reservations, Clock clock) {
+      OrderAdminRepository orders,
+      InventoryReservationService reservations,
+      PaymentCheckoutService payments,
+      Clock clock) {
     this.orders = orders;
     this.reservations = reservations;
+    this.payments = payments;
     this.clock = clock;
   }
 
@@ -131,7 +137,25 @@ public class OrderAdminService {
             : new AdminOrderView.Cancellation(order.cancelReason(), order.cancelledAt()),
         order.anonymizedAt(),
         order.paidAt(),
-        order.paidWithoutStock());
+        order.paidWithoutStock(),
+        payments
+            .summary(tenant, id)
+            .map(
+                payment ->
+                    new AdminOrderView.Payment(
+                        "MERCADO_PAGO",
+                        payment.providerOrderId(),
+                        payment.status(),
+                        payment.providerStatus(),
+                        payment.providerStatusDetail(),
+                        OrderViews.money(payment.amount()),
+                        payment.paidAmount() == null
+                            ? null
+                            : OrderViews.money(payment.paidAmount()),
+                        payment.approvedAt(),
+                        payment.checkedAt(),
+                        payment.lastCheckError()))
+            .orElse(null));
   }
 
   private static OrderException missing() {

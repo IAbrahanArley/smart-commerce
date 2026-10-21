@@ -4,7 +4,7 @@ import Link from "next/link";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { apiRequest, requestError } from "@/lib/auth-api";
 import { formatBRL } from "@/lib/catalog";
-import { CANCEL_REASON_MAX, FULFILLMENT_LABELS, type OrderDetail as Order, STATUS_LABELS, cancelReason, formatDateTime, formatPhone, formatPostalCode } from "@/lib/orders";
+import { CANCEL_REASON_MAX, FULFILLMENT_LABELS, type OrderDetail as Order, STATUS_LABELS, cancelReason, formatDateTime, formatPhone, formatPostalCode, PAYMENT_STATUS_LABELS, paymentDivergence } from "@/lib/orders";
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 
@@ -111,6 +111,19 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
             <div><dt>Total</dt><dd className="numeric"><strong>{formatBRL(order.total)}</strong></dd></div>
           </dl>
         </section>
+        {order.payment ? <section className="side-card" aria-labelledby="order-payment-title">
+          <h2 id="order-payment-title">Pagamento</h2>
+          <p>{PAYMENT_STATUS_LABELS[order.payment.status] ?? "Situação desconhecida"}</p>
+          <dl className="order-facts">
+            {order.payment.providerOrderId ? <div><dt>Order no Mercado Pago</dt><dd><span translate="no">{order.payment.providerOrderId}</span></dd></div> : null}
+            <div><dt>Valor cobrado</dt><dd className="numeric">{formatBRL(order.payment.amount)}</dd></div>
+            <div><dt>Valor pago</dt><dd className="numeric">{order.payment.paidAmount ? formatBRL(order.payment.paidAmount) : "—"}</dd></div>
+            <div><dt>Taxa e líquido</dt><dd>Não informados pelo Mercado Pago</dd></div>
+            {order.payment.providerStatus ? <div><dt>Situação no Mercado Pago</dt><dd><span translate="no">{order.payment.providerStatus}{order.payment.providerStatusDetail ? ` / ${order.payment.providerStatusDetail}` : ""}</span></dd></div> : null}
+            <div><dt>Última consulta</dt><dd>{formatDateTime(order.payment.checkedAt)}</dd></div>
+          </dl>
+          {paymentDivergence(order.payment.lastCheckError) ? <p className="feedback feedback-error">{paymentDivergence(order.payment.lastCheckError)}</p> : null}
+        </section> : null}
         <section className="side-card" aria-labelledby="order-buyer-title">
           <h2 id="order-buyer-title">Comprador e entrega</h2>
           {order.buyer ? <dl className="order-facts">

@@ -1,12 +1,15 @@
 package com.smartcommerce.payments.repositories;
 
 import com.smartcommerce.payments.domain.PaymentRecord;
+import com.smartcommerce.payments.domain.PaymentSummary;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -15,6 +18,9 @@ import org.springframework.stereotype.Repository;
 /** Payments of sales orders (SC-013); every statement is scoped by the tenant it is given. */
 @Repository
 public class PaymentRepository {
+  /** SC-015: the reconciliation routine first looks at a new provider order after this delay. */
+  public static final Duration FIRST_CHECK = Duration.ofMinutes(1);
+
   private final JdbcTemplate jdbc;
 
   public PaymentRepository(JdbcTemplate jdbc) {
@@ -72,7 +78,7 @@ public class PaymentRepository {
             """
             UPDATE payment SET status='CREATED', provider_user_id=?, provider_order_id=?,
               provider_status=?, checkout_url=?, provider_expires_at=?, updated_at=?,
-              version=version+1
+              next_check_at=?, version=version+1
             WHERE tenant_id=? AND id=? AND status='CREATING'
             """,
             providerUserId,
@@ -81,9 +87,84 @@ public class PaymentRepository {
             checkoutUrl,
             utc(expiresAt),
             utc(now),
+            utc(now.plus(FIRST_CHECK)),
             tenant,
             payment)
         == 1;
+  }
+
+  /**
+   * Claims up to {@code limit} CREATED payments due for a provider query whose provider order
+   * expired less than {@code horizon} ago (SC-015). The claim pushes {@code next_check_at} to
+   * {@code leaseUntil}, so a crashed run's rows come back later; SKIP LOCKED splits the work
+   * between instances. Each row keeps its own tenant.
+   */
+  public List<DueCheck> claimDueChecks(
+      Instant now, Instant horizon, Instant leaseUntil, int limit) {
+    return jdbc.query(
+        """
+        UPDATE payment SET next_check_at=?, check_attempts=check_attempts+1
+        WHERE id IN (SELECT id FROM payment
+          WHERE status='CREATED' AND next_check_at<=? AND provider_expires_at>?
+          ORDER BY next_check_at LIMIT ? FOR UPDATE SKIP LOCKED)
+        RETURNING id,tenant_id,provider_order_id,provider_expires_at
+        """,
+        (row, index) ->
+            new DueCheck(
+                row.getObject(1, UUID.class),
+                row.getObject(2, UUID.class),
+                row.getString(3),
+                row.getObject(4, OffsetDateTime.class).toInstant()),
+        utc(leaseUntil),
+        utc(now),
+        utc(horizon),
+        limit);
+  }
+
+  /** Schedules the next query of a still CREATED payment and records why it did not confirm. */
+  public void scheduleCheck(UUID tenant, UUID payment, Instant next, String error) {
+    jdbc.update(
+        """
+        UPDATE payment SET next_check_at=?, last_check_error=?
+        WHERE tenant_id=? AND id=? AND status='CREATED'
+        """,
+        utc(next),
+        error,
+        tenant,
+        payment);
+  }
+
+  /** What the store sees about the payment of one of its orders (SC-015). */
+  public Optional<PaymentSummary> summary(UUID tenant, UUID order) {
+    return jdbc
+        .query(
+            """
+            SELECT provider_order_id,status,provider_status,provider_status_detail,amount,
+              paid_amount,approved_at,checked_at,last_check_error
+            FROM payment WHERE tenant_id=? AND order_id=?
+            """,
+            (row, index) ->
+                new PaymentSummary(
+                    row.getString(1),
+                    row.getString(2),
+                    row.getString(3),
+                    row.getString(4),
+                    row.getBigDecimal(5),
+                    row.getBigDecimal(6),
+                    instant(row, 7),
+                    instant(row, 8),
+                    row.getString(9)),
+            tenant,
+            order)
+        .stream()
+        .findFirst();
+  }
+
+  public record DueCheck(UUID id, UUID tenant, String providerOrderId, Instant providerExpiresAt) {}
+
+  private static Instant instant(ResultSet row, int column) throws SQLException {
+    OffsetDateTime value = row.getObject(column, OffsetDateTime.class);
+    return value == null ? null : value.toInstant();
   }
 
   /**

@@ -3,6 +3,7 @@ package com.smartcommerce.payments.services;
 import com.smartcommerce.payments.domain.CheckoutPaymentRequest;
 import com.smartcommerce.payments.domain.PaymentException;
 import com.smartcommerce.payments.domain.PaymentRecord;
+import com.smartcommerce.payments.domain.PaymentSummary;
 import com.smartcommerce.payments.domain.ProviderOrder;
 import com.smartcommerce.payments.domain.SellerCredentials;
 import com.smartcommerce.payments.provider.PaymentProviders;
@@ -11,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +69,11 @@ public class PaymentCheckoutService {
   public boolean acceptsPayments(UUID tenant) {
     return providers.available()
         && Boolean.TRUE.equals(reads.execute(tx -> payments.connected(tenant)));
+  }
+
+  /** The payment of {@code order} as the store OWNER sees it (SC-015); tenant already trusted. */
+  public Optional<PaymentSummary> summary(UUID tenant, UUID order) {
+    return reads.execute(tx -> payments.summary(tenant, order));
   }
 
   /** Returns the checkout URL to redirect the buyer to, creating the provider order if needed. */

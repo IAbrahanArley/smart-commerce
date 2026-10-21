@@ -80,3 +80,5 @@ V19 (SC-014), aditiva:
 - **`inventory_movement` (P7):** `actor_kind` USER/SYSTEM (`actor_id` obrigatório só para USER), tipos `SALE` (negativo) e `SALE_REVERSAL` (positivo, SC-016) e `order_id` com FK composta para o pedido, obrigatório exatamente nesses tipos e só com ator de sistema.
 
 As CHECKs antigas sem nome explícito são removidas pela definição, e a migração falha se não encontrar exatamente uma.
+
+V20 (SC-015), aditiva: `payment.next_check_at` (próxima consulta da conciliação), `check_attempts` e `last_check_error` (divergência mostrada ao lojista), com índice parcial dos pagamentos `CREATED`. Taxa e líquido não são guardados, porque a Orders API não os informa.
