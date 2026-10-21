@@ -104,29 +104,36 @@ public class PaymentRepository {
     return jdbc.query(
         """
         UPDATE payment SET next_check_at=?, check_attempts=check_attempts+1
-        WHERE id IN (SELECT id FROM payment
-          WHERE status='CREATED' AND next_check_at<=? AND provider_expires_at>?
-          ORDER BY next_check_at LIMIT ? FOR UPDATE SKIP LOCKED)
-        RETURNING id,tenant_id,provider_order_id,provider_expires_at
+        WHERE id IN (SELECT p.id FROM payment p
+          WHERE p.next_check_at<=? AND (
+            (p.status='CREATED' AND p.provider_expires_at>?)
+            OR (p.status='APPROVED' AND EXISTS(SELECT 1 FROM payment_refund r
+              WHERE r.payment_id=p.id AND r.status='REQUESTED')))
+          ORDER BY p.next_check_at LIMIT ? FOR UPDATE OF p SKIP LOCKED)
+        RETURNING id,tenant_id,provider_order_id,provider_expires_at,status
         """,
         (row, index) ->
             new DueCheck(
                 row.getObject(1, UUID.class),
                 row.getObject(2, UUID.class),
                 row.getString(3),
-                row.getObject(4, OffsetDateTime.class).toInstant()),
+                row.getObject(4, OffsetDateTime.class).toInstant(),
+                "APPROVED".equals(row.getString(5))),
         utc(leaseUntil),
         utc(now),
         utc(horizon),
         limit);
   }
 
-  /** Schedules the next query of a still CREATED payment and records why it did not confirm. */
+  /**
+   * Schedules the next query of a payment still waiting (CREATED, or APPROVED with a refund to
+   * confirm) and records why the last one did not settle it.
+   */
   public void scheduleCheck(UUID tenant, UUID payment, Instant next, String error) {
     jdbc.update(
         """
         UPDATE payment SET next_check_at=?, last_check_error=?
-        WHERE tenant_id=? AND id=? AND status='CREATED'
+        WHERE tenant_id=? AND id=? AND status IN ('CREATED','APPROVED')
         """,
         utc(next),
         error,
@@ -139,9 +146,12 @@ public class PaymentRepository {
     return jdbc
         .query(
             """
-            SELECT provider_order_id,status,provider_status,provider_status_detail,amount,
-              paid_amount,approved_at,checked_at,last_check_error
-            FROM payment WHERE tenant_id=? AND order_id=?
+            SELECT p.provider_order_id,p.status,p.provider_status,p.provider_status_detail,
+              p.amount,p.paid_amount,p.approved_at,p.checked_at,p.last_check_error,
+              r.status,r.reason,r.restock,r.requested_at,r.provider_accepted_at,r.confirmed_at,
+              r.last_error
+            FROM payment p LEFT JOIN payment_refund r ON r.payment_id=p.id AND r.tenant_id=p.tenant_id
+            WHERE p.tenant_id=? AND p.order_id=?
             """,
             (row, index) ->
                 new PaymentSummary(
@@ -153,14 +163,64 @@ public class PaymentRepository {
                     row.getBigDecimal(6),
                     instant(row, 7),
                     instant(row, 8),
-                    row.getString(9)),
+                    row.getString(9),
+                    row.getString(10) == null
+                        ? null
+                        : new PaymentSummary.Refund(
+                            row.getString(10),
+                            row.getString(11),
+                            row.getBoolean(12),
+                            instant(row, 13),
+                            instant(row, 14),
+                            instant(row, 15),
+                            row.getString(16))),
             tenant,
             order)
         .stream()
         .findFirst();
   }
 
-  public record DueCheck(UUID id, UUID tenant, String providerOrderId, Instant providerExpiresAt) {}
+  public record DueCheck(
+      UUID id, UUID tenant, String providerOrderId, Instant providerExpiresAt, boolean refund) {}
+
+  /** Locks the payment of an order inside its tenant (SC-016). */
+  public Optional<PaymentRecord> lockByOrder(UUID tenant, UUID order) {
+    return jdbc
+        .query(
+            SELECT + " WHERE tenant_id=? AND order_id=? FOR UPDATE",
+            PaymentRepository::payment,
+            tenant,
+            order)
+        .stream()
+        .findFirst();
+  }
+
+  /** APPROVED to REFUNDED once; the caller holds the row lock. */
+  public boolean markRefunded(
+      UUID tenant, UUID payment, String status, String detail, Instant now) {
+    return jdbc.update(
+            """
+            UPDATE payment SET status='REFUNDED', provider_status=?, provider_status_detail=?,
+              checked_at=?, updated_at=?, last_check_error=NULL, version=version+1
+            WHERE tenant_id=? AND id=? AND status='APPROVED'
+            """,
+            status,
+            detail,
+            utc(now),
+            utc(now),
+            tenant,
+            payment)
+        == 1;
+  }
+
+  /** Asks the reconciliation to look at this payment from {@code next} on. */
+  public void checkFrom(UUID tenant, UUID payment, Instant next) {
+    jdbc.update(
+        "UPDATE payment SET next_check_at=? WHERE tenant_id=? AND id=?",
+        utc(next),
+        tenant,
+        payment);
+  }
 
   private static Instant instant(ResultSet row, int column) throws SQLException {
     OffsetDateTime value = row.getObject(column, OffsetDateTime.class);

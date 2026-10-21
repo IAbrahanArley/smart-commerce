@@ -20,7 +20,11 @@ public final class OrderException extends RuntimeException {
     /** The store cannot take payments now: integration off or account not connected (SC-013). */
     PAYMENT_UNAVAILABLE,
     /** The provider failed or answered unexpectedly; the order stays pending (SC-013). */
-    PAYMENT_FAILED
+    PAYMENT_FAILED,
+    /** Refund asked for an order that is not paid (SC-016). */
+    NOT_REFUNDABLE,
+    /** A refund was already asked for this order with the other stock choice (SC-016). */
+    REFUND_CONFLICT
   }
 
   private final Reason reason;

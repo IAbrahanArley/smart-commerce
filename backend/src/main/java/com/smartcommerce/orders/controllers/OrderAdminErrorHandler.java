@@ -23,6 +23,22 @@ public final class OrderAdminErrorHandler {
                   "O prazo deste pedido já terminou e as reservas foram liberadas. Não é preciso cancelar.",
                   "code",
                   "ORDER_EXPIRED"));
+    String refund =
+        switch (error.reason()) {
+          case NOT_REFUNDABLE -> "Só pedidos pagos podem ser reembolsados.";
+          case REFUND_CONFLICT ->
+              "Já existe um reembolso deste pedido com outra escolha sobre o estoque.";
+          case PAYMENT_UNAVAILABLE ->
+              "A conta Mercado Pago da loja não está disponível para reembolsar agora.";
+          case PAYMENT_FAILED ->
+              "O Mercado Pago não confirmou o pedido de reembolso. Tente novamente: o mesmo reembolso será reaproveitado.";
+          default -> null;
+        };
+    if (refund != null)
+      return ResponseEntity.status(
+              error.reason() == OrderException.Reason.PAYMENT_FAILED ? 502 : 409)
+          .cacheControl(CacheControl.noStore())
+          .body(Map.of("message", refund, "code", error.reason().name()));
     return ResponseEntity.status(404)
         .cacheControl(CacheControl.noStore())
         .body(Map.of("message", "Pedido ou loja não encontrado."));
@@ -39,7 +55,7 @@ public final class OrderAdminErrorHandler {
         .body(
             Map.of(
                 "message",
-                "Dados inválidos. Informe o motivo do cancelamento em uma linha, com 3 a 300 caracteres."));
+                "Dados inválidos. Informe o motivo em uma linha, com 3 a 300 caracteres, e a escolha sobre o estoque."));
   }
 
   @ExceptionHandler(DataAccessException.class)

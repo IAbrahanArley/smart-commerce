@@ -72,9 +72,11 @@ public class OrderAdminRepository {
                 " AND (o.status='EXPIRED' OR (o.status='PENDING_PAYMENT'"
                     + " AND o.reservation_expires_at<=?))");
         case "PAID" -> sql.append(" AND o.status='PAID'");
+        case "REFUNDED" -> sql.append(" AND o.status='REFUNDED'");
         default -> sql.append(" AND o.status='CANCELLED'");
       }
-      if (!"CANCELLED".equals(query.status()) && !"PAID".equals(query.status())) args.add(utc(now));
+      if ("PENDING_PAYMENT".equals(query.status()) || "EXPIRED".equals(query.status()))
+        args.add(utc(now));
     }
     if (query.after() != null) {
       sql.append(" AND o.number<?");
@@ -109,7 +111,7 @@ public class OrderAdminRepository {
                 o.fulfillment_text,o.buyer_name,o.buyer_email,o.buyer_phone,o.address_line1,
                 o.address_line2,o.address_district,o.address_city,o.address_state,
                 o.address_postal_code,o.reservation_expires_at,o.created_at,o.expired_at,
-                o.cancelled_at,o.cancel_reason,o.anonymized_at,o.paid_at,o.paid_without_stock
+                o.cancelled_at,o.cancel_reason,o.anonymized_at,o.paid_at,o.paid_without_stock,o.refunded_at
                 FROM sales_order o
                 """
                 + OWNER
@@ -210,7 +212,8 @@ public class OrderAdminRepository {
         row.getString(22),
         instant(row, 23),
         instant(row, 24),
-        row.getBoolean(25));
+        row.getBoolean(25),
+        instant(row, 26));
   }
 
   private static Instant instant(ResultSet row, int column) throws SQLException {

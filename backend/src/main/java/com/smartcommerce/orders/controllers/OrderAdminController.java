@@ -3,9 +3,11 @@ package com.smartcommerce.orders.controllers;
 import com.smartcommerce.orders.domain.AdminOrderQuery;
 import com.smartcommerce.orders.domain.CancelReason;
 import com.smartcommerce.orders.dto.request.CancelOrderRequest;
+import com.smartcommerce.orders.dto.request.RefundOrderRequest;
 import com.smartcommerce.orders.dto.response.AdminOrderPage;
 import com.smartcommerce.orders.dto.response.AdminOrderView;
 import com.smartcommerce.orders.services.OrderAdminService;
+import com.smartcommerce.orders.services.OrderRefundService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
@@ -21,9 +23,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/tenants/{tenantId}/orders")
 public final class OrderAdminController {
   private final OrderAdminService orders;
+  private final OrderRefundService refunds;
 
-  public OrderAdminController(OrderAdminService orders) {
+  public OrderAdminController(OrderAdminService orders, OrderRefundService refunds) {
     this.orders = orders;
+    this.refunds = refunds;
   }
 
   @GetMapping
@@ -62,5 +66,29 @@ public final class OrderAdminController {
                 tenantId,
                 orderId,
                 CancelReason.of(request == null ? null : request.reason())));
+  }
+
+  /**
+   * SC-016: full refund of a paid order. The body must state the reason and, explicitly, whether
+   * the units go back to stock. Idempotent: a repeat returns the same refund.
+   */
+  @SecurityRequirement(name = "csrf")
+  @PostMapping("/{orderId}/refund")
+  public ResponseEntity<AdminOrderView> refund(
+      @PathVariable UUID tenantId,
+      @PathVariable UUID orderId,
+      @RequestBody RefundOrderRequest request,
+      Authentication actor) {
+    if (request == null || request.restock() == null)
+      throw new IllegalArgumentException("Restock choice is required");
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .body(
+            refunds.refund(
+                UUID.fromString(actor.getName()),
+                tenantId,
+                orderId,
+                CancelReason.of(request.reason()),
+                request.restock()));
   }
 }

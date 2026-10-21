@@ -152,7 +152,8 @@ public class InventoryReservationService {
           inventory
               .deduct(tenant, line.variantId(), line.quantity())
               .orElseThrow(() -> new IllegalStateException("Locked balance changed"));
-      inventory.appendSale(
+      inventory.appendSystem(
+          "SALE",
           tenant,
           line.variantId(),
           order,
@@ -164,6 +165,42 @@ public class InventoryReservationService {
     }
     reservations.consume(tenant, order, now);
     return new SaleResult(true);
+  }
+
+  /**
+   * Returns a refunded order's units to stock (SC-016, ADR-0013 P9), exactly what its SALE
+   * movements took out, as SALE_REVERSAL movements by the system actor. Only called when the store
+   * chose to restock. Balances are locked in variant order; the request key per order and variant
+   * makes a second reversal impossible. Returns the number of lines restored (0 for an order paid
+   * without stock).
+   */
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public int reverseSale(UUID tenant, UUID order, String reason) {
+    if (tenant == null || order == null) throw new IllegalArgumentException("Invalid reversal");
+    var sold = inventory.soldUnits(tenant, order);
+    if (sold.isEmpty()) return 0;
+    var now = ReservationPolicy.now(clock);
+    inventory.lockLevels(tenant, sold.keySet(), now);
+    for (var line : sold.entrySet()) {
+      int after = inventory.restore(tenant, line.getKey(), line.getValue());
+      inventory.appendSystem(
+          "SALE_REVERSAL",
+          tenant,
+          line.getKey(),
+          order,
+          reversalRequest(order, line.getKey()),
+          line.getValue(),
+          after,
+          reason,
+          now);
+    }
+    return sold.size();
+  }
+
+  static UUID reversalRequest(UUID order, UUID variant) {
+    return UUID.nameUUIDFromBytes(
+        ("sale-reversal:" + order + ":" + variant)
+            .getBytes(java.nio.charset.StandardCharsets.UTF_8));
   }
 
   static UUID saleRequest(UUID order, UUID variant) {

@@ -151,7 +151,10 @@ public class BootstrapSecurityConfiguration {
                     .requestMatchers(
                         HttpMethod.GET, "/api/tenants/*/orders", "/api/tenants/*/orders/*")
                     .authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/tenants/*/orders/*/cancel")
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/tenants/*/orders/*/cancel",
+                        "/api/tenants/*/orders/*/refund")
                     .authenticated()
                     // SC-012: Mercado Pago connection. The callback is a top-level GET from the
                     // provider redirect: the session cookie (SameSite=Lax) identifies the user and

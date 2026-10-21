@@ -52,7 +52,8 @@ public final class AdminOrderRecords {
       String cancelReason,
       Instant anonymizedAt,
       Instant paidAt,
-      boolean paidWithoutStock) {}
+      boolean paidWithoutStock,
+      Instant refundedAt) {}
 
   /** Item snapshot with the private fields the OWNER may see (SKU and unit cost). */
   public record Item(

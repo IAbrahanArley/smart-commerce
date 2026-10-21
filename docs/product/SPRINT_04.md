@@ -95,6 +95,8 @@ Nenhuma tarefa começa sem autorização explícita do responsável.
 
 ## SC-016 — Reembolso controlado
 
+**Estado (2026-10-21):** autorizada e implementada, validada com a Orders API falsa ([validação](../quality/SC-016-VALIDATION.md)). O reembolso real no sandbox fica no lembrete abaixo.
+
 - **Admin:** "Reembolsar" só em pedido `PAID`, com motivo, confirmação em duas etapas e opção explícita "devolver ao estoque" (movimento `SALE_REVERSAL`).
 - **Backend:** `X-Idempotency-Key` por pedido; estado `REFUNDED` confirmado pelo provedor (webhook ou consulta).
 
@@ -125,6 +127,7 @@ Nenhuma tarefa começa sem autorização explícita do responsável.
 - [ ] Fazer um pedido na vitrine e conferir no Checkout Pro o total, os itens e os meios oferecidos (SC-013, hipótese H4: sem boleto).
 - [ ] Pagar com o comprador de teste e conferir o retorno à vitrine com `STOREFRONT_PUBLIC_ORIGIN` em HTTPS (hipótese H3).
 - [ ] Configurar o webhook da aplicação (evento "Order (Mercado Pago)") e `MERCADO_PAGO_WEBHOOK_SECRET`; usar o "Simular" do painel e conferir que a assinatura é aceita e o pedido passa a `PAID` (SC-014).
+- [ ] Reembolsar um pedido pago pelo admin, com e sem devolução ao estoque, e conferir que ele só vira "Reembolsado" quando o Mercado Pago confirmar (SC-016, hipóteses H11 e H12).
 - [ ] Registrar o resultado em [SC-012-VALIDATION.md](../quality/SC-012-VALIDATION.md) [SC-013-VALIDATION.md](../quality/SC-013-VALIDATION.md) e [SC-014-VALIDATION.md](../quality/SC-014-VALIDATION.md), inclusive o `live_mode` e o domínio do `checkout_url`.
 
 ## Definition of Done

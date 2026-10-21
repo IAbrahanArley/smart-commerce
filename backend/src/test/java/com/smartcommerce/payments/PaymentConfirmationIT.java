@@ -2,9 +2,12 @@ package com.smartcommerce.payments;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.smartcommerce.orders.domain.CancelReason;
+import com.smartcommerce.orders.domain.OrderException;
 import com.smartcommerce.orders.dto.response.AdminOrderView;
 import com.smartcommerce.orders.services.OrderAdminService;
 import com.smartcommerce.orders.services.OrderLifecycleService;
+import com.smartcommerce.orders.services.OrderRefundService;
 import com.smartcommerce.payments.provider.PaymentProviders;
 import com.smartcommerce.payments.security.TokenCipher;
 import com.smartcommerce.payments.services.PaymentEventService;
@@ -16,6 +19,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -32,6 +36,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,6 +95,9 @@ class PaymentConfirmationIT {
   private static final AtomicInteger SEQUENCE = new AtomicInteger();
   // Simulates the provider being down for order reads (SC-015).
   private static final AtomicBoolean DOWN = new AtomicBoolean();
+  // SC-016: refund requests seen by the fake (token and idempotency key) and how it answers.
+  private static final List<String> REFUNDS = new CopyOnWriteArrayList<>();
+  private static final AtomicReference<String> REFUND_MODE = new AtomicReference<>("PENDING");
   private static final HttpServer PROVIDER = provider();
 
   private final HttpClient client =
@@ -101,6 +109,7 @@ class PaymentConfirmationIT {
   @Autowired OrderLifecycleService lifecycle;
   @Autowired PaymentReconciliationService reconciliation;
   @Autowired OrderAdminService admin;
+  @Autowired OrderRefundService refunds;
   UUID tenantA;
   UUID tenantB;
   UUID variantA;
@@ -119,7 +128,35 @@ class PaymentConfirmationIT {
                     .substring("Bearer ".length());
             Map<String, Object> reply;
             int status = 200;
-            if ("POST".equals(exchange.getRequestMethod())) {
+            String path = exchange.getRequestURI().getPath();
+            if ("POST".equals(exchange.getRequestMethod()) && path.endsWith("/refund")) {
+              String id =
+                  path.substring("/v1/orders/".length(), path.length() - "/refund".length());
+              REFUNDS.add(token + " " + exchange.getRequestHeaders().getFirst("X-Idempotency-Key"));
+              Map<String, Object> state = ORDERS.get(id);
+              switch (REFUND_MODE.get()) {
+                case "FAIL" -> {
+                  status = 500;
+                  reply = Map.of("message", "internal_error");
+                }
+                case "ALREADY" -> {
+                  state.put("status_detail", "refunded");
+                  status = 409;
+                  reply =
+                      Map.of(
+                          "code", "order_already_refunded", "message", "Order already refunded.");
+                }
+                case "IMMEDIATE" -> {
+                  state.put("status_detail", "refunded");
+                  status = 201;
+                  reply = state;
+                }
+                default -> {
+                  status = 201;
+                  reply = state; // accepted, confirmed later
+                }
+              }
+            } else if ("POST".equals(exchange.getRequestMethod())) {
               JsonNode body = JSON.readTree(exchange.getRequestBody().readAllBytes());
               String id = "ORD" + SEQUENCE.incrementAndGet();
               reply = new LinkedHashMap<>();
@@ -190,6 +227,8 @@ class PaymentConfirmationIT {
     READS.clear();
     ORDERS.clear();
     DOWN.set(false);
+    REFUNDS.clear();
+    REFUND_MODE.set("PENDING");
     tenantA = store("confirma-a");
     tenantB = store("confirma-b");
     variantA = variant(tenantA, "10.00", 10);
@@ -473,7 +512,6 @@ class PaymentConfirmationIT {
     Order order = paidLater("confirma-a", variantA, 1);
     approve(order);
     String ts = String.valueOf(Instant.now().getEpochSecond());
-    int throttled = 0;
     for (int i = 0; i < 320; i++) {
       int status =
           post(
@@ -482,10 +520,8 @@ class PaymentConfirmationIT {
                   "req-f" + i,
                   "ts=" + ts + ",v1=" + "0".repeat(64))
               .statusCode();
-      assertThat(status).isIn(401, 429);
-      if (status == 429) throttled++;
+      assertThat(status).isIn(401, 429); // the ceiling itself: WebhookRateLimitTest
     }
-    assertThat(throttled).isPositive(); // failures alone exhaust the window
 
     // A signed delivery still goes through, with the id in lowercase as the provider may send it.
     String lower = order.provider().toLowerCase();
@@ -677,6 +713,127 @@ class PaymentConfirmationIT {
     assertThat(READS).containsExactly(TOKEN_A + " " + late.provider());
   }
 
+  @Test
+  void refundIsAskedOnceConfirmedOnlyByTheProviderAndRestocksExactlyOnce() throws Exception {
+    Order order = paid("confirma-a", variantA, 2);
+    assertThat(balance(tenantA, variantA)).isEqualTo(8);
+    UUID owner = owner(tenantA);
+
+    var requested =
+        refunds.refund(owner, tenantA, order.id(), CancelReason.of("Cliente desistiu"), true);
+    assertThat(requested.status()).isEqualTo("PAID"); // asked, not yet confirmed
+    assertThat(requested.payment().refund().status()).isEqualTo("REQUESTED");
+    assertThat(requested.payment().refund().providerAcceptedAt()).isNotNull();
+    // Double click: same refund, same idempotency key, nothing new.
+    refunds.refund(owner, tenantA, order.id(), CancelReason.of("Cliente desistiu"), true);
+    assertThat(REFUNDS).hasSize(2).containsOnly(TOKEN_A + " " + refundKey(order));
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_refund", Integer.class))
+        .isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT requested_by FROM payment_refund WHERE order_id=?", UUID.class, order.id()))
+        .isEqualTo(owner);
+    assertThat(balance(tenantA, variantA)).isEqualTo(8);
+
+    // The provider confirms later; the reconciliation settles it once.
+    ORDERS.get(order.provider()).put("status_detail", "refunded");
+    dueNow();
+    reconciliation.reconcileDue(20);
+    webhook(order.provider(), "evt-ref", "req-ref");
+    events.processDue(20);
+    dueNow();
+    reconciliation.reconcileDue(20);
+    assertThat(orderStatus(order)).isEqualTo("REFUNDED");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM payment WHERE order_id=?", String.class, order.id()))
+        .isEqualTo("REFUNDED");
+    assertThat(balance(tenantA, variantA)).isEqualTo(10);
+    assertThat(
+            jdbc.queryForList(
+                "SELECT delta,actor_kind,reason FROM inventory_movement WHERE order_id=?"
+                    + " AND type='SALE_REVERSAL'",
+                order.id()))
+        .singleElement()
+        .satisfies(
+            reversal -> {
+              assertThat(reversal.get("delta")).isEqualTo(2);
+              assertThat(reversal.get("actor_kind")).isEqualTo("SYSTEM");
+              assertThat(reversal.get("reason").toString()).startsWith("Devolução do pedido nº ");
+            });
+    var refunded = admin.find(owner, tenantA, order.id());
+    assertThat(refunded.refundedAt()).isNotNull();
+    assertThat(refunded.payment().refund().status()).isEqualTo("CONFIRMED");
+    // A refunded order is returned as is: no new provider call.
+    refunds.refund(owner, tenantA, order.id(), CancelReason.of("Outra vez"), false);
+    assertThat(REFUNDS).hasSize(2);
+    JsonNode buyer = JSON.readTree(get("confirma-a", order).body());
+    assertThat(buyer.get("status").asString()).isEqualTo("REFUNDED");
+  }
+
+  @Test
+  void refundWithoutRestockOrForAStocklessOrderNeverTouchesStock() throws Exception {
+    REFUND_MODE.set("IMMEDIATE");
+    Order kept = paid("confirma-a", variantA, 2);
+    var view =
+        refunds.refund(owner(tenantA), tenantA, kept.id(), CancelReason.of("Defeito"), false);
+    assertThat(view.status()).isEqualTo("REFUNDED");
+    assertThat(balance(tenantA, variantA)).isEqualTo(8);
+
+    // Paid without stock (P4) and refunded with restock: nothing was deducted, nothing returns.
+    Order stockless = paidLater("confirma-a", variantA, 2);
+    expire(stockless);
+    Order taker = paidLater("confirma-a", variantA, 8);
+    approve(stockless);
+    webhook(stockless.provider(), "evt-sl", "req-sl");
+    events.processDue(20);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT paid_without_stock FROM sales_order WHERE id=?",
+                Boolean.class,
+                stockless.id()))
+        .isTrue();
+    refunds.refund(owner(tenantA), tenantA, stockless.id(), CancelReason.of("Sem estoque"), true);
+    assertThat(orderStatus(stockless)).isEqualTo("REFUNDED");
+    assertThat(balance(tenantA, variantA)).isEqualTo(8);
+    assertThat(reservationStatuses(taker)).containsOnly("ACTIVE");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM inventory_movement WHERE type='SALE_REVERSAL'",
+                Integer.class))
+        .isZero();
+  }
+
+  @Test
+  void refundGuardsConflictsProviderFailuresAndOtherStores() throws Exception {
+    Order paidA = paid("confirma-a", variantA, 1);
+    Order pending = paidLater("confirma-a", variantA, 1);
+    UUID ownerA = owner(tenantA);
+    UUID ownerB = owner(tenantB);
+    assertThat(refundFails(ownerA, tenantA, pending, true))
+        .isEqualTo(OrderException.Reason.NOT_REFUNDABLE);
+    assertThat(refundFails(ownerB, tenantA, paidA, true)).isEqualTo(OrderException.Reason.MISSING);
+    assertThat(refundFails(ownerB, tenantB, paidA, true)).isEqualTo(OrderException.Reason.MISSING);
+    assertThat(REFUNDS).isEmpty();
+
+    REFUND_MODE.set("FAIL");
+    assertThat(refundFails(ownerA, tenantA, paidA, true))
+        .isEqualTo(OrderException.Reason.PAYMENT_FAILED);
+    assertThat(admin.find(ownerA, tenantA, paidA.id()).payment().refund().lastError())
+        .isEqualTo("PROVIDER_ERROR");
+    // The other stock choice for the same refund is a conflict, never a second refund.
+    assertThat(refundFails(ownerA, tenantA, paidA, false))
+        .isEqualTo(OrderException.Reason.REFUND_CONFLICT);
+
+    // Retried: the provider says it was already refunded; read back and settled once.
+    REFUND_MODE.set("ALREADY");
+    var view = refunds.refund(ownerA, tenantA, paidA.id(), CancelReason.of("Tentativa"), true);
+    assertThat(view.status()).isEqualTo("REFUNDED");
+    assertThat(view.payment().refund().lastError()).isNull();
+    assertThat(REFUNDS).containsOnly(TOKEN_A + " " + refundKey(paidA));
+    assertThat(balance(tenantA, variantA)).isEqualTo(10); // the paid unit came back to stock
+  }
+
   // --- helpers -----------------------------------------------------------------------------
 
   record Order(UUID id, String token, String provider) {}
@@ -818,6 +975,30 @@ class PaymentConfirmationIT {
   }
 
   /** The admin read model's paid fields, read straight from the table the admin view uses. */
+  /** A PAID order: created, paid at the provider and confirmed through the webhook queue. */
+  private Order paid(String slug, UUID variant, int quantity) throws Exception {
+    Order order = paidLater(slug, variant, quantity);
+    approve(order);
+    webhook(order.provider(), "evt-paid-" + order.provider(), "req-paid-" + order.provider());
+    events.processDue(20);
+    assertThat(orderStatus(order)).isEqualTo("PAID");
+    return order;
+  }
+
+  private OrderException.Reason refundFails(UUID actor, UUID tenant, Order order, boolean restock) {
+    try {
+      refunds.refund(actor, tenant, order.id(), CancelReason.of("Motivo sintético"), restock);
+    } catch (OrderException failure) {
+      return failure.reason();
+    }
+    throw new AssertionError("Refund should have failed");
+  }
+
+  private static String refundKey(Order order) {
+    return UUID.nameUUIDFromBytes(("sc-refund:" + order.id()).getBytes(StandardCharsets.UTF_8))
+        .toString();
+  }
+
   /** Makes every waiting payment due for the reconciliation routine now. */
   private void dueNow() {
     jdbc.update(

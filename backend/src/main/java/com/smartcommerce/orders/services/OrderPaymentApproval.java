@@ -2,7 +2,7 @@ package com.smartcommerce.orders.services;
 
 import com.smartcommerce.inventory.services.InventoryReservationService;
 import com.smartcommerce.orders.repositories.OrderPaymentRepository;
-import com.smartcommerce.payments.services.PaymentApprovalListener;
+import com.smartcommerce.payments.services.PaymentListener;
 import java.time.Instant;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
  * </ul>
  */
 @Service
-public class OrderPaymentApproval implements PaymentApprovalListener {
+public class OrderPaymentApproval implements PaymentListener {
   private static final Logger LOG = LoggerFactory.getLogger(OrderPaymentApproval.class);
   private final OrderPaymentRepository orders;
   private final InventoryReservationService inventory;
@@ -50,5 +50,25 @@ public class OrderPaymentApproval implements PaymentApprovalListener {
     if (!orders.markPaid(tenant, order, !sale.deducted(), paidAt))
       throw new IllegalStateException("Order changed while locked");
     if (!sale.deducted()) LOG.warn("Order {} paid without stock: the store must decide", order);
+  }
+
+  /**
+   * SC-016: the provider confirmed the full refund. PAID to REFUNDED once; the units go back to
+   * stock only when the store chose it, and only what the order's SALE movements took out (an order
+   * paid without stock returns nothing).
+   */
+  @Override
+  public void refunded(UUID tenant, UUID order, boolean restock, Instant refundedAt) {
+    var locked =
+        orders
+            .lock(tenant, order)
+            .orElseThrow(() -> new IllegalStateException("Refund without order"));
+    if ("REFUNDED".equals(locked.status())) return;
+    if (!"PAID".equals(locked.status()))
+      throw new IllegalStateException("Refund for an order that is not paid");
+    if (restock && !locked.paidWithoutStock())
+      inventory.reverseSale(tenant, order, "Devolução do pedido nº " + locked.number());
+    if (!orders.markRefunded(tenant, order, refundedAt))
+      throw new IllegalStateException("Order changed while locked");
   }
 }

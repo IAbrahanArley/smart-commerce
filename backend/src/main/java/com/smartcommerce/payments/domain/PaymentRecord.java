@@ -12,9 +12,13 @@ public record PaymentRecord(
     String providerOrderId,
     String providerUserId,
     String checkoutUrl) {
-  /** The provider order exists (CREATED or already APPROVED). */
+  /** The provider order exists (CREATED, APPROVED or REFUNDED). */
   public boolean created() {
-    return "CREATED".equals(status) || approved();
+    return "CREATED".equals(status) || approved() || refunded();
+  }
+
+  public boolean refunded() {
+    return "REFUNDED".equals(status);
   }
 
   public boolean approved() {

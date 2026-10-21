@@ -7,6 +7,7 @@ import { formatBRL } from "@/lib/catalog";
 import { CANCEL_REASON_MAX, FULFILLMENT_LABELS, type OrderDetail as Order, STATUS_LABELS, cancelReason, formatDateTime, formatPhone, formatPostalCode, PAYMENT_STATUS_LABELS, paymentDivergence } from "@/lib/orders";
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
+import OrderRefund from "@/components/order-refund";
 
 export default function OrderDetail({ tenantId, orderId }: { tenantId: string; orderId: string }) {
   const [order, setOrder] = useState<Order | null>(null);
@@ -134,6 +135,7 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
           <p><strong>{FULFILLMENT_LABELS[order.fulfillment.type]}:</strong> {order.fulfillment.text}</p>
           {order.address ? <address className="order-address">{order.address.line1}{order.address.line2 ? `, ${order.address.line2}` : ""}<br />{order.address.district} · {order.address.city}/{order.address.state}<br />CEP {formatPostalCode(order.address.postalCode)}</address> : null}
         </section>
+        <OrderRefund order={order} path={path} onChange={setOrder} onReload={() => setAttempt(current => current + 1)} />
         {order.status === "PENDING_PAYMENT" ? <section className="side-card" aria-labelledby="order-cancel-title">
           <h2 id="order-cancel-title">Cancelar pedido</h2>
           {!cancelling ? <><p>O cancelamento libera as unidades reservadas na hora e não pode ser desfeito.</p>
