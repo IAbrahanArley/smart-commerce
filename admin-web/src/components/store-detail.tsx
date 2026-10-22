@@ -8,8 +8,10 @@ import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 import { useConfirm } from "@/components/confirm-dialog";
 import StoreSummary from "@/components/store-summary";
+import StoreDashboard from "@/components/store-dashboard";
+import type { ReportPeriodKey } from "@/lib/finance";
 
-export default function StoreDetail({ tenantId }: { tenantId: string }) {
+export default function StoreDetail({ tenantId, period }: { tenantId: string; period: ReportPeriodKey }) {
   const [store, setStore] = useState<TenantStore | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "missing" | "signed-out" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
@@ -26,7 +28,7 @@ export default function StoreDetail({ tenantId }: { tenantId: string }) {
     if (!store || submitting.current) return;
     const published = store.store.status !== "PUBLISHED";
     if (!(await confirm(published
-      ? { title: "Publicar a loja?", message: "Qualquer pessoa com o link poderá consultar o nome da loja e o nome, preço e disponibilidade dos produtos selecionados. Compras ainda não estão disponíveis.", confirmLabel: "Publicar loja" }
+      ? { title: "Publicar a loja?", message: "Qualquer pessoa com o link poderá consultar o nome da loja e o nome, preço e disponibilidade dos produtos selecionados.", confirmLabel: "Publicar loja" }
       : { title: "Ocultar a loja?", message: "A vitrine e seus produtos deixarão de estar disponíveis para consulta pública.", confirmLabel: "Ocultar loja" }))) return;
     submitting.current = true; setBusy(true); setFeedback(null);
     try {
@@ -61,8 +63,9 @@ export default function StoreDetail({ tenantId }: { tenantId: string }) {
     {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar sua loja. Tente novamente.</p>
       <button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar loja novamente</button></> : null}
     {state === "ready" && store ? <>
-      <p className="notice">{store.store.status === "PUBLISHED" ? "Vitrine publicada. Qualquer pessoa com o link pode consultar os produtos selecionados. Compras ainda não estão disponíveis." : "Vitrine oculta. Selecione os produtos e publique a loja quando estiver pronta."}</p>
+      <p className="notice">{store.store.status === "PUBLISHED" ? "Vitrine publicada. Qualquer pessoa com o link pode consultar os produtos selecionados." : "Vitrine oculta. Selecione os produtos e publique a loja quando estiver pronta."}</p>
       <StoreSummary tenantId={tenantId} published={store.store.status === "PUBLISHED"} />
+      <StoreDashboard tenantId={tenantId} period={period} />
       <div className="overview-grid">
       <section className="side-card store-summary" aria-labelledby="store-data-title"><h2 id="store-data-title">Dados da loja</h2><dl className="store-data"><dt>Empresa</dt><dd>{store.companyName}</dd><dt>Nome da loja</dt><dd>{store.store.name}</dd>
         <dt>Identificador da loja</dt><dd>{store.store.slug}</dd><dt>Seu acesso</dt><dd>Proprietário</dd></dl></section>

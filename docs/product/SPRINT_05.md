@@ -80,6 +80,8 @@ Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dash
 
 ## SC-022 — Dashboard
 
+**Estado (2026-10-21):** autorizada e implementada ([validação](../quality/SC-022-VALIDATION.md)). A conferência visual do gráfico no navegador ficou para a SC-023.
+
 - Página inicial da loja no admin com os indicadores do F8: pedidos pagos, receita, ticket médio, margem estimada, estoque baixo e itens sem giro, com seletor de período.
 - Gráfico simples de vendas por dia em SVG próprio (F9), com tabela equivalente acessível.
 

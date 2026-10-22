@@ -2,8 +2,10 @@ package com.smartcommerce.finance.repositories;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -60,6 +62,24 @@ public class FinanceReportRepository {
         utc(from),
         utc(to));
   }
+
+  /** Sales per São Paulo calendar day in [from, to) (SC-022): day, count and gross revenue. */
+  public List<DaySales> salesByDay(UUID tenant, Instant from, Instant to) {
+    return jdbc.query(
+        """
+        SELECT (competence_at AT TIME ZONE 'America/Sao_Paulo')::date, count(*), sum(amount)
+        FROM finance_entry
+        WHERE tenant_id=? AND type='SALE' AND competence_at>=? AND competence_at<?
+        GROUP BY 1 ORDER BY 1
+        """,
+        (row, index) ->
+            new DaySales(row.getDate(1).toLocalDate(), row.getLong(2), row.getBigDecimal(3)),
+        tenant,
+        utc(from),
+        utc(to));
+  }
+
+  public record DaySales(LocalDate day, long orders, BigDecimal revenue) {}
 
   /** Money that moved in [from, to) by settlement date (F3): expenses paid, releases (SC-018). */
   public BigDecimal settled(UUID tenant, Instant from, Instant to) {

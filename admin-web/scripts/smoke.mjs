@@ -17,6 +17,17 @@ assert.equal(hostedTestEnvironment("hosted-test"), true);
 for (const value of [undefined, "", "production", "HOSTED-TEST"]) assert.equal(hostedTestEnvironment(value), false);
 import { cancelReason, formatDateTime, formatPhone, formatPostalCode, orderCursor, orderStatus, ordersApiPath, ordersPagePath, paymentDivergence } from "../src/lib/orders.ts";
 import { missingText, percentText, reportPeriod } from "../src/lib/finance.ts";
+import { bars, optionsText, shortDay } from "../src/lib/dashboard.ts";
+
+// Dashboard (SC-022): bars scale to the busiest day, an empty period draws flat, labels in pt-BR.
+const chart = bars([{ day: "2026-10-01", revenue: "50.00" }, { day: "2026-10-02", revenue: "100.00" }, { day: "2026-10-03", revenue: "0.00" }], 300, 100);
+assert.deepEqual(chart.map(bar => bar.height), [50, 100, 0]);
+assert.deepEqual(chart.map(bar => bar.y), [50, 0, 100]);
+assert.ok(chart.every(bar => bar.x >= 0 && bar.x + bar.width <= 300));
+assert.ok(bars([{ day: "2026-10-01", revenue: "0.00" }], 300, 100).every(bar => bar.height === 0), "Período vazio não divide por zero.");
+assert.deepEqual(bars([], 300, 100), []);
+assert.equal(shortDay("2026-10-05"), "05/10");
+assert.equal(optionsText([{ name: "Cor", value: "Azul" }, { name: "Tamanho", value: "M" }]), "Cor: Azul · Tamanho: M");
 import { expenseMonth, formatDay, lineText, monthLabel, monthOf, parseAmount, shiftMonth } from "../src/lib/expenses.ts";
 
 // Finance report (SC-021): period from the URL, missing data and percentages in Portuguese.
@@ -208,7 +219,7 @@ try {
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /Página não encontrada/);
-  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, pagamentos (Mercado Pago: destino da autorização, estados e retorno), despesas (mês na URL, valores e textos), financeiro (período na URL e margem parcial), pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
+  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, pagamentos (Mercado Pago: destino da autorização, estados e retorno), despesas (mês na URL, valores e textos), financeiro (período na URL e margem parcial), dashboard (barras do gráfico), pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
 } finally {
   server.kill();
 }

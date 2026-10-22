@@ -10,7 +10,9 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -94,6 +96,22 @@ public class FinanceReportService {
             : null,
         new FinanceReportView.Receivable(money(receivable.amount()), receivable.salesWithoutFee()),
         money(reports.settled(tenant, period.from(), period.to())));
+  }
+
+  /**
+   * Sales per day of the period, every day present (zero when nothing sold), for the dashboard
+   * chart (SC-022). Internal: the caller has already checked the OWNER through {@link #report}.
+   */
+  @Transactional(readOnly = true)
+  public List<FinanceReportRepository.DaySales> salesByDay(UUID tenant, ReportPeriod period) {
+    Map<LocalDate, FinanceReportRepository.DaySales> found = new HashMap<>();
+    for (var day : reports.salesByDay(tenant, period.from(), period.to()))
+      found.put(day.day(), day);
+    List<FinanceReportRepository.DaySales> days = new ArrayList<>();
+    for (LocalDate day = period.firstDay(); day.isBefore(period.endDay()); day = day.plusDays(1))
+      days.add(
+          found.getOrDefault(day, new FinanceReportRepository.DaySales(day, 0, BigDecimal.ZERO)));
+    return days;
   }
 
   private static String money(BigDecimal value) {
