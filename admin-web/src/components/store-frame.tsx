@@ -17,6 +17,8 @@ export default function StoreFrame({ tenantId, children }: { tenantId: string; c
     { href: `${base}/pedidos`, label: "Pedidos", icon: "receipt", current: pathname.startsWith(`${base}/pedidos`) },
     { href: `${base}/entrega`, label: "Entrega", icon: "truck", current: pathname === `${base}/entrega` },
     { href: `${base}/pagamentos`, label: "Pagamentos", icon: "card", current: pathname === `${base}/pagamentos` },
+    { href: `${base}/financeiro`, label: "Financeiro", icon: "chart", current: pathname === `${base}/financeiro` },
+    { href: `${base}/despesas`, label: "Despesas", icon: "wallet", current: pathname === `${base}/despesas` },
   ] as const;
 
   useEffect(() => {

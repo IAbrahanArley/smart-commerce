@@ -218,7 +218,15 @@ Com a conta conectada (SC-013), "Confirmar pedido" na vitrine cria a order do Ch
 
 A confirmação (SC-014) vem do webhook do Mercado Pago, autenticado por `MERCADO_PAGO_WEBHOOK_SECRET`. Uma rotina do backend consulta a order no provedor e, se estiver paga, marca o pedido como **Pago** e baixa o estoque uma única vez. Pagamento que chega depois do fim da reserva tenta reservar de novo; sem estoque, o admin mostra o alerta "pago sem estoque". O webhook exige URL HTTPS pública: em localhost, sem túnel (P6), a confirmação vem da conciliação (SC-015), que consulta o Mercado Pago a cada minuto enquanto a order está aberta e por 24 h depois do vencimento. O detalhe do pedido no admin mostra o pagamento e qualquer divergência encontrada. Detalhes em [SC-015-VALIDATION.md](docs/quality/SC-015-VALIDATION.md).
 
-No pedido pago, o dono da loja pode **reembolsar** o valor total (SC-016): informa o motivo, escolhe se as unidades voltam ao estoque e confirma num segundo passo. O pedido só aparece como "Reembolsado" depois que o Mercado Pago confirma. Detalhes em [SC-016-VALIDATION.md](docs/quality/SC-016-VALIDATION.md). Detalhes em [SC-014-VALIDATION.md](docs/quality/SC-014-VALIDATION.md).
+No pedido pago, o dono da loja pode **reembolsar** o valor total (SC-016): informa o motivo, escolhe se as unidades voltam ao estoque e confirma num segundo passo. O pedido só aparece como "Reembolsado" depois que o Mercado Pago confirma. Detalhes em [SC-016-VALIDATION.md](docs/quality/SC-016-VALIDATION.md).
+
+## Financeiro (Sprint 5)
+
+- **Despesas:** registradas pelo dono da loja (SC-020). Uma correção cancela a despesa com um motivo e registra outra; nada é apagado.
+- **Financeiro:** a página mostra, para o período escolhido (SC-021), receita, reembolsos, taxas, CMV, despesas, margem de contribuição, a receber e caixa, sempre a partir do livro de lançamentos (SC-019).
+- **Margem parcial:** a margem aparece como "parcial", com a lista do que falta, enquanto taxas ou custos não estão completos.
+
+Decisões no [ADR-0015](docs/architecture/adr/0015-finance-dashboard.md). Detalhes em [SC-014-VALIDATION.md](docs/quality/SC-014-VALIDATION.md).
 
 ## Ambiente de teste hospedado (Render + Vercel)
 

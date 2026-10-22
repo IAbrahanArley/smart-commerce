@@ -16,6 +16,37 @@ for (const invalid of ["http://api.example.test", "https://user:pw@api.example.t
 assert.equal(hostedTestEnvironment("hosted-test"), true);
 for (const value of [undefined, "", "production", "HOSTED-TEST"]) assert.equal(hostedTestEnvironment(value), false);
 import { cancelReason, formatDateTime, formatPhone, formatPostalCode, orderCursor, orderStatus, ordersApiPath, ordersPagePath, paymentDivergence } from "../src/lib/orders.ts";
+import { missingText, percentText, reportPeriod } from "../src/lib/finance.ts";
+import { bars, optionsText, shortDay } from "../src/lib/dashboard.ts";
+
+// Dashboard (SC-022): bars scale to the busiest day, an empty period draws flat, labels in pt-BR.
+const chart = bars([{ day: "2026-10-01", revenue: "50.00" }, { day: "2026-10-02", revenue: "100.00" }, { day: "2026-10-03", revenue: "0.00" }], 300, 100);
+assert.deepEqual(chart.map(bar => bar.height), [50, 100, 0]);
+assert.deepEqual(chart.map(bar => bar.y), [50, 0, 100]);
+assert.ok(chart.every(bar => bar.x >= 0 && bar.x + bar.width <= 300));
+assert.ok(bars([{ day: "2026-10-01", revenue: "0.00" }], 300, 100).every(bar => bar.height === 0), "Período vazio não divide por zero.");
+assert.deepEqual(bars([], 300, 100), []);
+assert.equal(shortDay("2026-10-05"), "05/10");
+assert.equal(optionsText([{ name: "Cor", value: "Azul" }, { name: "Tamanho", value: "M" }]), "Cor: Azul · Tamanho: M");
+import { expenseMonth, formatDay, lineText, monthLabel, monthOf, parseAmount, shiftMonth } from "../src/lib/expenses.ts";
+
+// Finance report (SC-021): period from the URL, missing data and percentages in Portuguese.
+assert.equal(reportPeriod("LAST_MONTH"), "LAST_MONTH");
+for (const invalid of [undefined, "", "last_month", "FOREVER"]) assert.equal(reportPeriod(invalid), "THIS_MONTH");
+assert.equal(missingText({ code: "FEES_UNAVAILABLE", count: 1 }), "1 venda sem a taxa do Mercado Pago informada");
+assert.equal(missingText({ code: "COST_MISSING", count: 2 }), "2 pedidos com produto sem custo cadastrado");
+assert.equal(percentText("15.00"), "15,00%"); assert.equal(percentText(null), "—");
+
+// Expenses (SC-020): month from the URL, Brazilian amounts and one-line texts mirror the backend.
+assert.equal(expenseMonth("2026-10", new Date()), "2026-10");
+for (const invalid of [undefined, "", "2026-13", "2026-1", "26-10", "2026-10-01"]) assert.equal(expenseMonth(invalid, new Date("2026-10-21T12:00:00Z")), "2026-10");
+assert.equal(monthOf(new Date("2026-11-01T02:00:00Z")), "2026-10", "Mês no fuso de São Paulo.");
+assert.equal(shiftMonth("2026-01", -1), "2025-12"); assert.equal(shiftMonth("2026-12", 1), "2027-01");
+assert.equal(monthLabel("2026-10"), "Outubro de 2026"); assert.equal(formatDay("2026-10-05"), "05/10/2026"); assert.equal(formatDay(null), "—");
+for (const [input, expected] of [["12,5", "12.50"], ["1.234,56", "1234.56"], ["1234.56", "1234.56"], ["R$ 80", "80.00"], ["0,01", "0.01"]]) assert.deepEqual(parseAmount(input), { amount: expected }, input);
+for (const input of ["0", "0,00", "-5", "1,234", "abc", "1.2.3", ""]) assert.ok("error" in parseAmount(input), input);
+assert.deepEqual(lineText("  Aluguel  ", 200, "a descrição"), { text: "Aluguel" });
+for (const input of ["ab", "linha\nquebrada", "x".repeat(201)]) assert.ok("error" in lineText(input, 200, "a descrição"), input);
 
 // Orders (SC-010): URL values are validated before reaching the API; the reason mirrors the backend.
 assert.equal(orderStatus("EXPIRED"), "EXPIRED");
@@ -158,6 +189,8 @@ try {
     ["/lojas/00000000-0000-0000-0000-000000000000", "Minha loja", "Consultando sua loja"],
     ["/lojas/00000000-0000-0000-0000-000000000000/entrega", "Entrega", "Consultando a configuração de entrega"],
     ["/lojas/00000000-0000-0000-0000-000000000000/pagamentos?mercadoPago=negado", "Pagamentos", "A autorização foi recusada no Mercado Pago"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/despesas?mes=2026-09", "Despesas", "Setembro de 2026"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/financeiro?periodo=LAST_7_DAYS", "Financeiro", 'value="LAST_7_DAYS" selected'],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'name="situacao"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Consultando pedido", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Consultando catálogo"],
@@ -186,7 +219,7 @@ try {
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /Página não encontrada/);
-  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, pagamentos (Mercado Pago: destino da autorização, estados e retorno), pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
+  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, pagamentos (Mercado Pago: destino da autorização, estados e retorno), despesas (mês na URL, valores e textos), financeiro (período na URL e margem parcial), dashboard (barras do gráfico), pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
 } finally {
   server.kill();
 }

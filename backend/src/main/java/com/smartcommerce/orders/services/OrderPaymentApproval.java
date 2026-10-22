@@ -1,5 +1,6 @@
 package com.smartcommerce.orders.services;
 
+import com.smartcommerce.finance.services.FinanceLedgerService;
 import com.smartcommerce.inventory.services.InventoryReservationService;
 import com.smartcommerce.orders.repositories.OrderPaymentRepository;
 import com.smartcommerce.payments.services.PaymentListener;
@@ -27,11 +28,15 @@ public class OrderPaymentApproval implements PaymentListener {
   private static final Logger LOG = LoggerFactory.getLogger(OrderPaymentApproval.class);
   private final OrderPaymentRepository orders;
   private final InventoryReservationService inventory;
+  private final FinanceLedgerService finance;
 
   public OrderPaymentApproval(
-      OrderPaymentRepository orders, InventoryReservationService inventory) {
+      OrderPaymentRepository orders,
+      InventoryReservationService inventory,
+      FinanceLedgerService finance) {
     this.orders = orders;
     this.inventory = inventory;
+    this.finance = finance;
   }
 
   @Override
@@ -49,6 +54,10 @@ public class OrderPaymentApproval implements PaymentListener {
             tenant, order, orders.lines(tenant, order), "Venda do pedido nº " + locked.number());
     if (!orders.markPaid(tenant, order, !sale.deducted(), paidAt))
       throw new IllegalStateException("Order changed while locked");
+    // SC-019: the sale and its cost enter the ledger in this same transaction (ADR-0015 F1, F4).
+    var figures = orders.saleFigures(tenant, order);
+    finance.recordSale(
+        tenant, order, figures.total(), figures.knownCost(), figures.costIncomplete(), paidAt);
     if (!sale.deducted()) LOG.warn("Order {} paid without stock: the store must decide", order);
   }
 
@@ -70,5 +79,12 @@ public class OrderPaymentApproval implements PaymentListener {
       inventory.reverseSale(tenant, order, "Devolução do pedido nº " + locked.number());
     if (!orders.markRefunded(tenant, order, refundedAt))
       throw new IllegalStateException("Order changed while locked");
+    // SC-019: the cost is reversed when the goods came back, or never left (paid without stock).
+    finance.recordRefund(
+        tenant,
+        order,
+        orders.saleFigures(tenant, order).total(),
+        restock || locked.paidWithoutStock(),
+        refundedAt);
   }
 }

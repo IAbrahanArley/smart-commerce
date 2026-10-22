@@ -32,7 +32,7 @@ export default function OrderList({ tenantId, status, after }: { tenantId: strin
 
   const filtered = status ? `com situação “${STATUS_LABELS[status]}”` : "";
   return <section className="page" aria-labelledby="orders-title">
-    <PageHeader id="orders-title" title="Pedidos" description="Pedidos feitos na vitrine. O pagamento ainda não está disponível: pedidos pendentes reservam o estoque por 30 minutos." />
+    <PageHeader id="orders-title" title="Pedidos" description="Pedidos feitos na vitrine. Pedidos aguardando pagamento reservam o estoque por 30 minutos." />
     <form className="order-filter" method="get" action={`${storePath}/pedidos`}>
       <label htmlFor="order-status">Situação</label>
       <select id="order-status" name="situacao" defaultValue={status ?? ""}>

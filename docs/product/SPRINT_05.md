@@ -32,6 +32,8 @@ Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dash
 
 ## SC-019 — Livro de lançamentos (módulo novo `finance`)
 
+**Estado (2026-10-21):** autorizada e implementada ([validação](../quality/SC-019-VALIDATION.md)).
+
 - Tabela `finance_entry`, só de acréscimo (F7), com tipos: venda, reembolso, taxa, CMV, estorno de CMV e despesa. Cada lançamento tem valor com sinal, competência, liquidação (quando houver), chave única derivada do fato e a origem (pedido, pagamento ou despesa).
 - Lançamentos gravados na mesma transação de `PAID`, `REFUNDED` e da taxa (SC-018), pela interface já existente entre `payments` e `orders`.
 - Migração com preenchimento inicial dos pedidos já pagos ou reembolsados.
@@ -47,6 +49,8 @@ Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dash
 
 ## SC-020 — Despesas manuais (módulo `finance`)
 
+**Estado (2026-10-21):** autorizada e implementada ([validação](../quality/SC-020-VALIDATION.md)).
+
 - Admin: lista, cadastro e correção (cancelar com motivo e lançar de novo, F6); categoria da lista fixa, tipo fixa ou variável, competência e pagamento.
 - Cada despesa gera seus lançamentos (competência e, se paga, caixa).
 
@@ -59,6 +63,8 @@ Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dash
 - A/B.
 
 ## SC-021 — Relatório financeiro do período
+
+**Estado (2026-10-21):** autorizada e implementada ([validação](../quality/SC-021-VALIDATION.md)). Até a SC-018, todo relatório com vendas aparece como parcial por falta das taxas.
 
 - `GET /api/tenants/{id}/finance?period=…`: receita bruta, reembolsos, taxas, CMV, despesas fixas e variáveis, margem de contribuição (F5), a receber (por data de liberação) e caixa simplificado (F3), todos derivados do livro.
 - Indicação "parcial" com o motivo (taxas indisponíveis, N pedidos sem custo).
@@ -73,6 +79,8 @@ Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dash
 - A/B.
 
 ## SC-022 — Dashboard
+
+**Estado (2026-10-21):** autorizada e implementada ([validação](../quality/SC-022-VALIDATION.md)). A conferência visual do gráfico no navegador ficou para a SC-023.
 
 - Página inicial da loja no admin com os indicadores do F8: pedidos pagos, receita, ticket médio, margem estimada, estoque baixo e itens sem giro, com seletor de período.
 - Gráfico simples de vendas por dia em SVG próprio (F9), com tabela equivalente acessível.

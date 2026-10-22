@@ -289,3 +289,14 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .confirm-dialog h2 { margin: 0 0 var(--sc-space-3); font-size: 1.25rem; line-height: 1.2; overflow-wrap: anywhere; }
 .confirm-dialog-message { line-height: 1.5; overflow-wrap: anywhere; }
 .confirm-dialog-actions { justify-content: flex-end; margin-top: var(--sc-space-6); }
+
+/* SC-022 dashboard: plain SVG chart with the platform tokens (ADR-0015 F9). */
+.dashboard-chart { margin: var(--sc-space-6) 0 var(--sc-space-3); }
+.dashboard-chart figcaption { font-weight: 700; margin-bottom: var(--sc-space-2); }
+.dashboard-chart svg { display: block; width: 100%; height: auto; max-height: 14rem; }
+.dashboard-bar { fill: var(--sc-color-action); }
+.dashboard-axis { stroke: var(--sc-color-divider); stroke-width: 1; }
+.dashboard-label { fill: var(--sc-color-text-secondary); font-size: 12px; }
+.dashboard-list { margin-top: var(--sc-space-6); }
+.dashboard-list h3 { font-size: 1rem; }
+.dashboard-list ul { margin: var(--sc-space-2) 0 0; padding-left: var(--sc-space-6); display: grid; gap: var(--sc-space-2); }
