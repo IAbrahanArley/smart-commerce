@@ -115,6 +115,15 @@ payments:
     # SC-015: queries the provider for orders still waiting; the main path without a webhook (P6).
     enabled: ${PAYMENTS_RECONCILIATION_ENABLED:true}
     interval: PT1M
+advisor:
+  # SC-025 (ADR-0016 A8, A11): the assistant is off by default. The quota counts questions per
+  # store per calendar month (São Paulo); the cap stops every store once the platform's estimated
+  # spend of the month reaches it.
+  enabled: ${ADVISOR_ENABLED:false}
+  monthly-question-quota: ${ADVISOR_MONTHLY_QUOTA:100}
+  global-monthly-cap-usd: ${ADVISOR_GLOBAL_MONTHLY_CAP_USD:20.00}
+  housekeeping:
+    enabled: ${ADVISOR_HOUSEKEEPING_ENABLED:true}
 deployment:
   # ADR-0014 H2: "hosted-test" marks the hosted test environment, the only place outside dev
   # where checkout may be enabled without payments. Any other value keeps D6 strict.

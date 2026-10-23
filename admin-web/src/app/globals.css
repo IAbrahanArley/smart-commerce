@@ -333,3 +333,14 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
   .period-navigation-current { flex-basis: 100%; order: -1; }
   .page-state { flex-direction: column; }
 }
+
+/* SC-024 store alerts: existing tokens only; the severity is also written as text. */
+.store-alerts { margin-block: var(--sc-space-6); }
+.alert-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sc-space-3); }
+.alert-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sc-space-2) var(--sc-space-3); padding: var(--sc-space-3) var(--sc-space-4); border: 1px solid var(--sc-color-divider); border-left-width: 4px; border-radius: var(--sc-radius-control); background: var(--sc-color-surface); overflow-wrap: anywhere; }
+.alert-critical { border-left-color: var(--sc-color-danger); background: var(--sc-color-danger-background); }
+.alert-attention { border-left-color: var(--sc-color-action); background: var(--sc-color-info-background); }
+.alert-info { border-left-color: var(--sc-color-control-border); }
+.alert-severity { font-weight: 700; }
+.alert-critical .alert-severity { color: var(--sc-color-danger); }
+.alert-text { flex: 1 1 18rem; }
