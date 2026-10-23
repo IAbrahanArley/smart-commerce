@@ -9,6 +9,7 @@ import StatusBadge from "@/components/status-badge";
 import { useConfirm } from "@/components/confirm-dialog";
 import StoreSummary from "@/components/store-summary";
 import StoreDashboard from "@/components/store-dashboard";
+import StoreAlerts from "@/components/store-alerts";
 import type { ReportPeriodKey } from "@/lib/finance";
 
 export default function StoreDetail({ tenantId, period }: { tenantId: string; period: ReportPeriodKey }) {
@@ -64,6 +65,7 @@ export default function StoreDetail({ tenantId, period }: { tenantId: string; pe
       <button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar loja novamente</button></> : null}
     {state === "ready" && store ? <>
       <p className="notice">{store.store.status === "PUBLISHED" ? "Vitrine publicada. Qualquer pessoa com o link pode consultar os produtos selecionados." : "Vitrine oculta. Selecione os produtos e publique a loja quando estiver pronta."}</p>
+      <StoreAlerts tenantId={tenantId} />
       <StoreSummary tenantId={tenantId} published={store.store.status === "PUBLISHED"} />
       <StoreDashboard tenantId={tenantId} period={period} />
       <div className="overview-grid">

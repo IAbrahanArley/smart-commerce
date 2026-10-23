@@ -26,6 +26,8 @@ O agente só lê: não altera pedidos, valores nem estoque, e não inventa núme
 
 ## SC-024 — Alertas determinísticos (módulo `advisor`, sem IA)
 
+**Estado (2026-10-23):** autorizada e implementada ([validação](../quality/SC-024-VALIDATION.md)).
+
 - Serviço de alertas por loja, calculado na hora a partir dos serviços existentes. Cada alerta tem código, gravidade (informativo, atenção, crítico), dado de apoio e link para a tela do admin. Os alertas:
   - estoque baixo e itens sem giro (limites do F8);
   - margem do período "parcial" (com o motivo) ou negativa;
@@ -43,6 +45,8 @@ O agente só lê: não altera pedidos, valores nem estoque, e não inventa núme
 - smoke do admin.
 
 ## SC-025 — Fundação do assistente, sem chamar modelo
+
+**Estado (2026-10-23):** autorizada e implementada ([validação](../quality/SC-025-VALIDATION.md)).
 
 - **Módulo `advisor`:** configuração `ADVISOR_ENABLED` (desligado por padrão), teto mensal global e cota por loja (A8).
 - **Migração aditiva:** tabela `advisor_usage`, só com metadados e sem texto (A9), e expiração em 90 dias pela rotina existente.

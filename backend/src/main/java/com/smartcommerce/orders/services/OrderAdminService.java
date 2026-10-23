@@ -13,8 +13,10 @@ import com.smartcommerce.orders.dto.response.OrderView;
 import com.smartcommerce.orders.repositories.OrderAdminRepository;
 import com.smartcommerce.payments.services.PaymentCheckoutService;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -40,6 +42,21 @@ public class OrderAdminService {
     this.reservations = reservations;
     this.payments = payments;
     this.clock = clock;
+  }
+
+  /** Orders created in {@code [from, to)} by effective status (SC-025 advisor); OWNER only. */
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+  public Map<String, Long> countsByStatus(UUID actor, UUID tenant, Instant from, Instant to) {
+    if (!orders.ownsStore(actor, tenant)) throw missing();
+    return orders.countsByStatus(tenant, from, to, ReservationPolicy.now(clock));
+  }
+
+  /** Pending orders whose reservation ends within {@code within} (SC-024 alert); OWNER only. */
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+  public long expiringSoon(UUID actor, UUID tenant, Duration within) {
+    if (!orders.ownsStore(actor, tenant)) throw missing();
+    Instant now = ReservationPolicy.now(clock);
+    return orders.pendingExpiring(tenant, now, now.plus(within));
   }
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
