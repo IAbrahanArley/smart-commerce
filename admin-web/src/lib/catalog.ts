@@ -24,10 +24,12 @@ export function decimalInput(value: string): string | null {
 }
 
 export function formatBRL(value: string): string {
-  if (!/^\d+\.\d{2}$/.test(value)) return "Valor indisponível";
-  const [whole, fraction] = value.split(".");
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
+  if (!/^-?\d+\.\d{2}$/.test(value)) return "Valor indisponível";
+  const negative = value.startsWith("-");
+  const [whole, fraction] = value.replace(/^-/, "").split(".");
+  const formatted = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
     .formatToParts(BigInt(whole))
     .map(part => part.type === "fraction" ? fraction : part.value)
     .join("");
+  return negative ? `-${formatted}` : formatted;
 }

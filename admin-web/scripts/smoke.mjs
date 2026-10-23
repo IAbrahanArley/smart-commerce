@@ -7,6 +7,10 @@ import { reservedStockMessage, wholeQuantity } from "../src/lib/inventory.ts";
 import { storefrontUrl } from "../src/lib/tenant-api.ts";
 import { backendOrigin, hostedTestEnvironment } from "../src/lib/deployment.ts";
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
+import { isProtectedPath } from "../src/lib/session-events.ts";
+
+for (const path of ["/conta", "/lojas", "/lojas/uuid/despesas"]) assert.equal(isProtectedPath(path), true, path);
+for (const path of ["/", "/entrar", "/cadastro", "/loja/produto", "/lojas-publicas"]) assert.equal(isProtectedPath(path), false, path);
 
 // ADR-0014: the /api rewrite only targets HTTPS (or loopback HTTP); the notice needs the exact flag.
 assert.equal(backendOrigin(undefined), "http://127.0.0.1:8080");
@@ -28,7 +32,18 @@ assert.ok(bars([{ day: "2026-10-01", revenue: "0.00" }], 300, 100).every(bar => 
 assert.deepEqual(bars([], 300, 100), []);
 assert.equal(shortDay("2026-10-05"), "05/10");
 assert.equal(optionsText([{ name: "Cor", value: "Azul" }, { name: "Tamanho", value: "M" }]), "Cor: Azul · Tamanho: M");
-import { expenseMonth, formatDay, lineText, monthLabel, monthOf, parseAmount, shiftMonth } from "../src/lib/expenses.ts";
+import { expenseDateErrors, expenseMonth, formatDay, lineText, monthLabel, monthOf, parseAmount, shiftMonth } from "../src/lib/expenses.ts";
+
+// Expense dates: same boundaries as the backend, at São Paulo midnight and on leap days.
+const expenseNow = new Date("2026-10-23T02:30:00Z"); // still October 22 in São Paulo
+assert.deepEqual(expenseDateErrors("2027-10-22", "2026-10-22", expenseNow), {});
+assert.ok(expenseDateErrors("1999-12-31", "", expenseNow).competenceDate);
+assert.ok(expenseDateErrors("2027-10-23", "", expenseNow).competenceDate);
+assert.ok(expenseDateErrors("2026-02-30", "", expenseNow).competenceDate);
+assert.ok(expenseDateErrors("2026-10-22", "2026-10-23", expenseNow).paidOn);
+assert.ok(expenseDateErrors("2026-10-22", "1999-12-31", expenseNow).paidOn);
+assert.deepEqual(expenseDateErrors("2025-02-28", "", new Date("2024-02-29T15:00:00Z")), {});
+assert.ok(expenseDateErrors("2025-03-01", "", new Date("2024-02-29T15:00:00Z")).competenceDate);
 
 // Finance report (SC-021): period from the URL, missing data and percentages in Portuguese.
 assert.equal(reportPeriod("LAST_MONTH"), "LAST_MONTH");
@@ -97,6 +112,10 @@ for (const invalid of ["1,001", "1.000,00", "1e2", "-1", "NaN", "100000000000000
 }
 assert.equal(formatBRL("99999999999999999.99").replace(/\s/g, " "), "R$ 99.999.999.999.999.999,99");
 assert.equal(formatBRL("0.01").replace(/\s/g, " "), "R$ 0,01");
+assert.equal(formatBRL("-15.00").replace(/\s/g, " "), "-R$ 15,00");
+assert.equal(formatBRL("-0.01").replace(/\s/g, " "), "-R$ 0,01");
+assert.equal(formatBRL("-99999999999999999.99").replace(/\s/g, " "), "-R$ 99.999.999.999.999.999,99");
+assert.equal(formatBRL("invalid"), "Valor indisponível");
 
 // SC-012: only Mercado Pago's HTTPS authorization page is a navigation target; unknown data is dropped.
 assert.equal(authorizationTarget({ authorizationUrl: "https://auth.mercadopago.com/authorization?client_id=1&state=x" }), "https://auth.mercadopago.com/authorization?client_id=1&state=x");
@@ -202,8 +221,14 @@ try {
     assert.equal(response.status, 200, path);
     assert.equal(response.headers.get("referrer-policy"), "no-referrer", path);
     const page = await response.text();
-    assert.ok(page.includes(title), `${path}: título`);
-    assert.ok(page.includes(field), `${path}: conteúdo semântico`);
+    if (isProtectedPath(new URL(path, baseUrl).pathname)) {
+      assert.match(page, /<h1[^>]*>Verificando sua sessão<\/h1>/, `${path}: acesso ainda não confirmado`);
+      assert.ok(!page.includes('<nav') && !page.includes('<form'), `${path}: conteúdo operacional não montado sem sessão`);
+      assert.equal((page.match(/<main[\s>]/g) ?? []).length, 1, `${path}: main único`);
+    } else {
+      assert.ok(page.includes(title), `${path}: título`);
+      assert.ok(page.includes(field), `${path}: conteúdo semântico`);
+    }
     assert.ok(!page.includes('class="presentation landing-page"'), `${path}: sem tema da landing`);
   }
   // Route ids must be canonical UUIDs before any API path is built from them.
@@ -219,7 +244,7 @@ try {
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /Página não encontrada/);
-  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, pagamentos (Mercado Pago: destino da autorização, estados e retorno), despesas (mês na URL, valores e textos), financeiro (período na URL e margem parcial), dashboard (barras do gráfico), pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
+  console.log("Smoke aprovado: páginas públicas, gate de sessão em todas as rotas operacionais, helpers de pagamentos/despesas/financeiro/dashboard/pedidos/estoque, valores e datas, headers de privacidade e 404. Não substitui teste de browser/API autenticado.");
 } finally {
   server.kill();
 }

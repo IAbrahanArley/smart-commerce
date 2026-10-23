@@ -4,6 +4,8 @@ Data: 2026-10-21. Base: [ADR-0015](../architecture/adr/0015-finance-dashboard.md
 
 **Estado:** implementada e validada com PostgreSQL via Testcontainers e com o smoke do admin. **Não houve verificação visual no navegador**, então o gráfico em SVG ainda precisa ser conferido numa tela real (está na lista de pendências da SC-023).
 
+Atualização de 2026-10-22: gráfico, tabela equivalente e responsividade conferidos no navegador com API sintética, com correções e [limitações registradas](SPRINT-05-UI-VALIDATION.md). A ausência de navegador acima descreve a validação inicial; a revisão integrada da SC-023 continua pendente.
+
 ## Critérios de aceite
 
 | Critério | Evidência (`DashboardIT`) |

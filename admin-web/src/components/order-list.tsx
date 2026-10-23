@@ -7,6 +7,7 @@ import { formatBRL } from "@/lib/catalog";
 import { ORDER_STATUSES, type OrderPage, type OrderStatus, STATUS_LABELS, formatDateTime, ordersApiPath, ordersPagePath } from "@/lib/orders";
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
+import PageState from "@/components/page-state";
 
 const SHORT_FULFILLMENT = { PICKUP: "Retirada", FIXED_SHIPPING: "Frete fixo" } as const;
 
@@ -41,10 +42,10 @@ export default function OrderList({ tenantId, status, after }: { tenantId: strin
       </select>
       <button type="submit">Filtrar pedidos</button>
     </form>
-    {state === "loading" ? <p role="status">Consultando pedidos…</p> : null}
+    {state === "loading" ? <PageState kind="loading" icon="receipt" title="Consultando pedidos…">Carregando os pedidos da sua loja.</PageState> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar os pedidos.</p><Link href="/entrar">Entrar</Link></> : null}
-    {state === "missing" ? <p role="status">Loja indisponível. Volte para suas lojas e escolha uma loja à qual você tem acesso.</p> : null}
-    {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar os pedidos. Tente novamente.</p><button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar pedidos novamente</button></> : null}
+    {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
+    {state === "error" ? <PageState kind="error" icon="receipt" title="Não foi possível consultar os pedidos" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar pedidos novamente">Confira a conexão e tente carregar a lista novamente.</PageState> : null}
     {state === "ready" && page ? page.orders.length ? <>
       <div className="data-table-wrap"><table className="data-table data-table-wrapping" role="table">
         <caption>{after ? "Pedidos mais antigos" : "Pedidos mais recentes"} {filtered}</caption>
@@ -61,6 +62,6 @@ export default function OrderList({ tenantId, status, after }: { tenantId: strin
         {after ? <Link href={ordersPagePath(tenantId, status, null)}>Voltar aos mais recentes</Link> : null}
         {page.nextCursor ? <Link href={ordersPagePath(tenantId, status, page.nextCursor)}>Ver pedidos mais antigos</Link> : null}
       </nav>
-    </> : <p className="feedback-empty">{status || after ? "Nenhum pedido encontrado com este filtro." : "Nenhum pedido ainda. Os pedidos feitos na vitrine aparecerão aqui."}</p> : null}
+    </> : <PageState icon="receipt" title={status || after ? "Nenhum pedido encontrado" : "Sua loja ainda não tem pedidos"}>{status || after ? "Tente outra situação para consultar os pedidos." : "Os pedidos feitos na vitrine aparecerão aqui, com os detalhes de pagamento e entrega."}</PageState> : null}
   </section>;
 }

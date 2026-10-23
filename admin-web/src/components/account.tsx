@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useSignOut } from "@/lib/use-sign-out";
+import { apiRequest } from "@/lib/auth-api";
 
 type Account = { id: string; email: string };
 
@@ -17,7 +18,7 @@ export default function AccountPanel() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store", signal: controller.signal })
+    apiRequest("/api/auth/me", { signal: controller.signal })
       .then(async response => {
         if (response.status === 401) { setSignedOut(true); return; }
         if (!response.ok) throw new Error();

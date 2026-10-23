@@ -9,3 +9,14 @@
 7. Beta: validação com lojistas, segurança, suporte e custos.
 
 Roadmap adaptativo: priorização e datas revistas após cada sprint.
+
+## Refinamento do catálogo — imagens de produtos
+
+Solicitação registrada em 2026-10-22, para priorização após a revisão integrada da Sprint 5. Upload, capa, ordenação, texto alternativo e galeria já existem conforme ADR-0011; esta evolução melhora sua presença no admin.
+
+- Mostrar a foto de capa nas listas de produtos e um estado explícito “Sem foto”, mantendo identificação e preço legíveis em telas pequenas.
+- Tornar o acesso à gestão das fotos fácil de encontrar no cadastro/edição e indicar qual imagem é a capa.
+- Reutilizar os endpoints, limites e regras de publicação existentes; não adicionar armazenamento externo, biblioteca ou imagens fictícias.
+- Aceite previsto: produto com/sem capa, troca de capa, upload inválido, teclado, layout móvel e isolamento A/B; ocultar produto/loja deve continuar impedindo novas consultas públicas às imagens.
+
+Planejamento registrado; implementação e evidências ficam em tarefa própria, sem incluir essa funcionalidade na entrega atual de sessão e espaçamento.
