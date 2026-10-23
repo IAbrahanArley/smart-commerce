@@ -4,6 +4,8 @@ Data: 2026-10-21. Base: [ADR-0015](../architecture/adr/0015-finance-dashboard.md
 
 **Estado:** implementada e validada com PostgreSQL via Testcontainers e com o smoke do admin. Não houve verificação manual no navegador.
 
+Atualização de 2026-10-22: [validação das telas](SPRINT-05-UI-VALIDATION.md) com API sintética no navegador, correções de rascunho, foco e datas, testes adicionais e limitações registradas. A ausência de navegador acima descreve a validação inicial de 2026-10-21.
+
 ## Critérios de aceite
 
 | Critério | Evidência |

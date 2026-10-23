@@ -4,6 +4,8 @@ Data: 2026-10-21. Base: [ADR-0015](../architecture/adr/0015-finance-dashboard.md
 
 **Estado:** implementada e validada com PostgreSQL via Testcontainers, com um cenário calculado à mão, e com o smoke do admin. Não houve verificação manual no navegador. As taxas do Mercado Pago ainda não existem no livro (SC-018), então todo relatório com vendas aparece como **parcial**, que é o comportamento esperado até lá.
 
+Atualização de 2026-10-22: [validação das telas](SPRINT-05-UI-VALIDATION.md) no navegador com API sintética; corrigidos valores negativos e orientação sobre custos históricos. A ausência de navegador acima descreve a validação inicial de 2026-10-21.
+
 ## Critérios de aceite
 
 | Critério | Evidência (`FinanceReportIT`) |

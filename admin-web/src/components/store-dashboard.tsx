@@ -9,6 +9,7 @@ import { formatDay } from "@/lib/expenses";
 import { PERIODS, type ReportPeriodKey, missingText, percentText } from "@/lib/finance";
 import { formatDateTime } from "@/lib/orders";
 import StatusBadge from "@/components/status-badge";
+import PageState from "@/components/page-state";
 
 const CHART_WIDTH = 600;
 const CHART_HEIGHT = 160;
@@ -17,7 +18,7 @@ const CHART_HEIGHT = 160;
 // report's; the chart is plain SVG with the design tokens and an equivalent table.
 export default function StoreDashboard({ tenantId, period }: { tenantId: string; period: ReportPeriodKey }) {
   const [data, setData] = useState<Dashboard | null>(null);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "signed-out" | "missing" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
   const chartId = useId();
   const storePath = `/lojas/${encodeURIComponent(tenantId)}`;
@@ -25,6 +26,9 @@ export default function StoreDashboard({ tenantId, period }: { tenantId: string;
   useEffect(() => {
     const controller = new AbortController();
     apiRequest(`/api/tenants/${encodeURIComponent(tenantId)}/dashboard?period=${period}`, { signal: controller.signal }).then(async response => {
+      if (controller.signal.aborted) return;
+      if (response.status === 401) { setState("signed-out"); return; }
+      if (response.status === 403 || response.status === 404) { setState("missing"); return; }
       if (!response.ok) throw new Error();
       const current: Dashboard = await response.json();
       if (controller.signal.aborted) return;
@@ -44,8 +48,10 @@ export default function StoreDashboard({ tenantId, period }: { tenantId: string;
       </select>
       <button type="submit">Ver período</button>
     </form>
-    {state === "loading" ? <p role="status">Consultando o desempenho…</p> : null}
-    {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar o desempenho. Tente novamente.</p><button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar novamente</button></> : null}
+    {state === "loading" ? <PageState headingLevel={3} kind="loading" icon="chart" title="Consultando o desempenho…">Carregando vendas e indicadores de estoque.</PageState> : null}
+    {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar o desempenho.</p><Link href="/entrar">Entrar</Link></> : null}
+    {state === "missing" ? <PageState headingLevel={3} icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
+    {state === "error" ? <PageState headingLevel={3} kind="error" icon="chart" title="Não foi possível consultar o desempenho" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar novamente">Confira a conexão e tente carregar os indicadores novamente.</PageState> : null}
     {state === "ready" && data ? <>
       <p className="field-help">De {formatDay(data.period.firstDay)} a {formatDay(data.period.lastDay)} (horário de Brasília).</p>
       <div className="stat-grid">
@@ -58,7 +64,7 @@ export default function StoreDashboard({ tenantId, period }: { tenantId: string;
       <figure className="dashboard-chart">
         <figcaption id={`${chartId}-title`}>Receita por dia</figcaption>
         <svg viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT + 24}`} role="img" aria-labelledby={`${chartId}-title ${chartId}-desc`}>
-          <desc id={`${chartId}-desc`}>{data.salesByDay.length} dias; os valores estão na tabela logo abaixo.</desc>
+          <desc id={`${chartId}-desc`}>{data.salesByDay.length} {data.salesByDay.length === 1 ? "dia" : "dias"}; os valores estão na tabela logo abaixo.</desc>
           <line x1="0" y1={CHART_HEIGHT} x2={CHART_WIDTH} y2={CHART_HEIGHT} className="dashboard-axis" />
           {chart.map((bar, index) => <g key={bar.day}>
             <rect x={bar.x} y={bar.y} width={bar.width} height={bar.height} className="dashboard-bar"><title>{`${bar.label}: ${formatBRL(bar.revenue)}`}</title></rect>
@@ -73,16 +79,16 @@ export default function StoreDashboard({ tenantId, period }: { tenantId: string;
           <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Dia</th><th role="columnheader" scope="col" className="numeric">Pedidos</th><th role="columnheader" scope="col" className="numeric">Receita</th></tr></thead>
           <tbody role="rowgroup">{data.salesByDay.map(day => <tr role="row" key={day.day}>
             <th role="rowheader" scope="row">{shortDay(day.day)}</th>
-            <td role="cell" className="numeric">{day.orders}</td>
-            <td role="cell" className="numeric">{formatBRL(day.revenue)}</td>
+            <td role="cell" data-label="Pedidos" className="numeric">{day.orders}</td>
+            <td role="cell" data-label="Receita" className="numeric">{formatBRL(day.revenue)}</td>
           </tr>)}</tbody>
         </table></div>
       </details>
-      <StockList title={`Estoque baixo (até ${data.lowStockThreshold} unidades disponíveis)`} total={data.lowStockCount} items={data.lowStock} storePath={storePath}
+      <div className="dashboard-stock-grid"><StockList title={`Estoque baixo (até ${data.lowStockThreshold} unidades disponíveis)`} total={data.lowStockCount} items={data.lowStock} storePath={storePath}
         empty="Nenhum item com estoque baixo." describe={item => `${item.available} ${item.available === 1 ? "unidade disponível" : "unidades disponíveis"}`} />
       <StockList title={`Sem venda há ${data.staleAfterDays} dias`} total={data.withoutSalesCount} items={data.withoutSales} storePath={storePath}
-        empty="Todos os itens com estoque venderam recentemente." describe={item => `${item.available} em estoque · ${item.lastSaleAt ? `última venda em ${formatDateTime(item.lastSaleAt)}` : "nunca vendido"}`} />
-      <p className="field-help"><Link href={`${storePath}/financeiro?periodo=${period}`}>Ver o financeiro completo do período</Link></p>
+        empty="Nenhum item com estoque está parado há 30 dias." describe={item => `${item.available} em estoque · ${item.lastSaleAt ? `última venda em ${formatDateTime(item.lastSaleAt)}` : "nunca vendido"}`} /></div>
+      <p className="field-help dashboard-footer"><Link href={`${storePath}/financeiro?periodo=${period}`}>Ver o financeiro completo do período</Link></p>
     </> : null}
   </section>;
 }
@@ -98,10 +104,10 @@ function Stat({ label, value, badge, detail }: { label: string; value: string; b
 function StockList({ title, total, items, storePath, empty, describe }: { title: string; total: number; items: DashboardStock[]; storePath: string; empty: string; describe: (item: DashboardStock) => string }) {
   return <div className="dashboard-list">
     <h3>{title}{total > items.length ? ` — ${items.length} de ${total}` : ""}</h3>
-    {items.length ? <ul>{items.map(item => <li key={item.variantId}>
-      <Link href={`${storePath}/produtos/${encodeURIComponent(item.productId)}`}>{item.productName}</Link>
-      {item.options.length ? <span className="cell-hint"> {optionsText(item.options)}</span> : null}
-      <span className="cell-hint"> — {describe(item)}</span>
+    {items.length ? <ul>{items.map(item => <li className="dashboard-stock-item" key={item.variantId}>
+      <div><Link href={`${storePath}/produtos/${encodeURIComponent(item.productId)}`}>{item.productName}</Link>
+      {item.options.length ? <span className="cell-hint">{optionsText(item.options)}</span> : null}</div>
+      <span className="cell-hint">{describe(item)}</span>
     </li>)}</ul> : <p>{empty}</p>}
   </div>;
 }

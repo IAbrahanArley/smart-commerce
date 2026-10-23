@@ -8,6 +8,7 @@ import { formatDay } from "@/lib/expenses";
 import { PERIODS, type FinanceReport, type ReportPeriodKey, missingText, percentText } from "@/lib/finance";
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
+import PageState from "@/components/page-state";
 
 // SC-021: the period's figures from the backend ledger (ADR-0015 F1–F5). Sale, receivable and cash
 // are shown apart, and the margin says "parcial", with what is missing, whenever a component is
@@ -51,10 +52,10 @@ export default function StoreFinance({ tenantId, period }: { tenantId: string; p
       </select>
       <button type="submit">Ver período</button>
     </form>
-    {state === "loading" ? <p role="status">Consultando o financeiro…</p> : null}
+    {state === "loading" ? <PageState kind="loading" icon="chart" title="Consultando o financeiro…">Carregando os lançamentos e os indicadores do período.</PageState> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar o financeiro.</p><Link href="/entrar">Entrar</Link></> : null}
-    {state === "missing" ? <p role="status">Loja indisponível. Volte para suas lojas e escolha uma loja à qual você tem acesso.</p> : null}
-    {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar o financeiro. Tente novamente.</p><button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar novamente</button></> : null}
+    {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
+    {state === "error" ? <PageState kind="error" icon="chart" title="Não foi possível consultar o financeiro" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar novamente">Confira a conexão e tente carregar o resumo novamente.</PageState> : null}
     {state === "ready" && report ? <>
       <p>De {formatDay(report.period.firstDay)} a {formatDay(report.period.lastDay)} (horário de Brasília).</p>
       <div className="stat-grid">
@@ -68,13 +69,13 @@ export default function StoreFinance({ tenantId, period }: { tenantId: string; p
         <caption>Margem de contribuição do período {report.complete ? null : <StatusBadge tone="neutral">Parcial</StatusBadge>}</caption>
         <tbody role="rowgroup">{rows.map(row => <tr role="row" key={row.label}>
           <th role="rowheader" scope="row">{row.strong ? <strong>{row.label}</strong> : row.label}{row.note ? <span className="cell-hint">{row.note}</span> : null}</th>
-          <td role="cell" className="numeric">{row.strong ? <strong>{row.value}</strong> : row.value}</td>
+          <td role="cell" data-label="Valor" className="numeric">{row.strong ? <strong>{row.value}</strong> : row.value}</td>
         </tr>)}</tbody>
       </table></div>
       {!report.complete ? <div className="notice">
         <p><strong>Margem parcial:</strong> faltam dados para um valor definitivo.</p>
         <ul>{report.missing.map(item => <li key={item.code}>{missingText(item)}</li>)}</ul>
-        <p>Cadastre o custo dos produtos para completar o CMV. As taxas aparecem quando o Mercado Pago informar.</p>
+        <p>Cadastre o custo dos produtos antes das próximas vendas. Alterar o custo no catálogo não completa os pedidos anteriores, que preservam o custo registrado no pedido. As taxas aparecem quando o Mercado Pago informar.</p>
       </div> : null}
       <dl className="order-facts">
         <div><dt>Despesas fixas do período</dt><dd className="numeric">{formatBRL(report.fixedExpenses)}</dd></div>
