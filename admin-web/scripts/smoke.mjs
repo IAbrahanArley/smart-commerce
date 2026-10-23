@@ -6,6 +6,7 @@ import { fulfillmentFields, fulfillmentPayload, fulfillmentText } from "../src/l
 import { reservedStockMessage, wholeQuantity } from "../src/lib/inventory.ts";
 import { storefrontUrl } from "../src/lib/tenant-api.ts";
 import { backendOrigin, hostedTestEnvironment } from "../src/lib/deployment.ts";
+import { alertLink, alertText, parseAlerts } from "../src/lib/alerts.ts";
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
 
 // ADR-0014: the /api rewrite only targets HTTPS (or loopback HTTP); the notice needs the exact flag.
@@ -111,6 +112,25 @@ assert.equal(callbackMessage("conectado").error, false);
 for (const word of ["negado", "expirado", "indisponivel", "erro"]) assert.equal(callbackMessage(word).error, true, word);
 assert.equal(callbackMessage("<script>"), null);
 assert.equal(callbackMessage(null), null);
+
+// SC-024: alerts keep known codes, severities and targets only, and never word an unknown code.
+const parsedAlerts = parseAlerts({ alerts: [
+  { code: "LOW_STOCK", severity: "ATTENTION", count: 1, amount: null, target: "PRODUCTS" },
+  { code: "MARGIN_NEGATIVE", severity: "CRITICAL", count: null, amount: "-25.00", target: "FINANCE" },
+  { code: "UNKNOWN_RULE", severity: "INFO", count: 1, amount: null, target: "PRODUCTS" },
+  { code: "LOW_STOCK", severity: "URGENT", count: 1, amount: null, target: "PRODUCTS" },
+  { code: "LOW_STOCK", severity: "INFO", count: 1, amount: null, target: "https://evil.test" },
+  { code: "MARGIN_NEGATIVE", severity: "CRITICAL", count: null, amount: "abc", target: "FINANCE" },
+] });
+assert.deepEqual(parsedAlerts.map(alert => alert.code), ["LOW_STOCK", "MARGIN_NEGATIVE"]);
+assert.equal(alertText(parsedAlerts[0]), "1 item com estoque baixo (5 unidades ou menos).");
+assert.equal(alertText(parsedAlerts[1]).replace(/\s/g, " "), "A margem de contribuição deste mês está negativa: -R$ 25,00.");
+for (const [raw, text] of [["-25.00", "-R$ 25,00"], ["-0.50", "-R$ 0,50"], ["-0.00", "R$ 0,00"], ["1234567.89", "R$ 1.234.567,89"], ["--1.00", "Valor indisponível"]])
+  assert.equal(formatBRL(raw).replace(/\s/g, " "), text, raw);
+assert.equal(alertText({ code: "ORDERS_EXPIRING", severity: "ATTENTION", count: 2, amount: null, target: "ORDERS" }), "2 pedidos aguardando pagamento com reserva terminando em até 10 minutos.");
+assert.equal(alertLink(parsedAlerts[0], "t-1").href, "/lojas/t-1/produtos");
+assert.equal(alertLink({ ...parsedAlerts[0], target: "ORDERS" }, "t-1").href, "/lojas/t-1/pedidos?situacao=PENDING_PAYMENT");
+assert.equal(parseAlerts(null), null);
 
 const fulfillment = { pickupEnabled: true, pickupInstructions: "  Rua A, 10  ", fixedShippingEnabled: true, fixedShippingAmount: "12,5", fixedShippingArea: "Centro" };
 assert.deepEqual(fulfillmentPayload(fulfillment, 3), { body: { pickupEnabled: true, pickupInstructions: "Rua A, 10", fixedShippingEnabled: true, fixedShippingAmount: "12.50", fixedShippingArea: "Centro", version: 3 } });
@@ -219,7 +239,7 @@ try {
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /Página não encontrada/);
-  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, página de entrega, pagamentos (Mercado Pago: destino da autorização, estados e retorno), despesas (mês na URL, valores e textos), financeiro (período na URL e margem parcial), dashboard (barras do gráfico), pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
+  console.log("Smoke aprovado: home, cadastro, login, confirmação, conta com navegação da conta, minhas lojas, detalhe de loja, alertas da loja, página de entrega, pagamentos (Mercado Pago: destino da autorização, estados e retorno), despesas (mês na URL, valores e textos), financeiro (período na URL e margem parcial), dashboard (barras do gráfico), pedidos (lista com filtro na URL e detalhe), catálogo, novo produto com navegação da loja, edição e estoque com trilha de navegação, estoque (mensagem RESERVED_STOCK), validações de valores, headers de privacidade e 404. Não substitui teste de browser/API.");
 } finally {
   server.kill();
 }

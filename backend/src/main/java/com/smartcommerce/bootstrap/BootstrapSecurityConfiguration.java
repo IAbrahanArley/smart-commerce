@@ -175,7 +175,8 @@ public class BootstrapSecurityConfiguration {
                         HttpMethod.GET,
                         "/api/tenants/*/expenses",
                         "/api/tenants/*/finance",
-                        "/api/tenants/*/dashboard")
+                        "/api/tenants/*/dashboard",
+                        "/api/tenants/*/alerts")
                     .authenticated()
                     .requestMatchers(
                         HttpMethod.POST,

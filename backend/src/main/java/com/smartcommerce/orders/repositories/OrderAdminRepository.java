@@ -10,7 +10,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -47,6 +49,42 @@ public class OrderAdminRepository {
             Boolean.class,
             actor,
             tenant));
+  }
+
+  /**
+   * Orders created in {@code [from, to)} by effective status (pending past the deadline counts as
+   * EXPIRED), for the advisor (SC-025). Counts only: no buyer column is read.
+   */
+  public Map<String, Long> countsByStatus(UUID tenant, Instant from, Instant to, Instant now) {
+    Map<String, Long> counts = new TreeMap<>();
+    jdbc.query(
+        "SELECT "
+            + EFFECTIVE_STATUS
+            + " AS status, count(*) AS total FROM sales_order o"
+            + " WHERE o.tenant_id=? AND o.created_at>=? AND o.created_at<? GROUP BY 1",
+        row -> {
+          counts.put(row.getString("status"), row.getLong("total"));
+        },
+        utc(now),
+        tenant,
+        utc(from),
+        utc(to));
+    return counts;
+  }
+
+  /** Pending orders whose reservation ends in {@code (now, until]} (SC-024 alert). */
+  public long pendingExpiring(UUID tenant, Instant now, Instant until) {
+    Long count =
+        jdbc.queryForObject(
+            """
+            SELECT count(*) FROM sales_order WHERE tenant_id=? AND status='PENDING_PAYMENT'
+              AND reservation_expires_at>? AND reservation_expires_at<=?
+            """,
+            Long.class,
+            tenant,
+            utc(now),
+            utc(until));
+    return count == null ? 0 : count;
   }
 
   /** One page plus one extra row, so the caller knows whether another page exists. */
