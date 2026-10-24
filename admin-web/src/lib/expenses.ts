@@ -60,6 +60,21 @@ export function formatDay(day: string | null): string {
   return `${date}/${month}/${year}`;
 }
 
+// Matches ExpenseInput's calendar bounds, including leap years and the store's time zone.
+export function expenseDateErrors(competence: string, paid: string, now: Date): { competenceDate?: string; paidOn?: string } {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+  const part = (name: string) => parts.find(item => item.type === name)!.value;
+  const today = `${part("year")}-${part("month")}-${part("day")}`;
+  const nextYear = Number(part("year")) + 1;
+  const lastDay = new Date(Date.UTC(nextYear, Number(part("month")), 0)).getUTCDate();
+  const limit = `${nextYear}-${part("month")}-${String(Math.min(Number(part("day")), lastDay)).padStart(2, "0")}`;
+  const valid = (day: string) => /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isFinite(Date.parse(`${day}T12:00:00Z`)) && new Date(`${day}T12:00:00Z`).toISOString().slice(0, 10) === day;
+  const errors: { competenceDate?: string; paidOn?: string } = {};
+  if (!valid(competence) || competence < "2000-01-01" || competence > limit) errors.competenceDate = "Informe uma data válida desde 2000 até um ano à frente.";
+  if (paid && (!valid(paid) || paid < "2000-01-01" || paid > today)) errors.paidOn = "Informe uma data válida desde 2000 até hoje, ou deixe em branco.";
+  return errors;
+}
+
 // Accepts "1.234,56", "1234,56" or "1234.56"; returns the API's "1234.56" or an error message.
 export function parseAmount(value: string): { amount: string } | { error: string } {
   const text = value.trim().replace(/^R\$\s*/, "");

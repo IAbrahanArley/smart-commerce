@@ -1,12 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { authRequest, requestError } from "@/lib/auth-api";
+import { invalidateSession } from "@/lib/session-events";
 
 // Single logout flow for the account page and the header menu; repeated clicks are ignored while pending.
 export function useSignOut() {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const submitting = useRef(false);
@@ -18,9 +17,10 @@ export function useSignOut() {
     setError("");
     try {
       const response = await authRequest("logout");
-      if (!response.ok) { setError(requestError(response.status)); return; }
-      router.replace("/entrar");
-      router.refresh();
+      if (!response.ok && response.status !== 401) { setError(requestError(response.status)); return; }
+      invalidateSession();
+      // A document navigation discards account data and the client Router Cache.
+      window.location.replace("/entrar");
     } catch { setError("Não foi possível sair. Verifique a conexão e tente novamente."); }
     finally { submitting.current = false; setPending(false); }
   }

@@ -80,7 +80,7 @@ Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dash
 
 ## SC-022 — Dashboard
 
-**Estado (2026-10-21):** autorizada e implementada ([validação](../quality/SC-022-VALIDATION.md)). A conferência visual do gráfico no navegador ficou para a SC-023.
+**Estado (2026-10-21):** autorizada e implementada ([validação](../quality/SC-022-VALIDATION.md)). A conferência visual do gráfico e das telas foi realizada em 2026-10-22 com API sintética ([registro](../quality/SPRINT-05-UI-VALIDATION.md)); validação integrada e pendências de acessibilidade continuam para SC-023.
 
 - Página inicial da loja no admin com os indicadores do F8: pedidos pagos, receita, ticket médio, margem estimada, estoque baixo e itens sem giro, com seletor de período.
 - Gráfico simples de vendas por dia em SVG próprio (F9), com tabela equivalente acessível.
@@ -94,6 +94,8 @@ Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dash
 - A/B.
 
 ## SC-023 — Revisão integrada
+
+**Preparação (2026-10-22):** validação das telas autorizada e realizada, com correções de moeda negativa, rascunho/foco/datas de despesas e estados do dashboard ([evidências e limitações](../quality/SPRINT-05-UI-VALIDATION.md)). Esta etapa não encerra a tarefa; a SC-018 e a validação real da Sprint 4 seguem como dependências.
 
 - Checklists de [SECURITY.md](../agents/SECURITY.md) e [QA.md](../agents/QA.md), com foco em tenant, integridade dos números e acessibilidade do dashboard.
 - Atualização de ARCHITECTURE, DATA_MODEL e do status do ADR-0015.

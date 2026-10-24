@@ -244,6 +244,8 @@ A skill design-taste-frontend apoia composição e revisão, preservando paleta/
 
 ## Conteúdo do produto autorizado
 
+**Ritmo das telas operacionais (2026-10-22).** O contêiner de página separa blocos irmãos por 24 px, usando os tokens existentes; grades internas conservam seu próprio gap. Filtros e navegação de competência usam superfícies e controles locais. Estados de carregamento, vazio e erro oferecem título, explicação e ação pertinente em painel reutilizável. Listas de estoque separam nome, variações e disponibilidade em linhas legíveis. Aplicação dos padrões existentes, sem mudança de identidade, cores, tipografia ou biblioteca.
+
 Na evolução do catálogo de 2026-10-17, fotos reais enviadas pelo lojista podem compor capa e galeria sem trocar a identidade da plataforma. Usar dimensões explícitas, proporção consistente com `object-fit: contain` para não cortar o produto, texto alternativo obrigatório e navegação por teclado. Não mostrar fotos de referência como se fossem mercadoria cadastrada. Nenhum cache/otimizador deve manter a foto pública depois de ocultar o produto em novas consultas.
 
 Organizar o formulário em identificação, descrição, preços/variações, imagens e publicação, com instruções e erros associados aos campos. Descrição permite apenas a formatação sanitizada do ADR-0011; nunca executar HTML de entrada bruta no preview. Opções como cor/tamanho devem usar rótulos textuais e controles nativos, sem depender de amostras de cor. Selecionar uma combinação exibe seu preço/disponibilidade real; não sugerir compra ou reserva inexistente. Limites de upload, necessidade de salvar antes de editar fotos e conflitos de versão precisam ser claros sem perder rascunhos.
