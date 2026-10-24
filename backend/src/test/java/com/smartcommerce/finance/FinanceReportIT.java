@@ -1,6 +1,7 @@
 package com.smartcommerce.finance;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.smartcommerce.finance.domain.ExpenseInput;
 import com.smartcommerce.finance.services.ExpenseService;
@@ -18,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -73,6 +76,38 @@ class FinanceReportIT {
     UUID ownerB = activeIdentity("relatorio-b@example.test");
     tenantA = store(ownerA, "relatorio-a");
     tenantB = store(ownerB, "relatorio-b");
+  }
+
+  @Test
+  void ledgerRowsCannotBeChangedOrDeletedOnlySettledOnce() {
+    UUID order = TestOrders.create(jdbc, tenantA);
+    ledger.recordSale(
+        tenantA, order, new BigDecimal("100.00"), new BigDecimal("40.00"), false, Instant.now());
+    String key = "sale:" + order;
+    for (String change :
+        List.of(
+            "UPDATE finance_entry SET amount=1.00 WHERE entry_key=?",
+            "UPDATE finance_entry SET competence_at=now()-interval '40 days' WHERE entry_key=?",
+            "DELETE FROM finance_entry WHERE entry_key=?"))
+      assertThatThrownBy(() -> jdbc.update(change, key))
+          .isInstanceOf(DataAccessException.class)
+          .hasMessageContaining("append-only");
+    // SC-018 path: settled_at is filled once, and only it.
+    assertThat(jdbc.update("UPDATE finance_entry SET settled_at=now() WHERE entry_key=?", key))
+        .isEqualTo(1);
+    assertThatThrownBy(
+            () -> jdbc.update("UPDATE finance_entry SET settled_at=now() WHERE entry_key=?", key))
+        .hasMessageContaining("append-only");
+    assertThatThrownBy(
+            () ->
+                jdbc.update(
+                    "UPDATE finance_entry SET settled_at=now(), amount=2.00 WHERE entry_key=?",
+                    "cogs:" + order))
+        .hasMessageContaining("append-only");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT amount::text FROM finance_entry WHERE entry_key=?", String.class, key))
+        .isEqualTo("100.00");
   }
 
   @Test

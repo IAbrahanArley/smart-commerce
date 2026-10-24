@@ -33,6 +33,16 @@ Status: **adotado** em 2026-10-21 para F1–F10, conforme as recomendações aba
 | F9 | Gráficos | **Sem dependência nova:** barras e linhas em SVG próprio com os tokens do DESIGN.md e tabela equivalente acessível. Uma biblioteca de gráficos só com aprovação | Recharts ou similar (dependência nova) | SC-022 |
 | F10 | Dinheiro e arredondamento | NUMERIC no banco e BigDecimal no código, BRL, sem float; arredondamento HALF_EVEN só na exibição de percentuais (2 casas); valores sempre com 2 casas | — | todas |
 
+## Revisão integrada (SC-023, 2026-10-24)
+
+A revisão das SC-019 a SC-022 está registrada em [SC-023-VALIDATION.md](../../quality/SC-023-VALIDATION.md). Ela não encontrou falha de isolamento nem de cálculo.
+
+**Ajuste feito:** a V25 passou a impor no banco o livro só de acréscimo (F7).
+
+**Ainda pendente para fechar o ADR:**
+- a SC-018, ou seja, taxa, líquido e liberação (F2, F3), que depende da validação real no sandbox do Mercado Pago;
+- a revisão de acessibilidade com leitor de tela, zoom e Axe.
+
 ## Consequências e riscos
 
 - **Dependência do sandbox (F2):** a taxa só fica disponível se a hipótese do `reference.id` se confirmar; a SC-018 pode terminar só com "taxa indisponível", e a margem (F5) fica "parcial" até lá. É a decisão mais incerta.
