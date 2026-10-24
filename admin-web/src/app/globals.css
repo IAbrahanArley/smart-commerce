@@ -344,3 +344,15 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .alert-severity { font-weight: 700; }
 .alert-critical .alert-severity { color: var(--sc-color-danger); }
 .alert-text { flex: 1 1 18rem; }
+
+/* Product photos in the admin (catalog refinement): cover thumbnails and an explicit "Sem foto". */
+.product-cell { display: flex; align-items: center; gap: var(--sc-space-3); min-width: 0; }
+.product-cell-text { display: grid; gap: var(--sc-space-1); min-width: 0; overflow-wrap: anywhere; }
+.product-thumb { flex: none; width: 48px; height: 48px; object-fit: cover; border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-control); background: var(--sc-color-disabled-background); }
+.product-thumb-empty { display: inline-flex; align-items: center; justify-content: center; padding: var(--sc-space-1); color: var(--sc-color-text-secondary); font-size: .75rem; font-weight: 700; line-height: 1.2; text-align: center; }
+.product-photos-summary { display: flex; align-items: center; gap: var(--sc-space-3); margin-block: var(--sc-space-3); }
+.product-photos-summary .product-thumb { width: 72px; height: 72px; }
+.product-photos-summary p { margin: 0; }
+#fotos { scroll-margin-top: 5rem; }
+#fotos:focus { outline: none; }
+#fotos:focus-visible { outline: 3px solid var(--sc-color-focus); outline-offset: 4px; }

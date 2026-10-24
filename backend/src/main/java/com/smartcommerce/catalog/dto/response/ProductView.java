@@ -15,4 +15,7 @@ public record ProductView(
     boolean published,
     String descriptionHtml,
     String kind,
-    List<VariantView> variants) {}
+    List<VariantView> variants,
+    UUID coverImageId,
+    String coverImageAlt,
+    int imageCount) {}

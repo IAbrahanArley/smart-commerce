@@ -13,7 +13,25 @@ export type Product = {
   descriptionHtml: string;
   kind: "SIMPLE" | "VARIABLE";
   variants: ProductVariant[];
+  coverImageId: string | null;
+  coverImageAlt: string | null;
+  imageCount: number;
 };
+
+export const MAX_PRODUCT_PHOTOS = 6;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Private (session) URL of a product's cover, or null without a valid cover id. Same origin: the
+// admin proxies /api to the backend, which checks the OWNER before serving the bytes.
+export function coverUrl(tenantId: string, product: Pick<Product, "id" | "coverImageId">): string | null {
+  if (!product.coverImageId || !UUID.test(product.coverImageId) || !UUID.test(product.id)) return null;
+  return `/api/tenants/${encodeURIComponent(tenantId)}/products/${encodeURIComponent(product.id)}/images/${encodeURIComponent(product.coverImageId)}/content`;
+}
+
+export function photoCountText(count: number): string {
+  if (!Number.isSafeInteger(count) || count <= 0) return "Sem foto";
+  return `${count} de ${MAX_PRODUCT_PHOTOS} fotos`;
+}
 
 // Decimal text is canonicalized without floating-point conversion or rounding.
 export function decimalInput(value: string): string | null {
