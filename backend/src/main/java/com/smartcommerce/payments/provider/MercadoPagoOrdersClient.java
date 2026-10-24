@@ -13,10 +13,14 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Consumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -29,6 +33,7 @@ import tools.jackson.databind.json.JsonMapper;
  * exception messages, and redirects are never followed.
  */
 public final class MercadoPagoOrdersClient {
+  private static final Logger LOG = LoggerFactory.getLogger(MercadoPagoOrdersClient.class);
   public static final String DEFAULT_API_URL = "https://api.mercadopago.com";
 
   /** P2: same window as the reservation (ADR-0012 D1); the Orders API minimum is 30 minutes. */
@@ -81,14 +86,44 @@ public final class MercadoPagoOrdersClient {
                   .build(),
               HttpResponse.BodyHandlers.ofString());
     } catch (IOException failure) {
+      LOG.warn("Checkout Pro order request failed: {}", failure.getClass().getSimpleName());
       throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
     } catch (InterruptedException interrupted) {
       Thread.currentThread().interrupt();
       throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
     }
-    if (response.statusCode() != 200 && response.statusCode() != 201)
+    if (response.statusCode() != 200 && response.statusCode() != 201) {
+      LOG.warn(
+          "Checkout Pro order rejected: HTTP {}, provider codes {}",
+          response.statusCode(),
+          errorCodes(parse(response.body())));
       throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    }
     return order(parse(response.body()), request, now);
+  }
+
+  /**
+   * Diagnostic codes from a provider error body ({@code error}, {@code errors[].code}, {@code
+   * cause[].code}): only short identifier-like values, at most five, never messages or the body,
+   * which may echo request data.
+   */
+  static List<String> errorCodes(JsonNode json) {
+    List<String> codes = new ArrayList<>();
+    if (json == null) return codes;
+    Consumer<JsonNode> add =
+        node -> {
+          if (node != null && (node.isString() || node.isNumber())) {
+            String value = node.asString();
+            if (value.matches("[A-Za-z0-9_.-]{1,60}") && codes.size() < 5) codes.add(value);
+          }
+        };
+    add.accept(json.get("error"));
+    for (String list : List.of("errors", "cause")) {
+      JsonNode items = json.get(list);
+      if (items != null && items.isArray())
+        for (JsonNode item : items) add.accept(item.get("code"));
+    }
+    return codes;
   }
 
   /**
@@ -234,23 +269,45 @@ public final class MercadoPagoOrdersClient {
   }
 
   private static ProviderOrder order(JsonNode json, CheckoutPaymentRequest request, Instant now) {
-    if (json == null) throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    if (json == null) {
+      LOG.warn("Checkout Pro order response not accepted: body is not a JSON object");
+      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    }
     String id = text(json, "id", 64);
     String status = text(json, "status", 40);
     String url = text(json, "checkout_url", 2048);
     String total = text(json, "total_amount", 40);
     String currency = text(json, "currency", 3);
     String reference = text(json, "external_reference", 64);
-    if (id == null
-        || !id.matches("[A-Za-z0-9_-]{1,64}")
-        || status == null
-        || !status.matches("[a-z_]{1,40}")
-        || !checkoutPage(url)
-        || !sameAmount(total, request.total())
-        || (currency != null && !"BRL".equals(currency))
-        || (reference != null && !reference.equals(request.orderId().toString())))
+    String invalid =
+        id == null || !id.matches("[A-Za-z0-9_-]{1,64}")
+            ? "id"
+            : status == null || !status.matches("[a-z_]{1,40}")
+                ? "status"
+                : !checkoutPage(url)
+                    ? url == null ? "checkout_url missing" : "checkout_url host " + host(url)
+                    : !sameAmount(total, request.total())
+                        ? "total_amount"
+                        : currency != null && !"BRL".equals(currency)
+                            ? "currency"
+                            : reference != null && !reference.equals(request.orderId().toString())
+                                ? "external_reference"
+                                : null;
+    if (invalid != null) {
+      // Field names only (and the checkout host, never the full URL or any value).
+      LOG.warn("Checkout Pro order response not accepted: {}", invalid);
       throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    }
     return new ProviderOrder(id, status, url, now.plus(EXPIRATION));
+  }
+
+  private static String host(String value) {
+    try {
+      String host = URI.create(value).getHost();
+      return host == null ? "none" : host.replaceAll("[^A-Za-z0-9.-]", "").toLowerCase(Locale.ROOT);
+    } catch (IllegalArgumentException invalid) {
+      return "invalid";
+    }
   }
 
   /** HTTPS on a Mercado Pago domain (the domain varies by the seller's country). */
