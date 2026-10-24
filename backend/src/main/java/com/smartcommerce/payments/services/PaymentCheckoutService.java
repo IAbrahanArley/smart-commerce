@@ -28,7 +28,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  *   <li>The payment row is claimed first, in its own transaction; the provider call runs outside
  *       any transaction or lock and the answer is stored afterwards.
  *   <li>The provider call is idempotent by a key derived from the order, so a retry after a
- *       timeout, or two concurrent attempts, get the same provider order instead of a second one.
+ *       timeout, or two concurrent attempts, reuse the provider's answer where it honours the key;
+ *       otherwise the first stored preference wins and only that one is shown to the buyer.
  *   <li>A failure leaves the row CREATING and the order pending: the buyer can simply try again.
  *   <li>The token is always the one of the order's own tenant; the tenant comes from the order the
  *       orders module resolved, never from the client.
@@ -76,9 +77,9 @@ public class PaymentCheckoutService {
     return reads.execute(tx -> payments.summary(tenant, order));
   }
 
-  /** Returns the checkout URL to redirect the buyer to, creating the provider order if needed. */
+  /** Returns the checkout URL to redirect the buyer to, creating the preference if needed. */
   public String open(CheckoutPaymentRequest request) {
-    var client = providers.requireOrders();
+    var client = providers.requireCheckout();
     PaymentRecord payment =
         writes.execute(
             tx -> payments.claim(request.tenant(), request.orderId(), request.total(), now()));
@@ -91,10 +92,10 @@ public class PaymentCheckoutService {
     ProviderOrder created;
     try {
       created =
-          client.createCheckoutOrder(
+          client.createPreference(
               seller.accessToken(), idempotencyKey(request.orderId()), request, now());
     } catch (PaymentException failure) {
-      LOG.warn("Checkout Pro order creation failed for order {}", request.orderId());
+      LOG.warn("Checkout Pro preference creation failed for order {}", request.orderId());
       throw failure;
     }
     Instant now = now();
@@ -112,15 +113,15 @@ public class PaymentCheckoutService {
                         created.expiresAt(),
                         now)));
     if (stored) return created.checkoutUrl();
-    // A concurrent attempt stored first; with the shared idempotency key it is the same order.
+    // A concurrent attempt stored first. Its preference has the same order reference, so the buyer
+    // goes to the stored one and the other simply expires unpaid.
     PaymentRecord current =
         reads.execute(tx -> payments.find(request.tenant(), request.orderId()).orElseThrow());
-    if (!current.created() || !created.id().equals(current.providerOrderId()))
-      throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
+    if (!current.created()) throw new PaymentException(PaymentException.Reason.PROVIDER_ERROR);
     return current.checkoutUrl();
   }
 
-  /** One provider order per sales order: the same key on every attempt (ADR-0013 P1). */
+  /** One preference per sales order: the same key on every attempt (ADR-0013 P1). */
   static String idempotencyKey(UUID order) {
     return UUID.nameUUIDFromBytes(("sc-checkout-pro:" + order).getBytes(StandardCharsets.UTF_8))
         .toString();

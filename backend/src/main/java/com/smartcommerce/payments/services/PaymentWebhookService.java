@@ -17,7 +17,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Webhook intake (SC-014, ADR-0013 P5): authenticate, record once, answer fast. Nothing is
  * processed here; {@link PaymentEventService} queries the provider later. The tenant is resolved
- * from the payment we stored for that provider order, never from the notification.
+ * from what we stored (the approved payment, or the single store connected to the notifying
+ * seller), never from the notification alone; the payment itself is then read with that store's
+ * token and must reference one of its orders.
  */
 @Service
 public class PaymentWebhookService {
@@ -55,22 +57,14 @@ public class PaymentWebhookService {
         WebhookNotification.parse(body, queryType, dataId, requestId);
     if (notification == null) return;
     writes.executeWithoutResult(
-        tx -> {
-          var owner = payments.ownerOfProviderOrder(notification.providerOrderId());
-          // Recorded under the stored spelling, so processing finds the payment exactly.
-          PaymentNotification routed =
-              owner
-                  .map(
-                      found ->
-                          new PaymentNotification(
-                              notification.eventKey(),
-                              notification.topic(),
-                              notification.action(),
-                              found.providerOrderId(),
-                              notification.providerUserId()))
-                  .orElse(notification);
-          events.insert(routed, owner.map(found -> found.tenant()).orElse(null), now);
-        });
+        tx ->
+            events.insert(
+                notification,
+                payments
+                    .ownerOfProviderPayment(
+                        notification.providerOrderId(), notification.providerUserId())
+                    .orElse(null),
+                now));
   }
 
   private Instant now() {

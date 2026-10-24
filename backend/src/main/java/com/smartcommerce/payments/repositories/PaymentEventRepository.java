@@ -59,14 +59,16 @@ public class PaymentEventRepository {
         UPDATE payment_event SET attempts=attempts+1, next_attempt_at=?
         WHERE id IN (SELECT id FROM payment_event WHERE status='PENDING' AND next_attempt_at<=?
           ORDER BY next_attempt_at LIMIT ? FOR UPDATE SKIP LOCKED)
-        RETURNING id,tenant_id,provider_order_id,attempts
+        RETURNING id,tenant_id,provider_order_id,attempts,topic,provider_user_id
         """,
         (row, index) ->
             new PaymentEventRecord(
                 row.getObject(1, UUID.class),
                 row.getObject(2, UUID.class),
                 row.getString(3),
-                row.getInt(4)),
+                row.getInt(4),
+                row.getString(5),
+                row.getString(6)),
         utc(leaseUntil),
         utc(now),
         limit);

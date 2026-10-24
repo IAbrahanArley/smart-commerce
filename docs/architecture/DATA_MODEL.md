@@ -97,9 +97,11 @@ V23 (SC-020), aditiva:
 - **`expense`:** categoria de lista fixa, tipo fixa ou variável, descrição, valor positivo, competência e pagamento como datas de São Paulo, `request_id` único por tenant, autor e cancelamento (quem, quando e motivo, juntos). Nunca é apagada.
 - **`finance_entry`:** ganha `expense_id` (FK composta) e o tipo `EXPENSE_REVERSAL` (positivo), com CHECK que liga os tipos de despesa à coluna.
 
+V26 (mudança da P1 do ADR-0013, 2026-10-24), aditiva: `payment.provider_payment_id`, o id do pagamento aprovado no Mercado Pago (só dígitos, único por provedor), usado no reembolso. Com preferências, `payment.provider_order_id` guarda o id da preferência e `payment_event.provider_order_id` o id do pagamento notificado (tópico `payment`).
+
 V21 (SC-016), aditiva:
 - **`sales_order`:** estado `REFUNDED` com `refunded_at`. As CHECKs mantêm `paid_at` e o histórico de expiração e cancelamento também em `REFUNDED`.
 - **`payment`:** estado `REFUNDED`.
 - **`payment_refund`:** um reembolso total por pagamento, com motivo (3–300), `restock`, `requested_by` (FK `identity_user`), `requested_at`, aceite do provedor, último erro e `confirmed_at`, que existe exatamente em `CONFIRMED`.
 
-V20 (SC-015), aditiva: `payment.next_check_at` (próxima consulta da conciliação), `check_attempts` e `last_check_error` (divergência mostrada ao lojista), com índice parcial dos pagamentos `CREATED`. Taxa e líquido não são guardados, porque a Orders API não os informa.
+V20 (SC-015), aditiva: `payment.next_check_at` (próxima consulta da conciliação), `check_attempts` e `last_check_error` (divergência mostrada ao lojista), com índice parcial dos pagamentos `CREATED`. Taxa e líquido não são guardados, porque a Orders API não os informava; com a API de pagamentos (V26) ficam disponíveis para a SC-018.

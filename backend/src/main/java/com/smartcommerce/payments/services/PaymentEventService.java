@@ -17,7 +17,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Processes stored notifications (SC-014). Claims a batch in its own short transaction, then
- * confirms each event's provider order outside it. Redelivered, out-of-order or concurrent events
+ * confirms each event's provider payment outside it. Redelivered, out-of-order or concurrent events
  * are harmless: confirmation is idempotent and always reads the provider's current state. Transient
  * failures retry with backoff; after {@link #MAX_ATTEMPTS} the event is FAILED and the
  * reconciliation routine (SC-015) remains the safety net.
@@ -63,7 +63,12 @@ public class PaymentEventService {
       return;
     }
     try {
-      switch (confirmations.confirm(event.tenant(), event.providerOrderId())) {
+      // The payment topic names a provider payment; anything older names a preference.
+      var outcome =
+          "payment".equals(event.topic())
+              ? confirmations.confirmProviderPayment(event.tenant(), event.providerOrderId())
+              : confirmations.confirm(event.tenant(), event.providerOrderId());
+      switch (outcome) {
         case UNKNOWN -> finish(event, "IGNORED", "UNKNOWN_ORDER");
         case NOT_PAID -> finish(event, "PROCESSED", "NOT_PAID");
         default -> finish(event, "PROCESSED", null);
