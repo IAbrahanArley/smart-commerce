@@ -18,9 +18,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class CatalogService {
   private final CatalogRepository products;
   private final VariantRepository variants;
+  private final ProductImageRepository images;
 
-  public CatalogService(CatalogRepository products, VariantRepository variants) {
+  public CatalogService(
+      CatalogRepository products, VariantRepository variants, ProductImageRepository images) {
     this.products = products;
+    this.images = images;
     this.variants = variants;
   }
 
@@ -92,7 +95,11 @@ public class CatalogService {
     return execute(
         () -> {
           products.requireAccess(actor, tenant);
-          return products.list(actor, tenant).stream().map(this::view).toList();
+          var list = products.list(actor, tenant);
+          var summaries = images.summaries(tenant, list.stream().map(Product::id).toList());
+          return list.stream()
+              .map(p -> view(p, summaries.getOrDefault(p.id(), ProductImageSummary.NONE)))
+              .toList();
         });
   }
 
@@ -272,6 +279,14 @@ public class CatalogService {
   }
 
   private ProductView view(Product p) {
+    return view(
+        p,
+        images
+            .summaries(p.tenantId(), List.of(p.id()))
+            .getOrDefault(p.id(), ProductImageSummary.NONE));
+  }
+
+  private ProductView view(Product p, ProductImageSummary photos) {
     var rows = variants.list(p.tenantId(), p.id());
     return new ProductView(
         p.id(),
@@ -296,7 +311,10 @@ public class CatalogService {
                         v.currency(),
                         v.version(),
                         VariantValues.decode(v.optionsJson())))
-            .toList());
+            .toList(),
+        photos.coverId(),
+        photos.coverAlt(),
+        photos.count());
   }
 
   private static String money(BigDecimal value) {

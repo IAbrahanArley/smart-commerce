@@ -312,6 +312,68 @@ class ProductImagesIT {
     assertThat(state.get("version").asLong()).isEqualTo(8);
   }
 
+  @Test
+  void productListAndDetailShowTheCoverFollowingOrderAndRemoval() throws Exception {
+    Browser a = login("catalog-a@example.test");
+    UUID withoutPhotos = create(a, tenantA, "NO-PHOTO");
+    UUID product = create(a, tenantA, "COVER");
+    byte[] png = ImageNormalizerTest.picture("png", 300, 300);
+    for (int i = 0; i < 2; i++)
+      assertThat(
+              upload(a, tenantA, product, i, png, "image.png", "image/png", a.csrfToken, null)
+                  .statusCode())
+          .isEqualTo(200);
+    String base = path(tenantA) + "/" + product;
+    List<String> ids = new java.util.ArrayList<>();
+    for (JsonNode item : JSON.readTree(a.get(base + "/images").body()).get("images"))
+      ids.add(item.get("id").asText());
+
+    JsonNode list = JSON.readTree(a.get(path(tenantA)).body());
+    JsonNode bare = find(list, withoutPhotos);
+    assertThat(bare.get("coverImageId").isNull()).isTrue();
+    assertThat(bare.get("imageCount").asInt()).isZero();
+    JsonNode covered = find(list, product);
+    assertThat(covered.get("coverImageId").asText()).isEqualTo(ids.getFirst());
+    assertThat(covered.get("coverImageAlt").asText()).isEqualTo("Foto de demonstração");
+    assertThat(covered.get("imageCount").asInt()).isEqualTo(2);
+
+    // Moving the second photo first makes it the cover, in the list and in the detail.
+    assertThat(
+            a.put(
+                    base + "/images/order",
+                    Map.of("version", 2, "imageIds", List.of(ids.get(1), ids.get(0))))
+                .statusCode())
+        .isEqualTo(200);
+    assertThat(
+            find(JSON.readTree(a.get(path(tenantA)).body()), product).get("coverImageId").asText())
+        .isEqualTo(ids.get(1));
+    assertThat(JSON.readTree(a.get(base).body()).get("coverImageId").asText())
+        .isEqualTo(ids.get(1));
+
+    for (int i = 0; i < 2; i++)
+      assertThat(
+              a.send(
+                      "DELETE",
+                      base + "/images/" + ids.get(i) + "?version=" + (3 + i),
+                      null,
+                      a.csrfToken,
+                      null)
+                  .statusCode())
+          .isEqualTo(200);
+    JsonNode cleared = JSON.readTree(a.get(base).body());
+    assertThat(cleared.get("coverImageId").isNull()).isTrue();
+    assertThat(cleared.get("imageCount").asInt()).isZero();
+
+    // Another owner never sees A's catalog, covers included.
+    Browser b = login("catalog-b@example.test");
+    assertThat(b.get(path(tenantA)).statusCode()).isEqualTo(404);
+  }
+
+  private static JsonNode find(JsonNode list, UUID product) {
+    for (JsonNode item : list) if (product.toString().equals(item.get("id").asText())) return item;
+    throw new AssertionError("Product not listed: " + product);
+  }
+
   private HttpResponse<String> upload(
       Browser owner,
       UUID tenant,

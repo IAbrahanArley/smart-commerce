@@ -4,12 +4,14 @@ import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { apiRequest } from "@/lib/auth-api";
 import { useConfirm } from "@/components/confirm-dialog";
+import StatusBadge from "@/components/status-badge";
 
 type Photo = { id: string; alt: string; width: number; height: number };
 type Images = { images: Photo[]; version: number };
 
-export default function ProductImages({ tenantId, productId, version, locked, onVersion, onReload }: {
-  tenantId: string; productId: string; version: number; locked: boolean; onVersion: (version: number) => void; onReload: () => void;
+export default function ProductImages({ tenantId, productId, version, locked, onVersion, onPhotos, onReload }: {
+  tenantId: string; productId: string; version: number; locked: boolean; onVersion: (version: number) => void;
+  onPhotos?: (photos: Photo[]) => void; onReload: () => void;
 }) {
   const path = `/api/tenants/${encodeURIComponent(tenantId)}/products/${encodeURIComponent(productId)}/images`;
   const [data, setData] = useState<Images | null>(null);
@@ -23,12 +25,15 @@ export default function ProductImages({ tenantId, productId, version, locked, on
   const feedbackRef = useRef<HTMLParagraphElement>(null);
   const submitting = useRef(false);
   const { confirm, dialog } = useConfirm();
+  // Latest callback without refetching the photos whenever the parent re-renders.
+  const photosChanged = useRef(onPhotos);
+  useEffect(() => { photosChanged.current = onPhotos; }, [onPhotos]);
   useEffect(() => {
     const controller = new AbortController();
     apiRequest(path, { signal: controller.signal }).then(async response => {
       if (!response.ok) throw new Error();
       const result: Images = await response.json();
-      if (!controller.signal.aborted) setData(result);
+      if (!controller.signal.aborted) { setData(result); photosChanged.current?.(result.images); }
     }).catch(() => { if (!controller.signal.aborted) setFeedback({ text: "Não foi possível consultar as fotos. Tente novamente.", error: true }); });
     return () => controller.abort();
   }, [path, attempt, version]);
@@ -52,7 +57,7 @@ export default function ProductImages({ tenantId, productId, version, locked, on
       }
       if (!response.ok) { setFeedback({ text: response.status === 413 ? "A foto excede o tamanho permitido. Use JPEG ou PNG de até 5 MiB." : "Não foi possível alterar as fotos. Confira o formato, tamanho e texto alternativo e tente novamente.", error: true }); return; }
       const result: Images = await response.json();
-      setData(result); onVersion(result.version); setAlt(""); setFile(null); form.current?.reset();
+      setData(result); onVersion(result.version); photosChanged.current?.(result.images); setAlt(""); setFile(null); form.current?.reset();
       setFeedback({ text: "Fotos atualizadas. A primeira foto é a capa do produto.", error: false });
     } catch { setUncertain(true); setFeedback({ text: "Não foi possível confirmar a alteração. Carregue a versão atual antes de repetir para evitar duplicação.", error: true }); }
     finally { submitting.current = false; setBusy(false); }
@@ -71,14 +76,14 @@ export default function ProductImages({ tenantId, productId, version, locked, on
     const [selected] = ids.splice(index, 1); ids.splice(target, 0, selected);
     void mutate(() => apiRequest(`${path}/order`, { method: "PUT", body: { imageIds: ids, version } }));
   }
-  return <section className="product-section" aria-labelledby="photos-title"><h2 id="photos-title">Fotos do produto</h2>{dialog}
+  return <section id="fotos" className="product-section" aria-labelledby="photos-title" tabIndex={-1}><h2 id="photos-title">Fotos do produto</h2>{dialog}
     <p>Até 6 fotos JPEG ou PNG, de até 5 MiB cada e entre 300 e 4.096 pixels por lado. A primeira é a capa. Descreva o conteúdo para quem não vê a imagem.</p>
     {locked ? <p className="notice">Salve as alterações do produto antes de modificar as fotos.</p> : null}
     {stale || uncertain ? <><p role="alert" className="feedback feedback-error">Atualize o produto para consultar a versão atual das fotos.</p><button type="button" disabled={busy || locked} onClick={onReload}>Carregar versão atual do produto</button></> : null}
     {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}
     {!data ? <>{!feedback ? <p role="status">Consultando fotos…</p> : null}<button type="button" onClick={() => { setFeedback(null); setAttempt(current => current + 1); }}>Consultar fotos novamente</button></> : !data.images.length ? <p>Nenhuma foto cadastrada.</p> : <ol className="photo-list">{data.images.map((photo, index) => <li key={photo.id} className="photo-item">
       <Image src={`${path}/${encodeURIComponent(photo.id)}/content`} alt={photo.alt} width={photo.width} height={photo.height} unoptimized className="product-photo" />
-      <p>{index === 0 ? "Capa" : `Foto ${index + 1}`} — {photo.alt}</p>
+      <p>{index === 0 ? <StatusBadge tone="positive">Capa</StatusBadge> : `Foto ${index + 1}`} — {photo.alt}</p>
       <div className="editor-tools">{index > 0 ? <><button type="button" disabled={disabled} onClick={() => move(index, 0)} aria-label={`Usar foto ${index + 1} como capa`}>Usar como capa</button><button type="button" disabled={disabled} onClick={() => move(index, index - 1)} aria-label={`Mover foto ${index + 1} para antes`}>Mover para antes</button></> : null}
         {index < data.images.length - 1 ? <button type="button" disabled={disabled} onClick={() => move(index, index + 1)} aria-label={`Mover foto ${index + 1} para depois`}>Mover para depois</button> : null}
         <button type="button" disabled={disabled} onClick={() => void (async () => { if (await confirm({ title: `Remover a foto ${index + 1}?`, message: "A foto sai do produto e da vitrine. Para usá-la de novo, envie o arquivo outra vez.", confirmLabel: "Remover foto", tone: "danger" })) void mutate(() => apiRequest(`${path}/${encodeURIComponent(photo.id)}?version=${version}`, { method: "DELETE" })); })()} aria-label={`Remover foto ${index + 1}`}>Remover foto</button>

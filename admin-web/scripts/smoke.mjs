@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
-import { decimalInput, formatBRL } from "../src/lib/catalog.ts";
+import { coverUrl, decimalInput, formatBRL, photoCountText } from "../src/lib/catalog.ts";
 import { fulfillmentFields, fulfillmentPayload, fulfillmentText } from "../src/lib/fulfillment.ts";
 import { reservedStockMessage, wholeQuantity } from "../src/lib/inventory.ts";
 import { storefrontUrl } from "../src/lib/tenant-api.ts";
@@ -131,6 +131,18 @@ assert.equal(alertText({ code: "ORDERS_EXPIRING", severity: "ATTENTION", count: 
 assert.equal(alertLink(parsedAlerts[0], "t-1").href, "/lojas/t-1/produtos");
 assert.equal(alertLink({ ...parsedAlerts[0], target: "ORDERS" }, "t-1").href, "/lojas/t-1/pedidos?situacao=PENDING_PAYMENT");
 assert.equal(parseAlerts(null), null);
+
+// Product photos: the cover URL is built only from canonical ids, and counts are worded.
+const productId = "11111111-1111-4111-8111-111111111111";
+const coverId = "22222222-2222-4222-8222-222222222222";
+assert.equal(coverUrl("t-1", { id: productId, coverImageId: coverId }), `/api/tenants/t-1/products/${productId}/images/${coverId}/content`);
+for (const bad of [null, "", "../../x", "22222222-2222-4222-8222-22222222222", "javascript:alert(1)"])
+  assert.equal(coverUrl("t-1", { id: productId, coverImageId: bad }), null, String(bad));
+assert.equal(coverUrl("t-1", { id: "x/../y", coverImageId: coverId }), null);
+assert.equal(photoCountText(0), "Sem foto");
+assert.equal(photoCountText(1), "1 de 6 fotos");
+assert.equal(photoCountText(3), "3 de 6 fotos");
+assert.equal(photoCountText(-1), "Sem foto");
 
 const fulfillment = { pickupEnabled: true, pickupInstructions: "  Rua A, 10  ", fixedShippingEnabled: true, fixedShippingAmount: "12,5", fixedShippingArea: "Centro" };
 assert.deepEqual(fulfillmentPayload(fulfillment, 3), { body: { pickupEnabled: true, pickupInstructions: "Rua A, 10", fixedShippingEnabled: true, fixedShippingAmount: "12.50", fixedShippingArea: "Centro", version: 3 } });
