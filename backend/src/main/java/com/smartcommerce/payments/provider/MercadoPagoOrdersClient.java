@@ -103,9 +103,10 @@ public final class MercadoPagoOrdersClient {
   }
 
   /**
-   * Diagnostic codes from a provider error body ({@code error}, {@code errors[].code}, {@code
-   * cause[].code}): only short identifier-like values, at most five, never messages or the body,
-   * which may echo request data.
+   * Diagnostic codes from a provider error body ({@code code}, {@code blocked_by}, {@code error},
+   * {@code errors[].code}, {@code cause[].code}; a policy denial answers 403 with {@code code} and
+   * {@code blocked_by}): only short identifier-like values, at most five, never messages or the
+   * body, which may echo request data.
    */
   static List<String> errorCodes(JsonNode json) {
     List<String> codes = new ArrayList<>();
@@ -117,6 +118,8 @@ public final class MercadoPagoOrdersClient {
             if (value.matches("[A-Za-z0-9_.-]{1,60}") && codes.size() < 5) codes.add(value);
           }
         };
+    add.accept(json.get("code"));
+    add.accept(json.get("blocked_by"));
     add.accept(json.get("error"));
     for (String list : List.of("errors", "cause")) {
       JsonNode items = json.get(list);

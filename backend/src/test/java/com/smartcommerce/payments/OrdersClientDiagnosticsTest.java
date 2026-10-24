@@ -78,6 +78,21 @@ class OrdersClientDiagnosticsTest {
   }
 
   @Test
+  void policyDenialLogsItsCodeAndBlocker(CapturedOutput output) throws Exception {
+    var client = client();
+    status.set(403);
+    body.set(
+        "{\"code\":\"PA_UNAUTHORIZED_RESULT_FROM_POLICIES\",\"blocked_by\":\"PolicyAgent\","
+            + "\"message\":\"At least one policy returned UNAUTHORIZED.\",\"status\":403}");
+    assertThatThrownBy(() -> client.createCheckoutOrder(TOKEN, "key-5", request(), Instant.now()))
+        .isInstanceOf(PaymentException.class);
+    assertThat(output.getAll())
+        .contains(
+            "Checkout Pro order rejected: HTTP 403, provider codes [PA_UNAUTHORIZED_RESULT_FROM_POLICIES, PolicyAgent]")
+        .doesNotContain(TOKEN, "At least one policy");
+  }
+
+  @Test
   void acceptedStatusWithUnexpectedResponseNamesTheFailedCheck(CapturedOutput output)
       throws Exception {
     var client = client();
