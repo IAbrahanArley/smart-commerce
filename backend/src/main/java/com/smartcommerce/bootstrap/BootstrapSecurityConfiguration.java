@@ -176,7 +176,11 @@ public class BootstrapSecurityConfiguration {
                         "/api/tenants/*/expenses",
                         "/api/tenants/*/finance",
                         "/api/tenants/*/dashboard",
-                        "/api/tenants/*/alerts")
+                        "/api/tenants/*/alerts",
+                        "/api/tenants/*/advisor")
+                    .authenticated()
+                    // SC-026: assistant question (OWNER, quota and switch checked in the service).
+                    .requestMatchers(HttpMethod.POST, "/api/tenants/*/advisor/questions")
                     .authenticated()
                     .requestMatchers(
                         HttpMethod.POST,

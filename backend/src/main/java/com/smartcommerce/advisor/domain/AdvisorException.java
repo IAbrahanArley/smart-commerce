@@ -12,7 +12,11 @@ public final class AdvisorException extends RuntimeException {
     /** The platform reached its monthly spending cap (A8). */
     GLOBAL_CAP_REACHED,
     /** A tool call with an unknown tool, an unknown argument or a value outside its list. */
-    INVALID_TOOL_CALL
+    INVALID_TOOL_CALL,
+    /** Empty question, or longer than 500 characters (SC-026). */
+    INVALID_QUESTION,
+    /** The model provider failed or rate-limited the question (SC-026). */
+    PROVIDER_UNAVAILABLE
   }
 
   private final Reason reason;

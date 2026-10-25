@@ -126,6 +126,13 @@ advisor:
   enabled: ${ADVISOR_ENABLED:false}
   monthly-question-quota: ${ADVISOR_MONTHLY_QUOTA:100}
   global-monthly-cap-usd: ${ADVISOR_GLOBAL_MONTHLY_CAP_USD:20.00}
+  # SC-026 (A1, A2, A11): Claude model and key. Without the key the assistant is unavailable even
+  # with ADVISOR_ENABLED=true. The key is created by the owner in the Anthropic console and set
+  # only in the environment panel; never version it. base-url is for test fakes only.
+  model: ${ADVISOR_MODEL:claude-opus-5-5}
+  anthropic:
+    api-key: ${ANTHROPIC_API_KEY:}
+    base-url: ${ADVISOR_ANTHROPIC_BASE_URL:}
   housekeeping:
     enabled: ${ADVISOR_HOUSEKEEPING_ENABLED:true}
 deployment:

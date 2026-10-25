@@ -72,6 +72,15 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `MERCADO_PAGO_NOTIFICATION_URL` | opcional: a mesma URL do webhook, enviada em cada preferência para que os pagamentos de todos os lojistas conectados notifiquem a plataforma |
 | `STOREFRONT_PUBLIC_ORIGIN` | URL de produção da vitrine na Vercel (passo 5), por exemplo `https://<projeto-vitrine>.vercel.app`, para a página de retorno do Checkout Pro (SC-013) |
 
+   **Assistente (SC-026, opcional).** Sem estas variáveis, o assistente fica indisponível. Use só dados sintéticos neste ambiente (ADR-0016 A11):
+
+| Variável | Valor |
+| --- | --- |
+| `ADVISOR_ENABLED` | `true` para ligar |
+| `ANTHROPIC_API_KEY` | chave criada no console da Anthropic (segredo; cadastre só no painel do Render, nunca no chat ou no Git) |
+| `ADVISOR_GLOBAL_MONTHLY_CAP_USD` | opcional: teto mensal da plataforma em US$ (padrão 20,00) |
+| `ADVISOR_MONTHLY_QUOTA` | opcional: perguntas por loja por mês (padrão 100) |
+
 3. **Não defina** `SPRING_PROFILES_ACTIVE=dev`. A `PORT` é definida pelo Render, e a imagem já escuta em `0.0.0.0`.
 4. **Primeiro deploy:** o build Maven dentro da imagem leva alguns minutos. Na simulação local com o mesmo limite do free (0,1 CPU e 512 MB), a aplicação levou **cerca de 4 minutos para ficar pronta**, aplicando as 16 migrações, e usou cerca de 230 MB.
 5. Anote a URL pública do backend, `https://<servico>.onrender.com`.

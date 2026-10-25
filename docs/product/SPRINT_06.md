@@ -69,6 +69,8 @@ O agente só lê: não altera pedidos, valores nem estoque, e não inventa núme
 
 ## SC-026 — Integração com o modelo
 
+**Estado (2026-10-25):** dependência aprovada pelo responsável (`anthropic-java` 2.71.0), implementada e validada com servidor falso ([validação](../quality/SC-026-VALIDATION.md)). O assistente continua desligado por padrão; a chamada real depende da chave no ambiente de teste hospedado.
+
 - **Dependência:** SDK Java oficial da Anthropic (`com.anthropic`), sujeito à aprovação do gate.
 - **Modelo (A2):** `claude-opus-5-5` com `effort: low`.
 - **Ferramentas:** com `strict: true` e `tool_choice: auto`.
