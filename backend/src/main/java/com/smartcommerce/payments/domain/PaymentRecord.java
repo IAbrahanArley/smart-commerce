@@ -11,8 +11,9 @@ public record PaymentRecord(
     BigDecimal amount,
     String providerOrderId,
     String providerUserId,
-    String checkoutUrl) {
-  /** The provider order exists (CREATED, APPROVED or REFUNDED). */
+    String checkoutUrl,
+    String providerPaymentId) {
+  /** The provider preference exists (CREATED, APPROVED or REFUNDED). */
   public boolean created() {
     return "CREATED".equals(status) || approved() || refunded();
   }

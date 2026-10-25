@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.smartcommerce.payments.domain.CheckoutPaymentRequest;
 import com.smartcommerce.payments.domain.PaymentException;
-import com.smartcommerce.payments.provider.MercadoPagoOrdersClient;
+import com.smartcommerce.payments.provider.MercadoPagoCheckoutClient;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -26,16 +26,16 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
  * response check failed) without the token, the response body or any request value.
  */
 @ExtendWith(OutputCaptureExtension.class)
-class OrdersClientDiagnosticsTest {
+class CheckoutClientDiagnosticsTest {
   private static final String TOKEN = "APP_USR-synthetic-seller-token";
   private final AtomicReference<Integer> status = new AtomicReference<>(400);
   private final AtomicReference<String> body = new AtomicReference<>("{}");
   private HttpServer server;
 
-  private MercadoPagoOrdersClient client() throws IOException {
+  private MercadoPagoCheckoutClient client() throws IOException {
     server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
     server.createContext(
-        "/v1/orders",
+        "/checkout/preferences",
         exchange -> {
           exchange.getRequestBody().readAllBytes();
           byte[] bytes = body.get().getBytes(StandardCharsets.UTF_8);
@@ -45,8 +45,8 @@ class OrdersClientDiagnosticsTest {
           exchange.close();
         });
     server.start();
-    return new MercadoPagoOrdersClient(
-        "http://127.0.0.1:" + server.getAddress().getPort(), "https://loja.example.test");
+    return new MercadoPagoCheckoutClient(
+        "http://127.0.0.1:" + server.getAddress().getPort(), "https://loja.example.test", "");
   }
 
   @AfterEach
@@ -64,16 +64,16 @@ class OrdersClientDiagnosticsTest {
   }
 
   @Test
-  void rejectedOrderLogsStatusAndProviderCodesOnly(CapturedOutput output) throws Exception {
+  void rejectedPreferenceLogsStatusAndProviderCodesOnly(CapturedOutput output) throws Exception {
     var client = client();
     body.set(
         "{\"errors\":[{\"code\":\"invalid_back_urls\",\"message\":\"buyer comprador@example.test\"},"
             + "{\"code\":\"<script>\",\"message\":\"x\"}],\"error\":\"bad_request\"}");
-    assertThatThrownBy(() -> client.createCheckoutOrder(TOKEN, "key-1", request(), Instant.now()))
+    assertThatThrownBy(() -> client.createPreference(TOKEN, "key-1", request(), Instant.now()))
         .isInstanceOf(PaymentException.class);
     assertThat(output.getAll())
         .contains(
-            "Checkout Pro order rejected: HTTP 400, provider codes [bad_request, invalid_back_urls]")
+            "Checkout Pro preference rejected: HTTP 400, provider codes [bad_request, invalid_back_urls]")
         .doesNotContain(TOKEN, "comprador@example.test", "<script>", "loja-teste");
   }
 
@@ -84,11 +84,11 @@ class OrdersClientDiagnosticsTest {
     body.set(
         "{\"code\":\"PA_UNAUTHORIZED_RESULT_FROM_POLICIES\",\"blocked_by\":\"PolicyAgent\","
             + "\"message\":\"At least one policy returned UNAUTHORIZED.\",\"status\":403}");
-    assertThatThrownBy(() -> client.createCheckoutOrder(TOKEN, "key-5", request(), Instant.now()))
+    assertThatThrownBy(() -> client.createPreference(TOKEN, "key-5", request(), Instant.now()))
         .isInstanceOf(PaymentException.class);
     assertThat(output.getAll())
         .contains(
-            "Checkout Pro order rejected: HTTP 403, provider codes [PA_UNAUTHORIZED_RESULT_FROM_POLICIES, PolicyAgent]")
+            "Checkout Pro preference rejected: HTTP 403, provider codes [PA_UNAUTHORIZED_RESULT_FROM_POLICIES, PolicyAgent]")
         .doesNotContain(TOKEN, "At least one policy");
   }
 
@@ -97,21 +97,20 @@ class OrdersClientDiagnosticsTest {
       throws Exception {
     var client = client();
     status.set(201);
-    body.set(
-        "{\"id\":\"ORD01\",\"status\":\"created\",\"total_amount\":\"49.90\","
-            + "\"checkout_url\":\"https://evil.example.test/pay?token=abc\"}");
-    assertThatThrownBy(() -> client.createCheckoutOrder(TOKEN, "key-2", request(), Instant.now()))
+    body.set("{\"id\":\"123-pref\",\"init_point\":\"https://evil.example.test/pay?token=abc\"}");
+    assertThatThrownBy(() -> client.createPreference(TOKEN, "key-2", request(), Instant.now()))
         .isInstanceOf(PaymentException.class);
-    body.set("{\"id\":\"ORD01\",\"status\":\"created\",\"total_amount\":\"49.90\"}");
-    assertThatThrownBy(() -> client.createCheckoutOrder(TOKEN, "key-3", request(), Instant.now()))
+    body.set("{\"id\":\"123-pref\"}");
+    assertThatThrownBy(() -> client.createPreference(TOKEN, "key-3", request(), Instant.now()))
         .isInstanceOf(PaymentException.class);
     body.set("not json");
-    assertThatThrownBy(() -> client.createCheckoutOrder(TOKEN, "key-4", request(), Instant.now()))
+    assertThatThrownBy(() -> client.createPreference(TOKEN, "key-4", request(), Instant.now()))
         .isInstanceOf(PaymentException.class);
     assertThat(output.getAll())
-        .contains("Checkout Pro order response not accepted: checkout_url host evil.example.test")
-        .contains("Checkout Pro order response not accepted: checkout_url missing")
-        .contains("Checkout Pro order response not accepted: body is not a JSON object")
+        .contains(
+            "Checkout Pro preference response not accepted: init_point host evil.example.test")
+        .contains("Checkout Pro preference response not accepted: init_point missing")
+        .contains("Checkout Pro preference response not accepted: body is not a JSON object")
         .doesNotContain(TOKEN, "token=abc");
   }
 }

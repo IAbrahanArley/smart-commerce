@@ -7,7 +7,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Parses an already authenticated Mercado Pago notification (SC-014). Only routing fields are kept;
- * the body is never stored. The signed {@code data.id} of the query string is the order to look at,
+ * the body is never stored. Checkout Pro through preferences notifies the topic {@code payment}
+ * (ADR-0013 P1 change): the signed {@code data.id} of the query string is the payment to look at,
  * and a body that names another one is rejected.
  */
 public final class WebhookNotification {
@@ -31,7 +32,7 @@ public final class WebhookNotification {
     String topic = type != null ? type : queryType;
     if (topic == null || !topic.matches("[a-z_.]{1,40}"))
       throw new PaymentException(PaymentException.Reason.INVALID_NOTIFICATION);
-    if (!"order".equals(topic)) return null;
+    if (!"payment".equals(topic)) return null;
     JsonNode data = json == null ? null : json.get("data");
     String bodyId = data == null || !data.isObject() ? null : text(data, "id", 64);
     if (bodyId != null && !bodyId.equalsIgnoreCase(dataId))
@@ -44,10 +45,10 @@ public final class WebhookNotification {
     // body id is the same event. A genuine redelivery with a new request id is a new event, which
     // is harmless because confirmation is idempotent.
     String key = "request:" + dataId.toLowerCase(java.util.Locale.ROOT) + ":" + requestId;
-    String order = bodyId == null ? dataId : bodyId;
-    if (!order.matches("[A-Za-z0-9_-]{1,64}"))
+    String payment = bodyId == null ? dataId : bodyId;
+    if (!payment.matches("[0-9]{1,40}"))
       throw new PaymentException(PaymentException.Reason.INVALID_NOTIFICATION);
-    return new PaymentNotification(key, topic, action, order, userId);
+    return new PaymentNotification(key, topic, action, payment, userId);
   }
 
   private static String text(JsonNode json, String field, int max) {

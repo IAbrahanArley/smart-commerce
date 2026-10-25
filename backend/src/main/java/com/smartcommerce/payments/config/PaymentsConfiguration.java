@@ -1,7 +1,7 @@
 package com.smartcommerce.payments.config;
 
+import com.smartcommerce.payments.provider.MercadoPagoCheckoutClient;
 import com.smartcommerce.payments.provider.MercadoPagoOAuthClient;
-import com.smartcommerce.payments.provider.MercadoPagoOrdersClient;
 import com.smartcommerce.payments.provider.PaymentProviders;
 import com.smartcommerce.payments.security.TokenCipher;
 import com.smartcommerce.payments.security.WebhookSignature;
@@ -14,7 +14,8 @@ import org.springframework.context.annotation.Configuration;
  * secret, the redirect URI and the encryption key are mandatory and validated at startup, so a
  * half-configured environment fails fast instead of storing tokens in clear or leaking errors. The
  * API URL is configurable only for the loopback fake used by tests (SC-013); the return origin is
- * the storefront's public origin, sent to the provider only when it is HTTPS.
+ * the storefront's public origin, sent to the provider only when it is HTTPS; the notification URL
+ * (optional, HTTPS) is sent with each preference so the provider notifies this platform.
  */
 @Configuration(proxyBeanMethods = false)
 public class PaymentsConfiguration {
@@ -28,13 +29,14 @@ public class PaymentsConfiguration {
       @Value("${payments.mercado-pago.test-token:true}") boolean testToken,
       @Value("${payments.mercado-pago.api-url:}") String apiUrl,
       @Value("${payments.mercado-pago.return-origin:}") String returnOrigin,
+      @Value("${payments.mercado-pago.notification-url:}") String notificationUrl,
       @Value("${payments.mercado-pago.webhook-secret:}") String webhookSecret,
       @Value("${payments.token-encryption-key:}") String encryptionKey) {
     if (clientId == null || clientId.isBlank()) return PaymentProviders.unavailable();
     return new PaymentProviders(
         new MercadoPagoOAuthClient(
             clientId, clientSecret, redirectUri, authorizationUrl, tokenUrl, testToken),
-        new MercadoPagoOrdersClient(apiUrl, returnOrigin),
+        new MercadoPagoCheckoutClient(apiUrl, returnOrigin, notificationUrl),
         TokenCipher.fromBase64(encryptionKey),
         webhookSecret == null || webhookSecret.isBlank()
             ? null

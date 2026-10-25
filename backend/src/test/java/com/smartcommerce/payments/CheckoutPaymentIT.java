@@ -13,6 +13,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
@@ -49,10 +50,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * SC-013 against a loopback fake of Mercado Pago's {@code POST /v1/orders}: the order is created
- * from the backend snapshot with the seller's own token and an idempotency key derived from the
- * order, a retry never creates a second provider order, a provider failure keeps the order pending,
- * a store without a connected account takes no orders, and A/B isolation holds.
+ * SC-013 against a loopback fake of Mercado Pago's {@code POST /checkout/preferences} (ADR-0013 P1
+ * change): the preference is created from the backend snapshot with the seller's own token and an
+ * idempotency key derived from the order, a retry never shows a second checkout, a provider failure
+ * keeps the order pending, a store without a connected account takes no orders, and A/B isolation
+ * holds.
  */
 @Testcontainers
 @ExtendWith(OutputCaptureExtension.class)
@@ -77,6 +79,8 @@ class CheckoutPaymentIT {
 
   private static final JsonMapper JSON = JsonMapper.builder().build();
   private static final String RETURN_ORIGIN = "https://loja.example.test";
+  private static final String NOTIFICATION_URL =
+      "https://api.example.test/api/public/webhooks/mercado-pago";
   private static final String TOKEN_A = "APP_USR-synthetic-seller-a";
   private static final String TOKEN_B = "APP_USR-synthetic-seller-b";
   private static final List<Call> CALLS = new CopyOnWriteArrayList<>();
@@ -103,7 +107,7 @@ class CheckoutPaymentIT {
     try {
       HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
       server.createContext(
-          "/v1/orders",
+          "/checkout/preferences",
           exchange -> {
             JsonNode body = JSON.readTree(exchange.getRequestBody().readAllBytes());
             CALLS.add(
@@ -137,6 +141,7 @@ class CheckoutPaymentIT {
         "payments.mercado-pago.api-url",
         () -> "http://127.0.0.1:" + PROVIDER.getAddress().getPort());
     registry.add("payments.mercado-pago.return-origin", () -> RETURN_ORIGIN);
+    registry.add("payments.mercado-pago.notification-url", () -> NOTIFICATION_URL);
     registry.add(
         "payments.token-encryption-key",
         () -> Base64.getEncoder().encodeToString("synthetic-32-byte-test-key-00013".getBytes()));
@@ -164,8 +169,8 @@ class CheckoutPaymentIT {
   }
 
   @Test
-  void createsTheProviderOrderFromTheSnapshotWithTheSellersTokenAndNoBuyerData(
-      CapturedOutput output) throws Exception {
+  void createsThePreferenceFromTheSnapshotWithTheSellersTokenAndNoBuyerData(CapturedOutput output)
+      throws Exception {
     Order order = checkout("pagar-a", variantA, 2, true, "44.30"); // 2 × 15.90 + 12.50
     assertThat(order.view().get("payable").asBoolean()).isTrue();
 
@@ -173,7 +178,7 @@ class CheckoutPaymentIT {
     assertThat(paid.statusCode()).isEqualTo(200);
     assertThat(paid.headers().firstValue("Cache-Control").orElse("")).contains("no-store");
     String url = JSON.readTree(paid.body()).get("checkoutUrl").asString();
-    assertThat(url).startsWith("https://sandbox.mercadopago.com.br/checkout/");
+    assertThat(url).startsWith("https://www.mercadopago.com.br/checkout/");
 
     assertThat(CALLS).hasSize(1);
     Call call = CALLS.getFirst();
@@ -184,25 +189,31 @@ class CheckoutPaymentIT {
                     ("sc-checkout-pro:" + order.id()).getBytes(StandardCharsets.UTF_8))
                 .toString());
     JsonNode body = call.body();
-    assertThat(body.get("type").asString()).isEqualTo("online");
-    assertThat(body.get("processing_mode").asString()).isEqualTo("manual");
-    assertThat(body.get("total_amount").asString()).isEqualTo("44.30");
     assertThat(body.get("external_reference").asString()).isEqualTo(order.id());
-    assertThat(body.get("expiration_time").asString()).isEqualTo("PT30M");
+    assertThat(body.get("expires").asBoolean()).isTrue();
+    var from = OffsetDateTime.parse(body.get("expiration_date_from").asString());
+    var to = OffsetDateTime.parse(body.get("expiration_date_to").asString());
+    assertThat(Duration.between(from, to)).isEqualTo(Duration.ofMinutes(30));
     assertThat(body.get("items")).hasSize(2);
     assertThat(body.get("items").get(0).get("title").asString()).isEqualTo("Camiseta (Cor: Azul)");
-    assertThat(body.get("items").get(0).get("unit_price").asString()).isEqualTo("15.90");
+    assertThat(body.get("items").get(0).get("unit_price").isNumber()).isTrue();
+    assertThat(body.get("items").get(0).get("unit_price").decimalValue())
+        .isEqualByComparingTo("15.90");
     assertThat(body.get("items").get(0).get("quantity").asInt()).isEqualTo(2);
+    assertThat(body.get("items").get(0).get("currency_id").asString()).isEqualTo("BRL");
     assertThat(body.get("items").get(1).get("title").asString()).isEqualTo("Frete");
-    assertThat(body.get("items").get(1).get("unit_price").asString()).isEqualTo("12.50");
-    assertThat(body.get("config").get("payment_method").get("not_allowed_types"))
-        .extracting(JsonNode::asString)
-        .contains("ticket")
+    assertThat(body.get("items").get(1).get("unit_price").decimalValue())
+        .isEqualByComparingTo("12.50");
+    assertThat(body.get("payment_methods").get("excluded_payment_types"))
+        .extracting(type -> type.get("id").asString())
+        .contains("ticket", "atm", "digital_currency")
         .doesNotContain("credit_card", "debit_card", "bank_transfer", "account_money");
     String back = RETURN_ORIGIN + "/lojas/pagar-a/pedidos/" + order.id() + "/pagamento";
-    assertThat(body.get("config").get("online").get("success_url").asString()).isEqualTo(back);
-    assertThat(body.get("config").get("online").get("failure_url").asString()).isEqualTo(back);
-    assertThat(body.get("config").get("online").get("pending_url").asString()).isEqualTo(back);
+    assertThat(body.get("back_urls").get("success").asString()).isEqualTo(back);
+    assertThat(body.get("back_urls").get("failure").asString()).isEqualTo(back);
+    assertThat(body.get("back_urls").get("pending").asString()).isEqualTo(back);
+    assertThat(body.get("auto_return").asString()).isEqualTo("approved");
+    assertThat(body.get("notification_url").asString()).isEqualTo(NOTIFICATION_URL);
     // P11: no payer data leaves the platform; the provider collects it.
     assertThat(body.has("payer")).isFalse();
     assertThat(body.toString()).doesNotContain("Sintético", "example.test\"", "98888", "01001");
@@ -215,7 +226,7 @@ class CheckoutPaymentIT {
     assertThat(row.get("status")).isEqualTo("CREATED");
     assertThat(row.get("amount").toString()).isEqualTo("44.30");
     assertThat(row.get("provider_user_id")).isEqualTo("111111");
-    assertThat(row.get("provider_order_id")).isEqualTo("ORD-1");
+    assertThat(row.get("provider_order_id")).isEqualTo("111111-pref-1");
     assertThat(row.get("checkout_url")).isEqualTo(url);
     assertThat(row.get("provider_status")).isEqualTo("created");
     assertThat(row.get("tenant_id")).isEqualTo(tenantA);
@@ -225,12 +236,13 @@ class CheckoutPaymentIT {
                 String.class,
                 UUID.fromString(order.id())))
         .isEqualTo("PENDING_PAYMENT");
-    assertThat(paid.body()).doesNotContain(TOKEN_A, "111111");
+    // Preference ids start with the collector id, so it appears only inside the provider's URL.
+    assertThat(paid.body().replace(url, "")).doesNotContain(TOKEN_A, "111111");
     assertThat(output.getAll()).doesNotContain(TOKEN_A, TOKEN_B);
   }
 
   @Test
-  void retriesAndConcurrentAttemptsShareOneProviderOrder() throws Exception {
+  void retriesAndConcurrentAttemptsShowOneCheckout() throws Exception {
     Order order = checkout("pagar-a", variantA, 1, false, "15.90");
     List<Callable<HttpResponse<String>>> attempts = new ArrayList<>();
     CyclicBarrier barrier = new CyclicBarrier(4);
@@ -248,7 +260,7 @@ class CheckoutPaymentIT {
       }
     }
     assertThat(urls).hasSize(4).containsOnly(urls.getFirst());
-    // Calls that raced past the claim all used the same key, so the provider kept one order.
+    // Calls that raced past the claim all used the same key; the first stored answer is shown.
     assertThat(CALLS).isNotEmpty().extracting(Call::idempotencyKey).containsOnly(key(order));
     assertThat(IDS_BY_KEY).hasSize(1);
 
@@ -292,17 +304,17 @@ class CheckoutPaymentIT {
     Order order = checkout("pagar-a", variantA, 1, false, "15.90");
     for (Function<JsonNode, Reply> reply :
         List.<Function<JsonNode, Reply>>of(
-            body -> answer("ORD-X", "https://evil.example/checkout", "15.90", "BRL"),
-            body -> answer("ORD-X", "http://www.mercadopago.com.br/checkout", "15.90", "BRL"),
-            body -> answer("ORD-X", "https://mercadopago.com.br.evil.example/x", "15.90", "BRL"),
-            body -> answer("ORD-X", "https://www.mercadopago.com.br/c", "15.89", "BRL"),
-            body -> answer("ORD-X", "https://www.mercadopago.com.br/c", "15.90", "ARS"),
-            body -> answer("ORD X", "https://www.mercadopago.com.br/c", "15.90", "BRL"),
+            body -> answer("PREF-X", "https://evil.example/checkout", reference(body)),
+            body -> answer("PREF-X", "http://www.mercadopago.com.br/checkout", reference(body)),
+            body -> answer("PREF-X", "https://mercadopago.com.br.evil.example/x", reference(body)),
+            body ->
+                answer("PREF-X", "https://www.mercadopago.com.br/c", UUID.randomUUID().toString()),
+            body -> answer("PREF X", "https://www.mercadopago.com.br/c", reference(body)),
             body -> new Reply(201, "not json"))) {
       NEXT.set(reply);
       var response = pay("pagar-a", order.id(), order.token());
       assertThat(response.statusCode()).isEqualTo(502);
-      assertThat(response.body()).doesNotContain("evil", "ORD");
+      assertThat(response.body()).doesNotContain("evil", "PREF");
     }
     assertThat(paymentStatus(order)).isEqualTo("CREATING");
   }
@@ -391,33 +403,29 @@ class CheckoutPaymentIT {
 
   private static Reply created(JsonNode body) {
     String key = CALLS.getLast().idempotencyKey();
-    String id = IDS_BY_KEY.computeIfAbsent(key, ignored -> "ORD-" + SEQUENCE.incrementAndGet());
+    String id =
+        IDS_BY_KEY.computeIfAbsent(key, ignored -> "111111-pref-" + SEQUENCE.incrementAndGet());
     Map<String, Object> reply = new LinkedHashMap<>();
     reply.put("id", id);
-    reply.put("status", "created");
-    reply.put("checkout_url", "https://sandbox.mercadopago.com.br/checkout/v1/redirect?id=" + id);
-    reply.put("total_amount", body.get("total_amount").asString());
-    reply.put("currency", "BRL");
-    reply.put("external_reference", body.get("external_reference").asString());
-    reply.put("expiration_time", body.get("expiration_time").asString());
+    reply.put("collector_id", 111111);
+    reply.put("init_point", "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=" + id);
+    reply.put(
+        "sandbox_init_point",
+        "https://sandbox.mercadopago.com.br/checkout/v1/redirect?pref_id=" + id);
+    reply.put("external_reference", reference(body));
+    reply.put("items", body.get("items"));
     return new Reply(201, JSON.writeValueAsString(reply));
   }
 
-  private static Reply answer(String id, String url, String total, String currency) {
+  private static String reference(JsonNode body) {
+    return body.get("external_reference").asString();
+  }
+
+  private static Reply answer(String id, String url, String reference) {
     return new Reply(
         201,
         JSON.writeValueAsString(
-            Map.of(
-                "id",
-                id,
-                "status",
-                "created",
-                "checkout_url",
-                url,
-                "total_amount",
-                total,
-                "currency",
-                currency)));
+            Map.of("id", id, "init_point", url, "external_reference", reference)));
   }
 
   private static String key(Order order) {

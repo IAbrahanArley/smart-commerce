@@ -42,6 +42,8 @@ Nenhuma tarefa começa sem autorização explícita do responsável.
 
 ## SC-013 — Pagar o pedido pelo Checkout Pro
 
+**Mudança (2026-10-24):** a Orders API respondeu 403 por política para esta conta, e o Checkout Pro passou a usar a **API de preferências** ([ADR-0013, mudança da P1](../architecture/adr/0013-mercado-pago-checkout-pro.md#mudança-da-p1-checkout-pro-pela-api-de-preferências-aprovada-em-2026-10-24)). Criação, confirmação (tópico `payment`, `GET /v1/payments/{id}` e busca por referência) e reembolso (`POST /v1/payments/{id}/refunds`) foram migrados e validados com servidores falsos; os textos abaixo descrevem a primeira implementação.
+
 **Estado (2026-10-20):** autorizada e implementada, validada com um servidor falso da Orders API ([validação](../quality/SC-013-VALIDATION.md)). A criação de uma order real em sandbox fica pendente até a SC-012 ser validada com o usuário de teste vendedor.
 
 - **Criação da order:** no checkout, o backend cria a order no Mercado Pago com o token do lojista, `X-Idempotency-Key` derivado do pedido, `external_reference` (id do pedido), itens e total do snapshot, `expiration_time` igual ao fim da reserva (P2) e meios de pagamento restritos.
@@ -128,9 +130,9 @@ Nenhuma tarefa começa sem autorização explícita do responsável.
 - [ ] Em janela anônima, logado como o vendedor de teste, conectar a loja em **Pagamentos** no admin (SC-012); desconectar e conectar de novo.
 - [ ] Fazer um pedido na vitrine e conferir no Checkout Pro o total, os itens e os meios oferecidos (SC-013, hipótese H4: sem boleto).
 - [ ] Pagar com o comprador de teste e conferir o retorno à vitrine com `STOREFRONT_PUBLIC_ORIGIN` em HTTPS (hipótese H3).
-- [ ] Configurar o webhook da aplicação (evento "Order (Mercado Pago)") e `MERCADO_PAGO_WEBHOOK_SECRET`; usar o "Simular" do painel e conferir que a assinatura é aceita e o pedido passa a `PAID` (SC-014).
+- [ ] Configurar o webhook da aplicação (evento "Pagamentos") e `MERCADO_PAGO_WEBHOOK_SECRET`; usar o "Simular" do painel e conferir que a assinatura é aceita e o pedido passa a `PAID` (SC-014).
 - [ ] Reembolsar um pedido pago pelo admin, com e sem devolução ao estoque, e conferir que ele só vira "Reembolsado" quando o Mercado Pago confirmar (SC-016, hipóteses H11 e H12).
-- [ ] Registrar o resultado em [SC-012-VALIDATION.md](../quality/SC-012-VALIDATION.md) [SC-013-VALIDATION.md](../quality/SC-013-VALIDATION.md) e [SC-014-VALIDATION.md](../quality/SC-014-VALIDATION.md), inclusive o `live_mode` e o domínio do `checkout_url`.
+- [ ] Registrar o resultado em [SC-012-VALIDATION.md](../quality/SC-012-VALIDATION.md) [SC-013-VALIDATION.md](../quality/SC-013-VALIDATION.md) e [SC-014-VALIDATION.md](../quality/SC-014-VALIDATION.md), inclusive o `live_mode` e o domínio do `init_point`.
 
 ## Definition of Done
 

@@ -232,42 +232,50 @@ public class PaymentRepository {
   }
 
   /**
-   * The tenant owning a provider order (SC-014). The only cross-tenant read: it routes a
-   * notification to the store that created the order, never the notification's own claims.
+   * The tenant of a notified provider payment (topic {@code payment}, ADR-0013 P1 change). Cross-
+   * tenant routing only: the payment we already approved under that id, otherwise the single store
+   * connected to the notifying seller account. A seller connected to several stores routes to none;
+   * the reconciliation (SC-015) then confirms each store's payment by its own order.
    */
-  public Optional<ProviderOrderOwner> ownerOfProviderOrder(String providerOrderId) {
-    // Case-insensitive: the signature admits a lowercased id; the stored spelling is returned.
-    List<ProviderOrderOwner> found =
+  public Optional<UUID> ownerOfProviderPayment(String providerPaymentId, String providerUserId) {
+    List<UUID> approved =
         jdbc.query(
             """
-            SELECT tenant_id,provider_order_id FROM payment
-            WHERE provider='MERCADO_PAGO' AND lower(provider_order_id)=lower(?) LIMIT 2
+            SELECT tenant_id FROM payment
+            WHERE provider='MERCADO_PAGO' AND provider_payment_id=?
             """,
-            (row, index) -> new ProviderOrderOwner(row.getObject(1, UUID.class), row.getString(2)),
-            providerOrderId);
-    // Ids differing only by case in two stores would be ambiguous: route neither (SC-017 review).
-    return found.size() == 1 ? Optional.of(found.getFirst()) : Optional.empty();
+            (row, index) -> row.getObject(1, UUID.class),
+            providerPaymentId);
+    if (!approved.isEmpty()) return Optional.of(approved.getFirst());
+    if (providerUserId == null) return Optional.empty();
+    List<UUID> connected =
+        jdbc.query(
+            """
+            SELECT tenant_id FROM payment_account
+            WHERE provider='MERCADO_PAGO' AND provider_user_id=? AND status='CONNECTED' LIMIT 2
+            """,
+            (row, index) -> row.getObject(1, UUID.class),
+            providerUserId);
+    return connected.size() == 1 ? Optional.of(connected.getFirst()) : Optional.empty();
   }
 
-  public record ProviderOrderOwner(UUID tenant, String providerOrderId) {}
+  /** The payment approved with this provider payment inside its tenant, without locking. */
+  public Optional<PaymentRecord> findByProviderPayment(UUID tenant, String providerPaymentId) {
+    return jdbc
+        .query(
+            SELECT + " WHERE tenant_id=? AND provider_payment_id=?",
+            PaymentRepository::payment,
+            tenant,
+            providerPaymentId)
+        .stream()
+        .findFirst();
+  }
 
   /** The payment of a provider order inside its tenant, without locking. */
   public Optional<PaymentRecord> findByProviderOrder(UUID tenant, String providerOrderId) {
     return jdbc
         .query(
             SELECT + " WHERE tenant_id=? AND provider_order_id=?",
-            PaymentRepository::payment,
-            tenant,
-            providerOrderId)
-        .stream()
-        .findFirst();
-  }
-
-  /** Locks the payment of a provider order inside its tenant; serializes confirmations. */
-  public Optional<PaymentRecord> lockByProviderOrder(UUID tenant, String providerOrderId) {
-    return jdbc
-        .query(
-            SELECT + " WHERE tenant_id=? AND provider_order_id=? FOR UPDATE",
             PaymentRepository::payment,
             tenant,
             providerOrderId)
@@ -298,20 +306,26 @@ public class PaymentRepository {
         payment);
   }
 
-  /** CREATED to APPROVED once; the caller holds the row lock. */
+  /**
+   * CREATED to APPROVED once, keeping the id of the approved provider payment (refunds go to it);
+   * the caller holds the row lock.
+   */
   public boolean approve(
       UUID tenant,
       UUID payment,
+      String providerPaymentId,
       String providerStatus,
       String detail,
       BigDecimal paidAmount,
       Instant now) {
     return jdbc.update(
             """
-            UPDATE payment SET status='APPROVED', provider_status=?, provider_status_detail=?,
-              paid_amount=?, approved_at=?, checked_at=?, updated_at=?, version=version+1
+            UPDATE payment SET status='APPROVED', provider_payment_id=?, provider_status=?,
+              provider_status_detail=?, paid_amount=?, approved_at=?, checked_at=?, updated_at=?,
+              version=version+1
             WHERE tenant_id=? AND id=? AND status='CREATED'
             """,
+            providerPaymentId,
             providerStatus,
             detail,
             paidAmount,
@@ -325,7 +339,8 @@ public class PaymentRepository {
 
   private static final String SELECT =
       """
-      SELECT id,order_id,status,amount,provider_order_id,provider_user_id,checkout_url
+      SELECT id,order_id,status,amount,provider_order_id,provider_user_id,checkout_url,
+        provider_payment_id
       FROM payment""";
 
   private static PaymentRecord payment(ResultSet row, int index) throws SQLException {
@@ -336,7 +351,8 @@ public class PaymentRepository {
         row.getBigDecimal("amount"),
         row.getString("provider_order_id"),
         row.getString("provider_user_id"),
-        row.getString("checkout_url"));
+        row.getString("checkout_url"),
+        row.getString("provider_payment_id"));
   }
 
   private static OffsetDateTime utc(Instant value) {

@@ -28,8 +28,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  *       another choice is a conflict.
  *   <li>Outside any transaction the provider is asked, always with the same idempotency key per
  *       order, so it never refunds twice. A provider failure is recorded; the store may retry.
- *   <li>The order is never marked refunded from that answer: the provider order is read back (now,
- *       and later by the reconciliation or a webhook) and only a refunded order settles it, once.
+ *   <li>The order is never marked refunded from that answer: the provider payment is read back
+ *       (now, and later by the reconciliation or a webhook) and only a refunded payment settles it,
+ *       once.
  * </ol>
  */
 @Service
@@ -62,7 +63,7 @@ public class PaymentRefundService {
   }
 
   public void request(UUID tenant, UUID order, UUID actor, String reason, boolean restock) {
-    var client = providers.requireOrders();
+    var client = providers.requireCheckout();
     PaymentRecord payment =
         writes.execute(
             tx -> {
@@ -89,10 +90,13 @@ public class PaymentRefundService {
     if (!seller.providerUserId().equals(payment.providerUserId()))
       throw new PaymentException(PaymentException.Reason.ACCOUNT_CHANGED);
     try {
-      client.refundOrder(seller.accessToken(), payment.providerOrderId(), idempotencyKey(order));
+      client.refundPayment(
+          seller.accessToken(), payment.providerPaymentId(), idempotencyKey(order));
     } catch (PaymentException failure) {
       LOG.warn("Refund request failed for order {}", order);
       writes.executeWithoutResult(tx -> refunds.failed(tenant, payment.id(), "PROVIDER_ERROR"));
+      // A retry of a refund already done is refused by the provider: the payment read back says.
+      if (settledAnyway(tenant, payment.providerOrderId())) return;
       throw failure;
     }
     writes.executeWithoutResult(tx -> refunds.accepted(tenant, payment.id(), now()));
@@ -100,6 +104,16 @@ public class PaymentRefundService {
       confirmations.confirm(tenant, payment.providerOrderId());
     } catch (PaymentException pending) {
       // Not confirmed yet: the reconciliation (or a webhook) settles it later.
+    }
+  }
+
+  private boolean settledAnyway(UUID tenant, String preference) {
+    try {
+      var outcome = confirmations.confirm(tenant, preference);
+      return outcome == PaymentConfirmationService.Outcome.REFUNDED
+          || outcome == PaymentConfirmationService.Outcome.ALREADY_REFUNDED;
+    } catch (PaymentException unreadable) {
+      return false;
     }
   }
 
