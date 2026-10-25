@@ -95,6 +95,8 @@ Data: 2026-10-21. **F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dash
 
 ## SC-023 — Revisão integrada
 
+**Estado (2026-10-24):** revisão executada ([validação](../quality/SC-023-VALIDATION.md)). Não houve falha de isolamento nem de cálculo, e a V27 passou a impor no banco o livro só de acréscimo. A sprint só fecha depois da SC-018 (sandbox real do Mercado Pago) e da revisão manual de acessibilidade.
+
 **Preparação (2026-10-22):** validação das telas autorizada e realizada, com correções de moeda negativa, rascunho/foco/datas de despesas e estados do dashboard ([evidências e limitações](../quality/SPRINT-05-UI-VALIDATION.md)). Esta etapa não encerra a tarefa; a SC-018 e a validação real da Sprint 4 seguem como dependências.
 
 - Checklists de [SECURITY.md](../agents/SECURITY.md) e [QA.md](../agents/QA.md), com foco em tenant, integridade dos números e acessibilidade do dashboard.

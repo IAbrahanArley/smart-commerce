@@ -33,6 +33,19 @@ Implementado e revisado até a SC-017 (sandbox, validação real pendente, [ADR-
 
 ## Livro financeiro (Sprint 5)
 O módulo `finance` guarda os fatos financeiros num livro só de acréscimo (`finance_entry`, [ADR-0015](adr/0015-finance-dashboard.md)): venda e CMV quando o pedido é pago, reembolso e eventual estorno do CMV quando é reembolsado, tudo na mesma transação da mudança de estado e com chave idempotente por fato. As despesas manuais (SC-020) também ficam no módulo: cada despesa gera um lançamento, e uma correção cancela a anterior com um lançamento de estorno, sem apagar nada. Os relatórios e o dashboard leem só o livro: o relatório do período (SC-021) soma os lançamentos por competência no calendário de São Paulo, separa a receber e caixa pela liquidação e marca a margem como parcial quando faltam taxas ou custos. O dashboard (módulo `analytics`, SC-022) só compõe o relatório, as vendas por dia do livro e as listas de estoque baixo e sem giro do `inventory`, sem cálculos próprios. A dependência é de `orders` para `finance` e de `analytics` para `finance` e `inventory`.
+ Desde a V27 (SC-023), o próprio banco recusa alterar ou apagar lançamentos; só o preenchimento único de `settled_at` é permitido.
+
+## Assistente consultivo (Sprint 6)
+O módulo `advisor` ([ADR-0016](adr/0016-consultative-agent.md)) tem três partes:
+- **Alertas (SC-024):** regras determinísticas, sem IA, sobre os serviços de `finance`, `inventory`, `orders` e `payments`.
+- **Fundação do assistente (SC-025):**
+  - interruptor desligado por padrão;
+  - cota por loja e teto global sob *advisory locks*;
+  - registro só de metadados em `advisor_usage`;
+  - ferramentas só leitura com esquema fechado, que devolvem agregados e catálogo, nunca dados de comprador.
+- **Integração com o modelo (SC-026 em diante):** quando chegar, chama essas ferramentas pelo backend, com o tenant sempre vindo da sessão.
+
+A dependência é de `advisor` para `finance`, `analytics`, `inventory`, `orders` e `payments`, nunca no sentido contrário.
 
 ## Princípios financeiros
 Guardar fatos auditáveis e separar data da venda, aprovação, liquidação e movimentação de caixa. BigDecimal, BRL, snapshot de custos e taxas. IA nunca calcula o resultado como fonte de verdade.

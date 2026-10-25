@@ -97,7 +97,17 @@ V23 (SC-020), aditiva:
 - **`expense`:** categoria de lista fixa, tipo fixa ou variável, descrição, valor positivo, competência e pagamento como datas de São Paulo, `request_id` único por tenant, autor e cancelamento (quem, quando e motivo, juntos). Nunca é apagada.
 - **`finance_entry`:** ganha `expense_id` (FK composta) e o tipo `EXPENSE_REVERSAL` (positivo), com CHECK que liga os tipos de despesa à coluna.
 
+V24 (SC-025), aditiva: `advisor_usage`, uma linha por pergunta ao assistente, **só metadados**:
+- **o que guarda:** loja, usuário, horário, resultado (`PENDING`, `ANSWERED`, `REFUSED`, `UNGROUNDED`, `PROVIDER_ERROR`, `CANCELLED`), modelo, tokens, quantidade e nomes das ferramentas usadas e custo estimado;
+- **o que nunca guarda:** o texto da pergunta ou da resposta;
+- **ciclo de vida:** `finished_at` existe exatamente para as linhas fora de `PENDING`; uma rotina cancela as pendentes presas e apaga as linhas com mais de 90 dias ([ADR-0016](adr/0016-consultative-agent.md) A8, A9).
+
 V26 (mudança da P1 do ADR-0013, 2026-10-24), aditiva: `payment.provider_payment_id`, o id do pagamento aprovado no Mercado Pago (só dígitos, único por provedor), usado no reembolso. Com preferências, `payment.provider_order_id` guarda o id da preferência e `payment_event.provider_order_id` o id do pagamento notificado (tópico `payment`).
+
+V27 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
+- **`DELETE`:** recusado sempre;
+- **`UPDATE`:** só para preencher `settled_at` uma única vez, a partir de nulo, que é o caminho da SC-018;
+- **`TRUNCATE`:** não é afetado, porque não é operação de linha; os testes o usam em bancos descartáveis.
 
 V21 (SC-016), aditiva:
 - **`sales_order`:** estado `REFUNDED` com `refunded_at`. As CHECKs mantêm `paid_at` e o histórico de expiração e cancelamento também em `REFUNDED`.
