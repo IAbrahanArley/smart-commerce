@@ -1,6 +1,6 @@
 # ADR-0016 — Agente consultivo, alertas e explicabilidade (Sprint 6)
 
-Status: **adotado** em 2026-10-23 para A1–A12, conforme as recomendações abaixo, aprovadas pelo responsável. Proposto na mesma data. Nada foi implementado nem contratado. Cada tarefa da Sprint 6 ainda exige autorização própria. A instalação do SDK da Anthropic (A1) é aprovada no gate da SC-026, e as execuções pagas de avaliação, no gate da SC-029. Plano incremental: [SPRINT_06.md](../../product/SPRINT_06.md).
+Status: **adotado** em 2026-10-23 para A1–A12, conforme as recomendações abaixo, aprovadas pelo responsável. Proposto na mesma data. Nada foi implementado nem contratado. Cada tarefa da Sprint 6 ainda exige autorização própria. A instalação do SDK da Anthropic (A1) foi **aprovada em 2026-10-25** no gate da SC-026 (`anthropic-java` 2.71.0, [validação](../../quality/SC-026-VALIDATION.md)), e as execuções pagas de avaliação, no gate da SC-029. Plano incremental: [SPRINT_06.md](../../product/SPRINT_06.md).
 
 ## Contexto
 
@@ -23,7 +23,7 @@ Status: **adotado** em 2026-10-23 para A1–A12, conforme as recomendações aba
   - Todos esses números já são calculados, de forma determinística e isolada por tenant, por serviços do backend. O agente **reaproveita** esses serviços e não cria cálculo próprio.
 - **Estado das dependências:** a validação real da Sprint 4 e a SC-018 (taxas) estão pendentes. Até lá, margens com vendas aparecem como "parcial". O agente precisa repetir esse estado, nunca preencher a lacuna.
 
-**API Claude, documentação consultada em 2026-10-23 (confirmar de novo antes da SC-026):**
+**API Claude, documentação consultada em 2026-10-23 e reconfirmada em 2026-10-25 na SC-026** (leitura de cache do Haiku: 0,01; escrita de cache de 5 min: 1,25× a entrada):
 
 | Modelo | ID | Entrada (US$/milhão de tokens) | Saída (US$/milhão de tokens) |
 | --- | --- | --- | --- |

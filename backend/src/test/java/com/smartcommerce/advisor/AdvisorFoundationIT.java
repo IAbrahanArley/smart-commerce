@@ -7,6 +7,7 @@ import com.smartcommerce.advisor.domain.AdvisorException;
 import com.smartcommerce.advisor.domain.AdvisorUsage;
 import com.smartcommerce.advisor.dto.tool.ToolResults;
 import com.smartcommerce.advisor.repositories.AdvisorUsageRepository;
+import com.smartcommerce.advisor.services.AdvisorAssistantService;
 import com.smartcommerce.advisor.services.AdvisorHousekeepingJob;
 import com.smartcommerce.advisor.services.AdvisorQuotaService;
 import com.smartcommerce.advisor.services.AdvisorToolService;
@@ -67,6 +68,7 @@ class AdvisorFoundationIT {
   @Autowired JdbcTemplate jdbc;
   @Autowired AdvisorToolService tools;
   @Autowired AdvisorQuotaService quota;
+  @Autowired AdvisorAssistantService assistant;
   @Autowired AdvisorUsageRepository usage;
   @Autowired FinanceLedgerService ledger;
   @Autowired FinanceReportService finance;
@@ -234,6 +236,16 @@ class AdvisorFoundationIT {
     assertThatThrownBy(() -> off.start(ownerA, tenantA))
         .hasFieldOrPropertyWithValue("reason", AdvisorException.Reason.DISABLED);
     assertThat(off.enabled()).isFalse();
+  }
+
+  @Test
+  void switchedOnWithoutAKeyTheAssistantIsUnavailable() {
+    // SC-026 (A11): this context has advisor.enabled=true but no ANTHROPIC_API_KEY.
+    assertThat(assistant.available()).isFalse();
+    assertThat(assistant.status(ownerA, tenantA).enabled()).isFalse();
+    assertThatThrownBy(() -> assistant.ask(ownerA, tenantA, "Como foi meu mês?"))
+        .hasFieldOrPropertyWithValue("reason", AdvisorException.Reason.DISABLED);
+    assertThat(usage.countedSince(tenantA, Instant.EPOCH)).isZero();
   }
 
   @Test
