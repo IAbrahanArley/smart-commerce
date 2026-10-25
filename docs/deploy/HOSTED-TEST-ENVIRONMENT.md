@@ -68,7 +68,8 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `MERCADO_PAGO_CLIENT_SECRET` | segredo da aplicação (segredo) |
 | `MERCADO_PAGO_REDIRECT_URI` | `https://<projeto-admin>.vercel.app/api/payments/mercado-pago/callback`, idêntica à cadastrada na aplicação |
 | `PAYMENTS_TOKEN_ENCRYPTION_KEY` | 32 bytes aleatórios em Base64 (segredo; comando em [SC-012-VALIDATION.md](../quality/SC-012-VALIDATION.md)) |
-| `MERCADO_PAGO_WEBHOOK_SECRET` | segredo do webhook da aplicação (segredo; painel → Webhooks). Cadastre a URL `https://<servico>.onrender.com/api/public/webhooks/mercado-pago` com o evento "Order (Mercado Pago)" (SC-014) |
+| `MERCADO_PAGO_WEBHOOK_SECRET` | segredo do webhook da aplicação (segredo; painel → Webhooks). Cadastre a URL `https://<servico>.onrender.com/api/public/webhooks/mercado-pago` com o evento **"Pagamentos"** (SC-014; o Checkout Pro usa preferências desde a mudança da P1 do ADR-0013) |
+| `MERCADO_PAGO_NOTIFICATION_URL` | opcional: a mesma URL do webhook, enviada em cada preferência para que os pagamentos de todos os lojistas conectados notifiquem a plataforma |
 | `STOREFRONT_PUBLIC_ORIGIN` | URL de produção da vitrine na Vercel (passo 5), por exemplo `https://<projeto-vitrine>.vercel.app`, para a página de retorno do Checkout Pro (SC-013) |
 
 3. **Não defina** `SPRING_PROFILES_ACTIVE=dev`. A `PORT` é definida pelo Render, e a imagem já escuta em `0.0.0.0`.

@@ -43,6 +43,34 @@ public class ProductImageRepository {
     entities.clear();
   }
 
+  /**
+   * Cover (first by position) and photo count of each product, in one query for a whole list.
+   * Products without photos are absent from the map.
+   */
+  public Map<UUID, ProductImageSummary> summaries(UUID tenant, Collection<UUID> products) {
+    if (products.isEmpty()) return Map.of();
+    List<?> rows =
+        entities
+            .createNativeQuery(
+                """
+                SELECT DISTINCT ON (product_id) product_id, id, alt,
+                  count(*) OVER (PARTITION BY product_id)
+                FROM catalog_product_image WHERE tenant_id=:tenant AND product_id IN (:products)
+                ORDER BY product_id, position, id
+                """)
+            .setParameter("tenant", tenant)
+            .setParameter("products", products)
+            .getResultList();
+    Map<UUID, ProductImageSummary> summaries = new HashMap<>();
+    for (Object raw : rows) {
+      Object[] r = (Object[]) raw;
+      summaries.put(
+          (UUID) r[0],
+          new ProductImageSummary((UUID) r[1], (String) r[2], ((Number) r[3]).intValue()));
+    }
+    return summaries;
+  }
+
   public List<ProductImageData> list(UUID tenant, UUID product) {
     List<?> rows =
         entities

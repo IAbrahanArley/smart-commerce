@@ -13,7 +13,7 @@ import com.smartcommerce.payments.security.WebhookSignature;
  */
 public record PaymentProviders(
     MercadoPagoOAuthClient mercadoPago,
-    MercadoPagoOrdersClient orders,
+    MercadoPagoCheckoutClient checkout,
     TokenCipher cipher,
     WebhookSignature webhook) {
   public static PaymentProviders unavailable() {
@@ -25,7 +25,7 @@ public record PaymentProviders(
   }
 
   public boolean available() {
-    return mercadoPago != null && orders != null && cipher != null;
+    return mercadoPago != null && checkout != null && cipher != null;
   }
 
   public MercadoPagoOAuthClient requireMercadoPago() {
@@ -33,9 +33,9 @@ public record PaymentProviders(
     return mercadoPago;
   }
 
-  public MercadoPagoOrdersClient requireOrders() {
+  public MercadoPagoCheckoutClient requireCheckout() {
     if (!available()) throw new PaymentException(PaymentException.Reason.UNAVAILABLE);
-    return orders;
+    return checkout;
   }
 
   public TokenCipher requireCipher() {

@@ -26,7 +26,7 @@ Revisão feita por um revisor independente só leitura (subagente) sobre o diff 
 1. admin → backend: sessão, CSRF e vínculo OWNER;
 2. vitrine → backend: cadeia pública, token do pedido em cabeçalho;
 3. Mercado Pago → backend: webhook público, assinado por HMAC;
-4. backend → Mercado Pago: OAuth, Orders API e reembolso, só para URLs configuradas;
+4. backend → Mercado Pago: OAuth, preferências, pagamentos e reembolso, só para URLs configuradas (a Orders API foi substituída na mudança da P1 do ADR-0013, 2026-10-24);
 5. backend → PostgreSQL: tenant sempre derivado do vínculo, do pedido ou do pagamento guardado.
 
 ## Ameaças, controles e evidências

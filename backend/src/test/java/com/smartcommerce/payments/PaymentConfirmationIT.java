@@ -12,8 +12,10 @@ import com.smartcommerce.payments.provider.PaymentProviders;
 import com.smartcommerce.payments.security.TokenCipher;
 import com.smartcommerce.payments.services.PaymentEventService;
 import com.smartcommerce.payments.services.PaymentReconciliationService;
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -58,10 +60,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * SC-014 against a loopback fake of Mercado Pago's Orders API: signed webhook, idempotent event
- * record, confirmation only by querying the provider with the order's own store token, a single
- * stock deduction by the system actor, late payment (P4) with and without stock, races with the
- * expiration batch and between events, and A/B isolation.
+ * SC-014 against a loopback fake of Mercado Pago's preferences and payments APIs (ADR-0013 P1
+ * change): signed webhook of the {@code payment} topic, idempotent event record, confirmation only
+ * by querying the provider with the order's own store token, a single stock deduction by the system
+ * actor, late payment (P4) with and without stock, races with the expiration batch and between
+ * events, and A/B isolation.
  */
 @Testcontainers
 @ExtendWith(OutputCaptureExtension.class)
@@ -90,10 +93,15 @@ class PaymentConfirmationIT {
   private static final String TOKEN_B = "APP_USR-synthetic-seller-b-0014";
   private static final Map<String, String> SELLERS = Map.of(TOKEN_A, "111111", TOKEN_B, "222222");
   private static final List<String> READS = new CopyOnWriteArrayList<>();
-  // Provider-side state of each order, by id; tests change status to simulate the buyer paying.
-  private static final Map<String, Map<String, Object>> ORDERS = new ConcurrentHashMap<>();
+  // Provider-side payments by id, created when the buyer first tries to pay; tests change their
+  // status to simulate the buyer paying. DRAFTS holds each preference's future payment, OWNERS the
+  // seller who may read it and PREFERENCES the payment of each preference.
+  private static final Map<String, Map<String, Object>> PAYMENTS = new ConcurrentHashMap<>();
+  private static final Map<String, Map<String, Object>> DRAFTS = new ConcurrentHashMap<>();
+  private static final Map<String, String> OWNERS = new ConcurrentHashMap<>();
+  private static final Map<String, String> PREFERENCES = new ConcurrentHashMap<>();
   private static final AtomicInteger SEQUENCE = new AtomicInteger();
-  // Simulates the provider being down for order reads (SC-015).
+  // Simulates the provider being down for payment reads (SC-015).
   private static final AtomicBoolean DOWN = new AtomicBoolean();
   // SC-016: refund requests seen by the fake (token and idempotency key) and how it answers.
   private static final List<String> REFUNDS = new CopyOnWriteArrayList<>();
@@ -118,89 +126,120 @@ class PaymentConfirmationIT {
   private static HttpServer provider() {
     try {
       HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-      server.createContext(
-          "/v1/orders",
-          exchange -> {
-            String token =
-                exchange
-                    .getRequestHeaders()
-                    .getFirst("Authorization")
-                    .substring("Bearer ".length());
-            Map<String, Object> reply;
-            int status = 200;
-            String path = exchange.getRequestURI().getPath();
-            if ("POST".equals(exchange.getRequestMethod()) && path.endsWith("/refund")) {
-              String id =
-                  path.substring("/v1/orders/".length(), path.length() - "/refund".length());
-              REFUNDS.add(token + " " + exchange.getRequestHeaders().getFirst("X-Idempotency-Key"));
-              Map<String, Object> state = ORDERS.get(id);
-              switch (REFUND_MODE.get()) {
-                case "FAIL" -> {
-                  status = 500;
-                  reply = Map.of("message", "internal_error");
-                }
-                case "CANNOT" -> {
-                  status = 409;
-                  reply = Map.of("code", "cannot_refund_order", "message", "Cannot refund order.");
-                }
-                case "ALREADY" -> {
-                  state.put("status_detail", "refunded");
-                  status = 409;
-                  reply =
-                      Map.of(
-                          "code", "order_already_refunded", "message", "Order already refunded.");
-                }
-                case "IMMEDIATE" -> {
-                  state.put("status_detail", "refunded");
-                  status = 201;
-                  reply = state;
-                }
-                default -> {
-                  status = 201;
-                  reply = state; // accepted, confirmed later
-                }
-              }
-            } else if ("POST".equals(exchange.getRequestMethod())) {
-              JsonNode body = JSON.readTree(exchange.getRequestBody().readAllBytes());
-              String id = "ORD" + SEQUENCE.incrementAndGet();
-              reply = new LinkedHashMap<>();
-              reply.put("id", id);
-              reply.put("status", "created");
-              reply.put("status_detail", "created");
-              reply.put("checkout_url", "https://sandbox.mercadopago.com.br/checkout?id=" + id);
-              reply.put("total_amount", body.get("total_amount").asString());
-              reply.put("total_paid_amount", "0.00");
-              reply.put("currency", "BRL");
-              reply.put("external_reference", body.get("external_reference").asString());
-              reply.put("user_id", SELLERS.get(token));
-              ORDERS.put(id, reply);
-              status = 201;
-            } else {
-              String id = exchange.getRequestURI().getPath().substring("/v1/orders/".length());
-              READS.add(token + " " + id);
-              reply = ORDERS.get(id);
-              if (DOWN.get()) {
-                status = 500;
-                reply = Map.of("message", "internal_error");
-              } else
-              // Another seller's token cannot read the order.
-              if (reply == null || !SELLERS.get(token).equals(reply.get("user_id"))) {
-                status = 404;
-                reply = Map.of("message", "not found");
-              }
-            }
-            byte[] bytes = JSON.writeValueAsBytes(reply);
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(status, bytes.length);
-            exchange.getResponseBody().write(bytes);
-            exchange.close();
-          });
+      server.createContext("/", PaymentConfirmationIT::handle);
       server.setExecutor(Executors.newFixedThreadPool(4));
       server.start();
       return server;
     } catch (IOException failure) {
       throw new IllegalStateException(failure);
     }
+  }
+
+  private static void handle(HttpExchange exchange) throws IOException {
+    String token =
+        exchange.getRequestHeaders().getFirst("Authorization").substring("Bearer ".length());
+    String seller = SELLERS.get(token);
+    String method = exchange.getRequestMethod();
+    String path = exchange.getRequestURI().getPath();
+    Object reply;
+    int status = 200;
+    if ("POST".equals(method) && "/checkout/preferences".equals(path)) {
+      JsonNode body = JSON.readTree(exchange.getRequestBody().readAllBytes());
+      int n = SEQUENCE.incrementAndGet();
+      String id = seller + "-PREF" + n;
+      String payment = String.valueOf(900_000 + n);
+      BigDecimal total = BigDecimal.ZERO;
+      for (JsonNode item : body.get("items"))
+        total =
+            total.add(
+                item.get("unit_price")
+                    .decimalValue()
+                    .multiply(BigDecimal.valueOf(item.get("quantity").asInt())));
+      // The buyer's payment, as the provider will report it once they try to pay.
+      Map<String, Object> draft = new LinkedHashMap<>();
+      draft.put("id", Long.parseLong(payment));
+      draft.put("status", "pending");
+      draft.put("status_detail", "pending_waiting_payment");
+      draft.put("transaction_amount", total.setScale(2));
+      draft.put("transaction_amount_refunded", BigDecimal.ZERO.setScale(2));
+      draft.put("currency_id", "BRL");
+      draft.put("external_reference", body.get("external_reference").asString());
+      draft.put("collector_id", Long.parseLong(seller));
+      DRAFTS.put(payment, draft);
+      OWNERS.put(payment, seller);
+      PREFERENCES.put(id, payment);
+      reply =
+          Map.of(
+              "id",
+              id,
+              "collector_id",
+              Long.parseLong(seller),
+              "external_reference",
+              body.get("external_reference").asString(),
+              "init_point",
+              "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=" + id);
+      status = 201;
+    } else if ("POST".equals(method) && path.endsWith("/refunds")) {
+      String id = path.substring("/v1/payments/".length(), path.length() - "/refunds".length());
+      REFUNDS.add(token + " " + exchange.getRequestHeaders().getFirst("X-Idempotency-Key"));
+      Map<String, Object> state = PAYMENTS.get(id);
+      switch (REFUND_MODE.get()) {
+        case "FAIL" -> {
+          status = 500;
+          reply = Map.of("message", "internal_error");
+        }
+        case "CANNOT" -> {
+          status = 400;
+          reply = Map.of("error", "bad_request", "message", "Payment cannot be refunded.");
+        }
+        case "ALREADY" -> {
+          refunded(state);
+          status = 400;
+          reply = Map.of("error", "bad_request", "message", "Payment already refunded.");
+        }
+        case "IMMEDIATE" -> {
+          refunded(state);
+          status = 201;
+          reply = Map.of("id", 1, "payment_id", Long.parseLong(id), "status", "approved");
+        }
+        default -> {
+          status = 201; // accepted, confirmed later
+          reply = Map.of("id", 1, "payment_id", Long.parseLong(id), "status", "pending");
+        }
+      }
+    } else if (DOWN.get()) {
+      status = 500;
+      reply = Map.of("message", "internal_error");
+    } else if ("/v1/payments/search".equals(path)) {
+      String reference = query(exchange, "external_reference");
+      READS.add(token + " ref:" + reference);
+      List<Object> results = new ArrayList<>();
+      PAYMENTS.entrySet().stream()
+          .filter(entry -> seller.equals(OWNERS.get(entry.getKey())))
+          .filter(entry -> reference.equals(entry.getValue().get("external_reference")))
+          .forEach(entry -> results.add(entry.getValue()));
+      reply = Map.of("results", results, "paging", Map.of("total", results.size()));
+    } else {
+      String id = path.substring("/v1/payments/".length());
+      READS.add(token + " " + id);
+      reply = PAYMENTS.get(id);
+      // Another seller's token cannot read the payment.
+      if (reply == null || !seller.equals(OWNERS.get(id))) {
+        status = 404;
+        reply = Map.of("message", "Payment not found");
+      }
+    }
+    byte[] bytes = JSON.writeValueAsBytes(reply);
+    exchange.getResponseHeaders().add("Content-Type", "application/json");
+    exchange.sendResponseHeaders(status, bytes.length);
+    exchange.getResponseBody().write(bytes);
+    exchange.close();
+  }
+
+  private static String query(HttpExchange exchange, String name) {
+    for (String pair : exchange.getRequestURI().getQuery().split("&"))
+      if (pair.startsWith(name + "=")) return pair.substring(name.length() + 1);
+    return "";
   }
 
   @DynamicPropertySource
@@ -229,7 +268,10 @@ class PaymentConfirmationIT {
     // TRUNCATE is restricted to this class's disposable container, never the developer database.
     jdbc.execute("TRUNCATE tenant, identity_user, order_rate_limit, payment_event CASCADE");
     READS.clear();
-    ORDERS.clear();
+    PAYMENTS.clear();
+    DRAFTS.clear();
+    OWNERS.clear();
+    PREFERENCES.clear();
     DOWN.set(false);
     REFUNDS.clear();
     REFUND_MODE.set("PENDING");
@@ -247,7 +289,7 @@ class PaymentConfirmationIT {
     Order order = paidLater("confirma-a", variantA, 2); // 2 × 10.00
     approve(order);
 
-    var received = webhook(order.provider(), "evt-1", "req-1");
+    var received = webhook(order.payment(), "evt-1", "req-1");
     assertThat(received.statusCode()).isEqualTo(200);
     assertThat(eventStatus("req-1")).isEqualTo("PENDING");
     assertThat(orderStatus(order)).isEqualTo("PENDING_PAYMENT"); // nothing before processing
@@ -255,7 +297,7 @@ class PaymentConfirmationIT {
 
     assertThat(orderStatus(order)).isEqualTo("PAID");
     assertThat(eventStatus("req-1")).isEqualTo("PROCESSED");
-    assertThat(READS).containsExactly(TOKEN_A + " " + order.provider());
+    assertThat(READS).containsExactly(TOKEN_A + " " + order.payment());
     assertThat(balance(tenantA, variantA)).isEqualTo(8);
     assertThat(sales(order))
         .singleElement()
@@ -277,9 +319,9 @@ class PaymentConfirmationIT {
 
     // The same signed request again (even with another body id) is one event; a new request
     // about the same order is a new event that changes nothing.
-    assertThat(webhook(order.provider(), "evt-replayed", "req-1").statusCode()).isEqualTo(200);
+    assertThat(webhook(order.payment(), "evt-replayed", "req-1").statusCode()).isEqualTo(200);
     assertThat(eventCount()).isEqualTo(1);
-    assertThat(webhook(order.provider(), "evt-2", "req-3").statusCode()).isEqualTo(200);
+    assertThat(webhook(order.payment(), "evt-2", "req-3").statusCode()).isEqualTo(200);
     assertThat(events.processDue(20)).isEqualTo(1);
     assertThat(eventStatus("req-3")).isEqualTo("PROCESSED");
     assertThat(READS).hasSize(1); // already approved: the provider is not even queried again
@@ -302,46 +344,42 @@ class PaymentConfirmationIT {
     Order order = paidLater("confirma-a", variantA, 1);
     approve(order);
     String ts = String.valueOf(Instant.now().getEpochSecond());
-    String body = body(order.provider(), "evt-x");
-    String good =
-        WebhookSignatureTest.sign(WEBHOOK_SECRET, manifest(order.provider(), "req-x", ts));
+    String body = body(order.payment(), "evt-x");
+    String good = WebhookSignatureTest.sign(WEBHOOK_SECRET, manifest(order.payment(), "req-x", ts));
     for (var attempt :
         List.of(
-            post(order.provider(), body, "req-x", null),
-            post(order.provider(), body, "req-x", "ts=" + ts + ",v1=" + "0".repeat(64)),
+            post(order.payment(), body, "req-x", null),
+            post(order.payment(), body, "req-x", "ts=" + ts + ",v1=" + "0".repeat(64)),
             post(
-                order.provider(),
+                order.payment(),
                 body,
                 "req-x",
                 "ts="
                     + ts
                     + ",v1="
                     + WebhookSignatureTest.sign(
-                        "another-synthetic-secret", manifest(order.provider(), "req-x", ts))),
-            post(order.provider(), body, "req-other", "ts=" + ts + ",v1=" + good),
-            post("ORD999", body(("ORD999"), "evt-x"), "req-x", "ts=" + ts + ",v1=" + good),
+                        "another-synthetic-secret", manifest(order.payment(), "req-x", ts))),
+            post(order.payment(), body, "req-other", "ts=" + ts + ",v1=" + good),
+            post("999999", body("999999", "evt-x"), "req-x", "ts=" + ts + ",v1=" + good),
             post(
-                order.provider(),
+                order.payment(),
                 body,
                 "req-old",
-                stale(order.provider(), "req-old", Instant.now().minusSeconds(1200)))))
+                stale(order.payment(), "req-old", Instant.now().minusSeconds(1200)))))
       // 429 once the shared failure window is spent (another test floods it); both are refusals.
       assertThat(attempt.statusCode()).isIn(401, 429);
 
     // Signed for this order, but the body names another one: rejected, not routed.
     var swapped =
         post(
-            order.provider(),
-            body("ORD777", "evt-y"),
-            "req-y",
-            signature(order.provider(), "req-y"));
+            order.payment(), body("777777", "evt-y"), "req-y", signature(order.payment(), "req-y"));
     assertThat(swapped.statusCode()).isEqualTo(400);
     var huge =
         post(
-            order.provider(),
+            order.payment(),
             "{\"pad\":\"" + "x".repeat(20_000) + "\"}",
             "req-z",
-            signature(order.provider(), "req-z"));
+            signature(order.payment(), "req-z"));
     assertThat(huge.statusCode()).isEqualTo(413);
     assertThat(eventCount()).isZero();
     assertThat(events.processDue(20)).isZero();
@@ -352,8 +390,8 @@ class PaymentConfirmationIT {
   @Test
   void outOfOrderNotificationsOnlyConfirmWhatTheProviderReportsAsPaid() throws Exception {
     Order order = paidLater("confirma-a", variantA, 1);
-    ORDERS.get(order.provider()).put("status", "action_required");
-    webhook(order.provider(), "evt-late-first", "req-1");
+    buyer(order).putAll(Map.of("status", "in_process", "status_detail", "pending_review_manual"));
+    webhook(order.payment(), "evt-late-first", "req-1");
     events.processDue(20);
     assertThat(eventStatus("req-1")).isEqualTo("PROCESSED");
     assertThat(orderStatus(order)).isEqualTo("PENDING_PAYMENT");
@@ -361,20 +399,16 @@ class PaymentConfirmationIT {
     assertThat(
             jdbc.queryForObject(
                 "SELECT provider_status FROM payment WHERE order_id=?", String.class, order.id()))
-        .isEqualTo("action_required");
+        .isEqualTo("in_process");
 
-    // Processed but only partly paid: still not confirmed.
-    ORDERS
-        .get(order.provider())
-        .putAll(
-            Map.of(
-                "status", "processed", "status_detail", "accredited", "total_paid_amount", "5.00"));
-    webhook(order.provider(), "evt-partial", "req-2");
+    // Rejected: still not confirmed.
+    buyer(order).putAll(Map.of("status", "rejected", "status_detail", "cc_rejected_other_reason"));
+    webhook(order.payment(), "evt-rejected", "req-2");
     events.processDue(20);
     assertThat(orderStatus(order)).isEqualTo("PENDING_PAYMENT");
 
     approve(order);
-    webhook(order.provider(), "evt-paid", "req-3");
+    webhook(order.payment(), "evt-paid", "req-3");
     events.processDue(20);
     assertThat(orderStatus(order)).isEqualTo("PAID");
     assertThat(balance(tenantA, variantA)).isEqualTo(9);
@@ -387,7 +421,7 @@ class PaymentConfirmationIT {
     expire(expired);
     assertThat(orderStatus(expired)).isEqualTo("EXPIRED");
     approve(expired);
-    webhook(expired.provider(), "evt-exp", "req-1");
+    webhook(expired.payment(), "evt-exp", "req-1");
     events.processDue(20);
     assertThat(orderStatus(expired)).isEqualTo("PAID");
     assertThat(
@@ -403,7 +437,7 @@ class PaymentConfirmationIT {
     Order cancelled = paidLater("confirma-a", variantA, 1);
     cancel(cancelled);
     approve(cancelled);
-    webhook(cancelled.provider(), "evt-can", "req-2");
+    webhook(cancelled.payment(), "evt-can", "req-2");
     events.processDue(20);
     assertThat(orderStatus(cancelled)).isEqualTo("PAID");
     assertThat(balance(tenantA, variantA)).isEqualTo(6);
@@ -413,7 +447,7 @@ class PaymentConfirmationIT {
     expire(unlucky);
     Order other = paidLater("confirma-a", variantA, 6);
     approve(unlucky);
-    webhook(unlucky.provider(), "evt-none", "req-3");
+    webhook(unlucky.payment(), "evt-none", "req-3");
     events.processDue(20);
     Map<String, Object> row =
         jdbc.queryForMap(
@@ -441,8 +475,8 @@ class PaymentConfirmationIT {
               + " expires_at=now()-interval '1 second' WHERE order_id=?",
           order.id());
       approve(order);
-      webhook(order.provider(), "evt-r" + round + "a", "req-a" + round);
-      webhook(order.provider(), "evt-r" + round + "b", "req-b" + round);
+      webhook(order.payment(), "evt-r" + round + "a", "req-a" + round);
+      webhook(order.payment(), "evt-r" + round + "b", "req-b" + round);
       CyclicBarrier barrier = new CyclicBarrier(3);
       List<Callable<Integer>> work = new ArrayList<>();
       work.add(
@@ -481,109 +515,133 @@ class PaymentConfirmationIT {
     Order a = paidLater("confirma-a", variantA, 1);
     Order b = paidLater("confirma-b", variantB, 1);
     approve(b);
-    // Claims seller A in the body; the stored payment says B, so B's token reads B's order.
+    // B's payment, but the body claims seller A: routed to A, whose token cannot read it.
     var claimed =
         post(
-            b.provider(),
-            "{\"id\":\"evt-b\",\"type\":\"order\",\"action\":\"order.processed\",\"user_id\":111111,"
-                + "\"data\":{\"id\":\""
-                + b.provider()
+            b.payment(),
+            "{\"id\":\"evt-b\",\"type\":\"payment\",\"action\":\"payment.updated\","
+                + "\"user_id\":111111,\"data\":{\"id\":\""
+                + b.payment()
                 + "\"}}",
             "req-b",
-            signature(b.provider(), "req-b"));
+            signature(b.payment(), "req-b"));
     assertThat(claimed.statusCode()).isEqualTo(200);
     events.processDue(20);
-    assertThat(READS).containsExactly(TOKEN_B + " " + b.provider());
+    assertThat(READS).containsExactly(TOKEN_A + " " + b.payment());
+    assertThat(eventStatus("req-b")).isEqualTo("PENDING"); // retried later, never confirmed by A
+    assertThat(orderStatus(b)).isEqualTo("PENDING_PAYMENT");
+
+    // The genuine notification names seller B: B's token reads B's payment.
+    webhook(b.payment(), "evt-b2", "req-b2");
+    events.processDue(20);
+    assertThat(READS).containsExactly(TOKEN_A + " " + b.payment(), TOKEN_B + " " + b.payment());
     assertThat(orderStatus(b)).isEqualTo("PAID");
     assertThat(orderStatus(a)).isEqualTo("PENDING_PAYMENT");
     assertThat(balance(tenantA, variantA)).isEqualTo(10);
     assertThat(
             jdbc.queryForObject(
-                "SELECT tenant_id FROM payment_event WHERE event_key LIKE '%:req-b'", UUID.class))
+                "SELECT tenant_id FROM payment_event WHERE event_key LIKE '%:req-b2'", UUID.class))
         .isEqualTo(tenantB);
 
-    // Unknown provider order: recorded as IGNORED, never queried.
-    assertThat(webhook("ORDUNKNOWN", "evt-u", "req-u").statusCode()).isEqualTo(200);
+    // A's own payment naming B's order is not an order of A: ignored.
+    approve(a);
+    buyer(a).put("external_reference", b.id().toString());
+    webhook(a.payment(), "evt-a0", "req-a0");
+    events.processDue(20);
+    assertThat(eventStatus("req-a0")).isEqualTo("IGNORED");
+    assertThat(orderStatus(a)).isEqualTo("PENDING_PAYMENT");
+    buyer(a).put("external_reference", a.id().toString());
+
+    // Unknown payment of an unknown seller: recorded as IGNORED, never queried.
+    int reads = READS.size();
+    assertThat(webhook("999000", "evt-u", "req-u").statusCode()).isEqualTo(200);
     assertThat(eventStatus("req-u")).isEqualTo("IGNORED");
 
-    // Store A reconnected to another seller: that token must not read A's existing order.
+    // Store A reconnected to another seller: no store is connected to seller A any more, and A's
+    // new token must not read A's existing order.
     jdbc.update("UPDATE payment_account SET provider_user_id='333333' WHERE tenant_id=?", tenantA);
-    approve(a);
-    webhook(a.provider(), "evt-a", "req-a");
-    events.processDue(20);
-    assertThat(eventStatus("req-a")).isEqualTo("FAILED");
-    assertThat(READS).hasSize(1);
+    webhook(a.payment(), "evt-a", "req-a");
+    assertThat(eventStatus("req-a")).isEqualTo("IGNORED");
+    dueNow();
+    reconciliation.reconcileDue(20);
+    assertThat(READS).hasSize(reads);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT last_check_error FROM payment WHERE order_id=?", String.class, a.id()))
+        .isEqualTo("ACCOUNT_CHANGED");
     assertThat(orderStatus(a)).isEqualTo("PENDING_PAYMENT");
   }
 
   @Test
-  void floodsOfBadSignaturesNeverBlockSignedDeliveriesAndIdsMatchWithoutCase() throws Exception {
+  void floodsOfBadSignaturesNeverBlockSignedDeliveries() throws Exception {
     Order order = paidLater("confirma-a", variantA, 1);
     approve(order);
     String ts = String.valueOf(Instant.now().getEpochSecond());
     for (int i = 0; i < 320; i++) {
       int status =
           post(
-                  order.provider(),
-                  body(order.provider(), "x"),
+                  order.payment(),
+                  body(order.payment(), "x"),
                   "req-f" + i,
                   "ts=" + ts + ",v1=" + "0".repeat(64))
               .statusCode();
       assertThat(status).isIn(401, 429); // the ceiling itself: WebhookRateLimitTest
     }
 
-    // A signed delivery still goes through, with the id in lowercase as the provider may send it.
-    String lower = order.provider().toLowerCase();
-    var signed = post(lower, body(lower, "evt-lower"), "req-lower", signature(lower, "req-lower"));
+    var signed = webhook(order.payment(), "evt-ok", "req-ok");
     assertThat(signed.statusCode()).isEqualTo(200);
-    assertThat(eventStatus("req-lower")).isEqualTo("PENDING");
+    assertThat(eventStatus("req-ok")).isEqualTo("PENDING");
     assertThat(
             jdbc.queryForObject(
-                "SELECT provider_order_id FROM payment_event WHERE event_key LIKE '%:req-lower'",
+                "SELECT provider_order_id FROM payment_event WHERE event_key LIKE '%:req-ok'",
                 String.class))
-        .isEqualTo(order.provider());
+        .isEqualTo(order.payment());
     events.processDue(20);
     assertThat(orderStatus(order)).isEqualTo("PAID");
   }
 
   @Test
-  void providerAnswersWithoutReferenceOrTotalNeverConfirm() throws Exception {
+  void providerAnswersWithoutReferenceAmountOrInBrlNeverConfirm() throws Exception {
     Order order = paidLater("confirma-a", variantA, 1);
     approve(order);
-    ORDERS.get(order.provider()).remove("external_reference");
-    webhook(order.provider(), "evt-n1", "req-n1");
+    buyer(order).remove("external_reference");
+    webhook(order.payment(), "evt-n1", "req-n1");
     events.processDue(20);
-    assertThat(eventStatus("req-n1")).isEqualTo("PENDING");
-    ORDERS.get(order.provider()).put("external_reference", order.id().toString());
-    ORDERS.get(order.provider()).remove("total_amount");
-    webhook(order.provider(), "evt-n2", "req-n2");
+    assertThat(eventStatus("req-n1")).isEqualTo("IGNORED"); // names none of our orders
+    buyer(order).put("external_reference", order.id().toString());
+    buyer(order).remove("transaction_amount");
+    webhook(order.payment(), "evt-n2", "req-n2");
     events.processDue(20);
-    ORDERS.get(order.provider()).put("total_amount", "10.00");
-    ORDERS.get(order.provider()).put("currency", "ARS");
-    webhook(order.provider(), "evt-n3", "req-n3");
+    buyer(order).put("transaction_amount", new BigDecimal("10.00"));
+    buyer(order).put("currency_id", "ARS");
+    webhook(order.payment(), "evt-n3", "req-n3");
     events.processDue(20);
     assertThat(orderStatus(order)).isEqualTo("PENDING_PAYMENT");
-    assertThat(jdbc.queryForList("SELECT last_error FROM payment_event", String.class))
-        .hasSize(3)
-        .containsOnly("PROVIDER_ERROR");
+    assertThat(
+            jdbc.queryForList(
+                "SELECT last_error FROM payment_event ORDER BY received_at", String.class))
+        .containsExactly("UNKNOWN_ORDER", "PROVIDER_ERROR", "PROVIDER_ERROR");
   }
 
   @Test
   void providerAnswersThatDoNotMatchTheStoredOrderNeverConfirm() throws Exception {
     Order order = paidLater("confirma-a", variantA, 1);
     approve(order);
-    ORDERS.get(order.provider()).put("external_reference", UUID.randomUUID().toString());
-    webhook(order.provider(), "evt-m1", "req-1");
+    // Approved for another amount: a divergence, never a partial payment.
+    buyer(order).put("transaction_amount", new BigDecimal("999.00"));
+    webhook(order.payment(), "evt-m1", "req-1");
     events.processDue(20);
-    ORDERS.get(order.provider()).put("external_reference", order.id().toString());
-    ORDERS.get(order.provider()).put("total_amount", "999.00");
-    webhook(order.provider(), "evt-m2", "req-2");
+    buyer(order).put("transaction_amount", new BigDecimal("10.00"));
+    // Readable with A's token but collected by another seller.
+    buyer(order).put("collector_id", 222222L);
+    webhook(order.payment(), "evt-m2", "req-2");
     events.processDue(20);
     assertThat(orderStatus(order)).isEqualTo("PENDING_PAYMENT");
     // Transient-looking failures stay PENDING with a later attempt, never PROCESSED.
     assertThat(
             jdbc.queryForList(
                 "SELECT status,attempts,last_error FROM payment_event ORDER BY received_at"))
+        .hasSize(2)
         .allSatisfy(
             event -> {
               assertThat(event.get("status")).isEqualTo("PENDING");
@@ -607,10 +665,7 @@ class PaymentConfirmationIT {
     assertThat(orderStatus(b)).isEqualTo("PAID");
     assertThat(orderStatus(unpaid)).isEqualTo("PENDING_PAYMENT");
     assertThat(READS)
-        .containsExactlyInAnyOrder(
-            TOKEN_A + " " + a.provider(),
-            TOKEN_B + " " + b.provider(),
-            TOKEN_A + " " + unpaid.provider());
+        .containsExactlyInAnyOrder(search(TOKEN_A, a), search(TOKEN_B, b), search(TOKEN_A, unpaid));
     assertThat(balance(tenantA, variantA)).isEqualTo(8);
     assertThat(balance(tenantB, variantB)).isEqualTo(9);
     // Approved payments leave the queue; the unpaid one comes back a minute later.
@@ -618,7 +673,7 @@ class PaymentConfirmationIT {
     dueNow();
     READS.clear();
     assertThat(reconciliation.reconcileDue(20)).isEqualTo(1);
-    assertThat(READS).containsExactly(TOKEN_A + " " + unpaid.provider());
+    assertThat(READS).containsExactly(search(TOKEN_A, unpaid));
     assertThat(sales(a)).hasSize(1);
   }
 
@@ -628,7 +683,7 @@ class PaymentConfirmationIT {
     for (int i = 0; i < 4; i++) orders.add(paidLater("confirma-a", variantA, 1));
     for (Order order : orders) {
       approve(order);
-      webhook(order.provider(), "evt-c" + order.provider(), "req-c" + order.provider());
+      webhook(order.payment(), "evt-c" + order.payment(), "req-c" + order.payment());
     }
     dueNow();
     CyclicBarrier barrier = new CyclicBarrier(4);
@@ -679,7 +734,7 @@ class PaymentConfirmationIT {
 
     AdminOrderView pending = admin.find(owner(tenantA), tenantA, order.id());
     assertThat(pending.payment().status()).isEqualTo("CREATED");
-    assertThat(pending.payment().providerOrderId()).isEqualTo(order.provider());
+    assertThat(pending.payment().providerOrderId()).isEqualTo(order.preference());
     assertThat(pending.payment().lastCheckError()).isEqualTo("PROVIDER_ERROR");
     assertThat(pending.payment().amount()).isEqualTo("10.00");
     assertThat(
@@ -696,7 +751,7 @@ class PaymentConfirmationIT {
     assertThat(paid.status()).isEqualTo("PAID");
     assertThat(paid.payment().status()).isEqualTo("APPROVED");
     assertThat(paid.payment().paidAmount()).isEqualTo("10.00");
-    assertThat(paid.payment().providerStatus()).isEqualTo("processed");
+    assertThat(paid.payment().providerStatus()).isEqualTo("approved");
     assertThat(paid.payment().approvedAt()).isNotNull();
     assertThat(paid.toString()).doesNotContain(TOKEN_A);
   }
@@ -719,7 +774,7 @@ class PaymentConfirmationIT {
     assertThat(reconciliation.reconcileDue(20)).isEqualTo(1);
     assertThat(orderStatus(late)).isEqualTo("PAID"); // P4: reserved again and deducted
     assertThat(orderStatus(abandoned)).isEqualTo("EXPIRED");
-    assertThat(READS).containsExactly(TOKEN_A + " " + late.provider());
+    assertThat(READS).containsExactly(search(TOKEN_A, late));
   }
 
   @Test
@@ -745,10 +800,10 @@ class PaymentConfirmationIT {
     assertThat(balance(tenantA, variantA)).isEqualTo(8);
 
     // The provider confirms later; the reconciliation settles it once.
-    ORDERS.get(order.provider()).put("status_detail", "refunded");
+    refunded(buyer(order));
     dueNow();
     reconciliation.reconcileDue(20);
-    webhook(order.provider(), "evt-ref", "req-ref");
+    webhook(order.payment(), "evt-ref", "req-ref");
     events.processDue(20);
     dueNow();
     reconciliation.reconcileDue(20);
@@ -801,7 +856,7 @@ class PaymentConfirmationIT {
     expire(stockless);
     Order taker = paidLater("confirma-a", variantA, 8);
     approve(stockless);
-    webhook(stockless.provider(), "evt-sl", "req-sl");
+    webhook(stockless.payment(), "evt-sl", "req-sl");
     events.processDue(20);
     assertThat(
             jdbc.queryForObject(
@@ -906,9 +961,10 @@ class PaymentConfirmationIT {
 
   // --- helpers -----------------------------------------------------------------------------
 
-  record Order(UUID id, String token, String provider) {}
+  /** {@code preference} is the stored provider order id; {@code payment} the buyer's payment. */
+  record Order(UUID id, String token, String preference, String payment) {}
 
-  /** A pending order with its Checkout Pro order created at the fake provider. */
+  /** A pending order with its Checkout Pro preference created at the fake provider. */
   private Order paidLater(String slug, UUID variant, int quantity) throws Exception {
     String total = String.format("%d.00", quantity * (slug.endsWith("a") ? 10 : 5));
     var created = postOrder(slug, variant, quantity, total);
@@ -925,18 +981,31 @@ class PaymentConfirmationIT {
                 .build(),
             HttpResponse.BodyHandlers.ofString());
     assertThat(paid.statusCode()).isEqualTo(200);
-    String provider =
+    String preference =
         jdbc.queryForObject(
             "SELECT provider_order_id FROM payment WHERE order_id=?", String.class, id);
-    return new Order(id, token, provider);
+    return new Order(id, token, preference, PREFERENCES.get(preference));
   }
 
   /** The buyer paid in full at the provider. */
   private static void approve(Order order) {
-    Map<String, Object> state = ORDERS.get(order.provider());
-    state.put("status", "processed");
-    state.put("status_detail", "accredited");
-    state.put("total_paid_amount", state.get("total_amount"));
+    buyer(order).putAll(Map.of("status", "approved", "status_detail", "accredited"));
+  }
+
+  /** The buyer's payment of the order at the provider, created when they first try to pay. */
+  private static Map<String, Object> buyer(Order order) {
+    return PAYMENTS.computeIfAbsent(order.payment(), id -> new ConcurrentHashMap<>(DRAFTS.get(id)));
+  }
+
+  private static void refunded(Map<String, Object> payment) {
+    payment.put("status", "refunded");
+    payment.put("status_detail", "refunded");
+    payment.put("transaction_amount_refunded", payment.get("transaction_amount"));
+  }
+
+  /** How the fake records a payment search by the order reference (reconciliation). */
+  private static String search(String token, Order order) {
+    return token + " ref:" + order.id();
   }
 
   private void expire(Order order) {
@@ -967,13 +1036,17 @@ class PaymentConfirmationIT {
     return post(provider, body(provider, eventId), requestId, signature(provider, requestId));
   }
 
-  private static String body(String provider, String eventId) {
+  /** A payment notification; {@code user_id} is the seller the fake knows for that payment. */
+  private static String body(String payment, String eventId) {
+    String seller = OWNERS.get(payment);
     return "{\"id\":\""
         + eventId
-        + "\",\"type\":\"order\",\"action\":\"order.processed\",\"api_version\":\"v1\","
-        + "\"live_mode\":false,\"data\":{\"id\":\""
-        + provider
-        + "\",\"status\":\"processed\"}}";
+        + "\",\"type\":\"payment\",\"action\":\"payment.updated\",\"api_version\":\"v1\","
+        + "\"live_mode\":false,"
+        + (seller == null ? "" : "\"user_id\":" + seller + ",")
+        + "\"data\":{\"id\":\""
+        + payment
+        + "\"}}";
   }
 
   private static String signature(String provider, String requestId) {
@@ -1000,7 +1073,7 @@ class PaymentConfirmationIT {
       throws Exception {
     var request =
         HttpRequest.newBuilder(
-                uri("/api/public/webhooks/mercado-pago?data.id=" + dataId + "&type=order"))
+                uri("/api/public/webhooks/mercado-pago?data.id=" + dataId + "&type=payment"))
             .timeout(Duration.ofSeconds(20))
             .header("Content-Type", "application/json")
             .header("x-request-id", requestId)
@@ -1049,7 +1122,7 @@ class PaymentConfirmationIT {
   private Order paid(String slug, UUID variant, int quantity) throws Exception {
     Order order = paidLater(slug, variant, quantity);
     approve(order);
-    webhook(order.provider(), "evt-paid-" + order.provider(), "req-paid-" + order.provider());
+    webhook(order.payment(), "evt-paid-" + order.payment(), "req-paid-" + order.payment());
     events.processDue(20);
     assertThat(orderStatus(order)).isEqualTo("PAID");
     return order;

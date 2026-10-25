@@ -37,7 +37,7 @@ Status: **adotado** em 2026-10-21 para F1–F10, conforme as recomendações aba
 
 A revisão das SC-019 a SC-022 está registrada em [SC-023-VALIDATION.md](../../quality/SC-023-VALIDATION.md). Ela não encontrou falha de isolamento nem de cálculo.
 
-**Ajuste feito:** a V25 passou a impor no banco o livro só de acréscimo (F7).
+**Ajuste feito:** a V27 passou a impor no banco o livro só de acréscimo (F7).
 
 **Ainda pendente para fechar o ADR:**
 - a SC-018, ou seja, taxa, líquido e liberação (F2, F3), que depende da validação real no sandbox do Mercado Pago;

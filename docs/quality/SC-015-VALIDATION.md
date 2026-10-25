@@ -4,6 +4,8 @@ Data: 2026-10-21. Base: [ADR-0013](../architecture/adr/0013-mercado-pago-checkou
 
 **Estado:** implementada e validada com a **Orders API falsa** em loopback. Nenhuma consulta ao Mercado Pago real foi feita. A validação real está no lembrete do [SPRINT_04.md](../product/SPRINT_04.md).
 
+> **Atualização (2026-10-24):** o Checkout Pro passou da Orders API para a API de preferências ([ADR-0013, mudança da P1](../architecture/adr/0013-mercado-pago-checkout-pro.md#mudança-da-p1-checkout-pro-pela-api-de-preferências-aprovada-em-2026-10-24)). Os testes citados aqui foram adaptados aos endpoints novos; este registro descreve a validação original.
+
 ## Critérios de aceite
 
 | Critério | Evidência (`PaymentConfirmationIT`) |

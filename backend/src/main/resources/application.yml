@@ -103,6 +103,10 @@ payments:
     # SC-014: secret of the application's webhook (panel > Webhooks). Empty turns the webhook
     # endpoint off; payments are then confirmed by querying the provider (SC-015).
     webhook-secret: ${MERCADO_PAGO_WEBHOOK_SECRET:}
+    # ADR-0013 (P1 change): public HTTPS URL of the webhook (backend origin +
+    # /api/public/webhooks/mercado-pago) sent with each preference, so payments of every
+    # connected seller notify this platform. Empty relies on the application's panel setting.
+    notification-url: ${MERCADO_PAGO_NOTIFICATION_URL:}
   # AES-256-GCM key for provider tokens at rest: 32 random bytes in Base64.
   token-encryption-key: ${PAYMENTS_TOKEN_ENCRYPTION_KEY:}
   token-refresh:

@@ -1,10 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/auth-api";
-import { formatBRL, type Product } from "@/lib/catalog";
+import { coverUrl, formatBRL, photoCountText, type Product } from "@/lib/catalog";
 import type { TenantStore } from "@/lib/tenant-api";
 import ProductForm from "@/components/product-form";
 import ProductImages from "@/components/product-images";
@@ -52,6 +53,15 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
     setNotice(customNotice ?? "Alterações salvas.");
   }
   function reload() { setState("loading"); setNotice(""); setDraftDirty(false); setAttempt(current => current + 1); }
+  function photos(images: { id: string; alt: string }[]) {
+    setProduct(current => current ? { ...current, coverImageId: images[0]?.id ?? null, coverImageAlt: images[0]?.alt ?? null, imageCount: images.length } : current);
+  }
+  function cover(item: Product, size: number) {
+    const src = coverUrl(tenantId, item);
+    // Decorative next to the product name; the photo's own alt text lives in the photo manager.
+    return src ? <Image src={src} alt="" width={size} height={size} unoptimized loading="lazy" className="product-thumb" />
+      : <span className="product-thumb product-thumb-empty" style={{ width: size, height: size }}>Sem foto</span>;
+  }
   function visibility(item: Product) {
     if (!item.published) return <StatusBadge tone="neutral">Oculto na vitrine</StatusBadge>;
     return store?.store.status === "PUBLISHED" ? <StatusBadge tone="positive">Visível na vitrine</StatusBadge> : <StatusBadge tone="neutral">Selecionado · Loja oculta</StatusBadge>;
@@ -70,10 +80,13 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
       {notice ? <p ref={noticeRef} tabIndex={-1} role="status" className="feedback feedback-success">{notice}</p> : null}
       {view === "edit" && product ? <div className="product-workspace">
         <ProductForm key={`${product.id}-${attempt}`} tenantId={tenantId} product={product} storePublished={store.store.status === "PUBLISHED"} onSaved={saved} onDirtyChange={setDraftDirty} onConflict={reload}
-          aside={<section className="side-card" aria-labelledby="product-stock-title"><h2 id="product-stock-title">Estoque</h2>
+          aside={<><section className="side-card product-photos-card" aria-labelledby="product-photos-card-title"><h2 id="product-photos-card-title">Fotos</h2>
+            <div className="product-photos-summary">{cover(product, 72)}<p>{product.imageCount > 0 ? <>{photoCountText(product.imageCount)}. A primeira é a capa na vitrine.</> : "Sem foto. Produtos com foto ficam mais fáceis de reconhecer na vitrine."}</p></div>
+            <a className="back-link" href="#fotos">{product.imageCount > 0 ? "Gerenciar fotos" : "Adicionar fotos"}</a></section>
+            <section className="side-card" aria-labelledby="product-stock-title"><h2 id="product-stock-title">Estoque</h2>
             <p className="field-help">{product.kind === "VARIABLE" ? "O saldo é separado por combinação." : "Consulte o saldo e registre entradas ou ajustes."}</p>
-            <Link className="back-link" href={`${storePath}/produtos/${encodeURIComponent(product.id)}/estoque`}>Consultar e movimentar estoque</Link></section>} />
-        <ProductImages tenantId={tenantId} productId={product.id} version={product.version} locked={draftDirty} onVersion={version => setProduct(current => current ? { ...current, version } : current)} onReload={reload} />
+            <Link className="back-link" href={`${storePath}/produtos/${encodeURIComponent(product.id)}/estoque`}>Consultar e movimentar estoque</Link></section></>} />
+        <ProductImages tenantId={tenantId} productId={product.id} version={product.version} locked={draftDirty} onVersion={version => setProduct(current => current ? { ...current, version } : current)} onPhotos={photos} onReload={reload} />
         {product.kind === "VARIABLE" ? <ProductVariants tenantId={tenantId} product={product} locked={draftDirty} onSaved={saved} onReload={reload} /> : null}
       </div> : null}
       {view === "new" ? <div className="product-new">
@@ -86,7 +99,7 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
           <caption>Produtos cadastrados ({new Intl.NumberFormat("pt-BR").format(products.length)})</caption>
           <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Produto</th><th role="columnheader" scope="col">SKU</th><th role="columnheader" scope="col" className="numeric">Preço</th><th role="columnheader" scope="col" className="numeric">Custo</th><th role="columnheader" scope="col">Vitrine</th><th role="columnheader" scope="col">Estoque</th></tr></thead>
           <tbody role="rowgroup">{products.map(item => <tr role="row" key={item.id}>
-            <th role="rowheader" scope="row"><Link href={`${storePath}/produtos/${encodeURIComponent(item.id)}`}>{item.name}</Link></th>
+            <th role="rowheader" scope="row"><span className="product-cell">{cover(item, 48)}<span className="product-cell-text"><Link href={`${storePath}/produtos/${encodeURIComponent(item.id)}`}>{item.name}</Link>{item.imageCount > 0 ? <span className="cell-hint">{photoCountText(item.imageCount)}</span> : null}</span></span></th>
             <td role="cell" data-label="SKU">{item.kind === "VARIABLE" ? `${item.variants.length} combinações` : <span translate="no">{item.sku}</span>}</td>
             <td role="cell" data-label="Preço" className="numeric">{item.kind === "VARIABLE" ? <span className="cell-hint">a partir de </span> : null}{formatBRL(item.price)}</td>
             <td role="cell" data-label="Custo" className="numeric">{item.kind === "VARIABLE" ? <span className="cell-hint">por combinação</span> : item.cost === null ? "Não informado" : formatBRL(item.cost)}</td>

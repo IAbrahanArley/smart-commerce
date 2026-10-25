@@ -102,7 +102,9 @@ V24 (SC-025), aditiva: `advisor_usage`, uma linha por pergunta ao assistente, **
 - **o que nunca guarda:** o texto da pergunta ou da resposta;
 - **ciclo de vida:** `finished_at` existe exatamente para as linhas fora de `PENDING`; uma rotina cancela as pendentes presas e apaga as linhas com mais de 90 dias ([ADR-0016](adr/0016-consultative-agent.md) A8, A9).
 
-V25 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
+V26 (mudança da P1 do ADR-0013, 2026-10-24), aditiva: `payment.provider_payment_id`, o id do pagamento aprovado no Mercado Pago (só dígitos, único por provedor), usado no reembolso. Com preferências, `payment.provider_order_id` guarda o id da preferência e `payment_event.provider_order_id` o id do pagamento notificado (tópico `payment`).
+
+V27 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
 - **`DELETE`:** recusado sempre;
 - **`UPDATE`:** só para preencher `settled_at` uma única vez, a partir de nulo, que é o caminho da SC-018;
 - **`TRUNCATE`:** não é afetado, porque não é operação de linha; os testes o usam em bancos descartáveis.
@@ -112,4 +114,4 @@ V21 (SC-016), aditiva:
 - **`payment`:** estado `REFUNDED`.
 - **`payment_refund`:** um reembolso total por pagamento, com motivo (3–300), `restock`, `requested_by` (FK `identity_user`), `requested_at`, aceite do provedor, último erro e `confirmed_at`, que existe exatamente em `CONFIRMED`.
 
-V20 (SC-015), aditiva: `payment.next_check_at` (próxima consulta da conciliação), `check_attempts` e `last_check_error` (divergência mostrada ao lojista), com índice parcial dos pagamentos `CREATED`. Taxa e líquido não são guardados, porque a Orders API não os informa.
+V20 (SC-015), aditiva: `payment.next_check_at` (próxima consulta da conciliação), `check_attempts` e `last_check_error` (divergência mostrada ao lojista), com índice parcial dos pagamentos `CREATED`. Taxa e líquido não são guardados, porque a Orders API não os informava; com a API de pagamentos (V26) ficam disponíveis para a SC-018.

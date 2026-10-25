@@ -55,7 +55,7 @@ Em 2026-10-19 o responsável aprovou:
 
 | ID | Decisão | Recomendação | Alternativas | Bloqueia |
 | --- | --- | --- | --- | --- |
-| P1 | Caminho de integração | **Checkout Pro via Orders API** | Preferências (legado; já tem mais exemplos) | todas |
+| P1 | Caminho de integração | ~~Checkout Pro via Orders API~~ **Preferências** desde 2026-10-24 (ver "Mudança da P1") | Orders API (bloqueada por política para esta conta) | todas |
 | P2 | Meios de pagamento × reserva de 30 min (D1) | **Cartão, Pix e saldo Mercado Pago; boleto excluído.** A order expira em `PT30M`, criada no mesmo instante da reserva | (a) só cartão e saldo, sem Pix; (b) Pix e boleto com reserva estendida até o vencimento (dias), o que muda o D1 | SC-013 |
 | P3 | Credenciais do lojista | **OAuth com PKCE (S256) e `offline_access`**, `state` assinado e de uso único, tokens **cifrados em repouso (AES-256-GCM)** com chave em variável de ambiente, renovação antes do vencimento, "Desconectar" no admin | Lojista colar o access token (descartado: expõe segredo e não renova) | SC-012 |
 | P4 | Pagamento aprovado depois da expiração ou do cancelamento | **Tentar reservar de novo e baixar**; sem estoque, o pedido fica `PAID` com alerta "sem estoque" para o lojista decidir o reembolso. Nada de reembolso automático | Reembolso automático (contraria a regra de aprovação humana) | SC-014 |
@@ -125,6 +125,45 @@ Modelo de ameaças e disposição dos achados em [SC-017-PAYMENTS-THREAT-MODEL.m
   - roteamento do webhook só com correspondência única.
 - **Propostos como risco aceito:** R10 (renovação de token sob lock), R11 (sem revogação no provedor) e R12 (sem limite no início do pagamento).
 - **Pendente:** a validação ponta a ponta no sandbox.
+
+## Mudança da P1: Checkout Pro pela API de preferências (aprovada em 2026-10-24)
+
+**Motivo, medido no ambiente de teste hospedado:**
+- A Orders API (`POST /v1/orders`) respondeu **HTTP 403 `PA_UNAUTHORIZED_RESULT_FROM_POLICIES` (`PolicyAgent`)** em dois casos:
+  - com o token OAuth da conta de teste vendedora;
+  - com a credencial de teste da própria aplicação.
+- A **API de preferências** (`POST /checkout/preferences`) respondeu **HTTP 201** com `init_point`, usando a credencial de produção da aplicação.
+- A preferência é o caminho mais documentado para plataformas com vários vendedores via OAuth.
+
+**Decisão:** o Checkout Pro passa a usar **preferências**. As demais decisões continuam: P2 (meios de pagamento e expiração junto com a reserva), P3, P4, P6 a P11.
+
+**Como cada parte passa a funcionar:**
+- **Criação:** `POST /checkout/preferences` com o token do lojista, com:
+  - `external_reference` = id do pedido;
+  - `expires` e `expiration_date_to` = 30 min (P2);
+  - `excluded_payment_types` = `ticket`, `atm` e `digital_currency` (P2);
+  - `back_urls` e `auto_return` para a página de retorno da vitrine;
+  - `notification_url` quando configurada.
+
+  O comprador vai para o `init_point`. O id da preferência ocupa o lugar do id da order.
+- **Confirmação (P5):**
+  - o webhook usa o tópico **`payment`** (`data.id` = id do pagamento, `user_id` = vendedor), com a assinatura de antes;
+  - a leitura é `GET /v1/payments/{id}` com o token do lojista;
+  - o pedido é localizado pelo `external_reference` e pela conta do vendedor, nunca pelo payload;
+  - a conciliação lê `GET /v1/payments/search?external_reference=…`.
+
+  Pago significa `approved` com `transaction_amount` igual ao total do pedido, em BRL e para o mesmo vendedor.
+- **Reembolso (P9):** `POST /v1/payments/{id}/refunds`, total e com chave de idempotência. O id do pagamento aprovado passa a ser guardado (`payment.provider_payment_id`, V26).
+- **Ganho para a SC-018:** a API de pagamentos informa `fee_details`, `transaction_details.net_received_amount` e `money_release_date`, que a Orders não informava.
+
+**Detalhes da implementação (2026-10-24):**
+- **Loja da notificação:** primeiro o pagamento já aprovado com aquele id; senão, a única loja conectada ao `user_id` do vendedor. Um vendedor conectado a várias lojas, ou sem `user_id`, não é roteado: o evento fica `IGNORED` e a conciliação confirma cada pedido pela própria referência. Um `user_id` falso só faz a leitura falhar, porque o token de outra loja não lê o pagamento.
+- **Divergências:** pagamento `approved` com valor diferente do total, de outro vendedor ou em outra moeda vira `PROVIDER_ERROR` e é tentado de novo, nunca "pago parcial". Pagamento sem referência, ou com referência que não é pedido da loja, é `UNKNOWN`.
+- **Tentativas concorrentes:** se duas criações correm, a primeira preferência gravada é a mostrada ao comprador; a outra vence sem pagamento.
+- **Reembolso já feito:** se o provedor recusa o pedido de reembolso, o pagamento é relido; se já consta reembolsado, o pedido é liquidado normalmente.
+- **`MERCADO_PAGO_NOTIFICATION_URL`** (opcional, HTTPS) vai em cada preferência. Sem ela, vale o webhook configurado no painel da aplicação, com o evento "Pagamentos".
+
+**Em homologação**, os usuários de teste usam credenciais de produção (`MERCADO_PAGO_TEST_TOKEN=false`), sem dinheiro real. Conectar uma conta real nesse ambiente geraria cobranças reais, então o ambiente fica restrito a contas de teste.
 
 ## Consequências e riscos
 

@@ -10,7 +10,7 @@ A revisão foi feita no código, pelo coordenador, apoiada nos testes automatiza
 
 | Severidade | Local | Achado | Disposição |
 | --- | --- | --- | --- |
-| P3 | `finance_entry` (V22) | O livro é só de acréscimo (F7) apenas por convenção do código; o banco aceitaria `UPDATE` e `DELETE` | **Corrigido:** a V25 cria um trigger que recusa `DELETE` e qualquer `UPDATE` exceto o preenchimento único de `settled_at` (caminho da SC-018). Há teste novo |
+| P3 | `finance_entry` (V22) | O livro é só de acréscimo (F7) apenas por convenção do código; o banco aceitaria `UPDATE` e `DELETE` | **Corrigido:** a V27 cria um trigger que recusa `DELETE` e qualquer `UPDATE` exceto o preenchimento único de `settled_at` (caminho da SC-018). Há teste novo |
 | P3 | `DATA_MODEL.md`, `ARCHITECTURE.md` | Faltavam a V24 (`advisor_usage`, SC-025) e a descrição do módulo `advisor` | **Corrigido** nesta tarefa |
 | Risco | `OrderPaymentApproval.approved` | Pedido pago **sem estoque** (P4) lança o CMV na aprovação, embora a mercadoria ainda não tenha saído; o estorno só acontece no reembolso | **Registrado** para decisão de produto. A alternativa é lançar o CMV só quando o estoque for coberto. Não mudou nada |
 | Risco | `expense.description` | Texto livre, que pode conter dado pessoal (por exemplo, nome de funcionário em "Pessoal"), guardado para sempre porque despesas nunca são apagadas (F6) | **Registrado** com a política de retenção (mesma validação jurídica do D2). As descrições não vão para o assistente (SC-025) |
@@ -24,7 +24,7 @@ A revisão foi feita no código, pelo coordenador, apoiada nos testes automatiza
 | Tenant e IDOR | <ul><li>o tenant vem da rota e só vale pelo vínculo OWNER ativo e verificado, conferido no serviço antes de qualquer leitura (`ownsStore`)</li><li>auditoria mecânica de todo SQL de `finance` e de `InventoryInsightRepository`: toda consulta filtra por `tenant_id`, e os prefixos reaproveitados recebem `WHERE tenant_id=?`</li><li>as subconsultas de taxa e o `JOIN` de despesas casam o tenant</li></ul> | Aprovado. Testes A/B em `ExpenseIT`, `FinanceReportIT` e `DashboardIT` |
 | CSRF | criar e cancelar despesa são `POST` com CSRF; leituras são `GET` | Aprovado |
 | Idempotência e concorrência | <ul><li>lançamentos com chave única por fato (`ON CONFLICT DO NOTHING`), gravados na mesma transação de `PAID` e `REFUNDED`, sob lock do pedido</li><li>despesas com `request_id` único; cancelamento sob lock</li><li>dashboard e relatório leem na mesma transação `REPEATABLE_READ`</li></ul> | Aprovado. Webhook repetido em `PaymentConfirmationIT`; corrida no `DashboardIT` |
-| Imutabilidade do livro | antes, só por convenção; agora o trigger da V25 garante | Corrigido |
+| Imutabilidade do livro | antes, só por convenção; agora o trigger da V27 garante | Corrigido |
 | Dados pessoais | os relatórios e o dashboard não expõem dados de comprador; as respostas não levam SKU nem custo no dashboard; o texto livre de despesa é risco registrado | Aprovado, com o risco registrado |
 | Segredos | nenhum segredo novo na Sprint 5 | Não aplicável |
 
@@ -44,7 +44,7 @@ A revisão foi feita no código, pelo coordenador, apoiada nos testes automatiza
 | Teste | Resultado |
 | --- | --- |
 | `FinanceReportIT`: novo `ledgerRowsCannotBeChangedOrDeletedOnlySettledOnce` | <ul><li>alterar valor ou competência e apagar são recusados</li><li>`settled_at` é preenchido uma vez e a segunda tentativa é recusada</li><li>junto com outro campo também é recusado</li><li>o valor fica intacto</li></ul> |
-| `FinanceReportIT`, `ExpenseIT`, `FinanceLedgerMigrationIT`, `PaymentConfirmationIT`, `ArchitectureTest` | passando com a V25: o preenchimento inicial da V22, os reembolsos e as despesas não alteram linhas |
+| `FinanceReportIT`, `ExpenseIT`, `FinanceLedgerMigrationIT`, `PaymentConfirmationIT`, `ArchitectureTest` | passando com a V27: o preenchimento inicial da V22, os reembolsos e as despesas não alteram linhas |
 | `mvnw verify` completo (2026-10-24) | 86 testes unitários e 147 de integração, todos passando |
 
 ## Acessibilidade e interface
