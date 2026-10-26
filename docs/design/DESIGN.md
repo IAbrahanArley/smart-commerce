@@ -129,6 +129,7 @@ Aprovado em 2026-10-17 a partir da [proposta de referências de mercado](PROPOST
 - **Listas operacionais:** tabela semântica com `caption` e cabeçalhos a partir de 48rem; abaixo disso, lista de linhas com os mesmos dados. Sem seleção em massa, filtros ou ordenação enquanto não houver funcionalidade.
 - **Criação em rota própria:** "Novo produto" é uma página (`/produtos/novo`) acionada pelo cabeçalho da lista; após cadastrar, o lojista segue para a edição do produto.
 - **Assistente (SC-027, 2026-10-25):** uma coluna de até 48rem. A pergunta do lojista fica num balão à direita, com o fundo de seleção. A resposta fica num cartão de superfície com borda esquerda de ação; quando o assistente não responde, a borda é neutra. As fontes aparecem em lista menor abaixo de um divisor. O aviso de IA usa o componente `notice`. Tudo com os tokens existentes, sem cor nova.
+- **"Explicar" (SC-028, 2026-10-26):** link de texto discreto (0,875rem, negrito, alvo de 44px) abaixo do número do cartão, ao lado do link de cada alerta e abaixo do título das listas do painel. O nome acessível completa o que será explicado. Só aparece com o assistente ligado.
 - **Edição em duas colunas:** a partir de 64rem, coluna principal (identificação, descrição, fotos e variações) e lateral com publicação e estoque. Em telas menores, uma coluna na ordem do DOM.
 
 ## Repaginação 2026-10 (referência Dashtail)

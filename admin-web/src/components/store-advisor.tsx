@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { type FormEvent, useEffect, useEffectEvent, useRef, useState } from "react";
 import { apiRequest } from "@/lib/auth-api";
 import {
   type AdvisorStatus, type Exchange, MAX_EXCHANGES, MAX_QUESTION, SUGGESTIONS,
@@ -13,7 +14,7 @@ import PageState from "@/components/page-state";
 // SC-027 (ADR-0016 A5, A7, A12): one short conversation per visit, kept only in this page. Every
 // answer shows its sources; the backend has already refused any answer with a number that has no
 // source. A polite status region announces progress, and focus moves to each new answer.
-export default function StoreAdvisor({ tenantId }: { tenantId: string }) {
+export default function StoreAdvisor({ tenantId, initialQuestion = null }: { tenantId: string; initialQuestion?: string | null }) {
   const [status, setStatus] = useState<AdvisorStatus | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "missing" | "signed-out" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
@@ -25,6 +26,9 @@ export default function StoreAdvisor({ tenantId }: { tenantId: string }) {
   const submitting = useRef(false);
   const nextId = useRef(1);
   const focusInput = useRef(false);
+  const explained = useRef(false);
+  const router = useRouter();
+  const pathname = usePathname();
   const latestRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const api = `/api/tenants/${encodeURIComponent(tenantId)}/advisor`;
@@ -74,6 +78,19 @@ export default function StoreAdvisor({ tenantId }: { tenantId: string }) {
       setError(message); setAnnouncement(message); inputRef.current?.focus();
     } finally { submitting.current = false; setBusy(false); }
   }
+
+  // SC-028: "Explicar" asks its fixed question once, then drops it from the URL so a reload does
+  // not spend another question of the quota.
+  const explain = useEffectEvent((text: string) => {
+    explained.current = true;
+    router.replace(pathname, { scroll: false });
+    setQuestion(text);
+    void ask(text);
+  });
+  const canAsk = state === "ready" && Boolean(status?.enabled) && (status?.remaining ?? 0) > 0;
+  useEffect(() => {
+    if (initialQuestion && canAsk && !explained.current) explain(initialQuestion);
+  }, [initialQuestion, canAsk]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

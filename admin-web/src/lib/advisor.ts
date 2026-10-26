@@ -109,3 +109,46 @@ export function quotaText(status: AdvisorStatus): string {
     ? `Resta 1 pergunta de ${status.monthlyQuota} neste mês.`
     : `Restam ${status.remaining} perguntas de ${status.monthlyQuota} neste mês.`;
 }
+
+// SC-028: "Explicar" opens the assistant with a fixed question for that item. Only known topics
+// and periods become a question, so nothing typed in the URL reaches the model.
+export type ExplainTopic =
+  | "PAID_ORDERS" | "REVENUE" | "AVERAGE_TICKET" | "MARGIN" | "LOW_STOCK_LIST" | "WITHOUT_SALES_LIST"
+  | `ALERT_${string}`;
+
+const CARD_QUESTIONS: Record<string, (period: string) => string> = {
+  PAID_ORDERS: period => `Explique o número de pedidos pagos da loja (${period}).`,
+  REVENUE: period => `Explique a receita da loja (${period}) e de onde ela vem.`,
+  AVERAGE_TICKET: period => `Explique o ticket médio da loja (${period}).`,
+  MARGIN: period => `Explique a margem de contribuição da loja (${period}) e o que falta para ela ficar completa.`,
+  LOW_STOCK_LIST: () => "Quais itens estão com estoque baixo e o que devo considerar fazer?",
+  WITHOUT_SALES_LIST: () => "Quais itens estão sem venda há 30 dias e o que devo considerar fazer?",
+};
+
+const ALERT_QUESTIONS: Record<string, string> = {
+  PAYMENTS_EXPIRED: "Explique o alerta de autorização do Mercado Pago vencida e como resolver.",
+  PAYMENTS_REVOKED: "Explique o alerta de autorização do Mercado Pago retirada e como resolver.",
+  PAYMENTS_NOT_CONNECTED: "Explique o alerta de conta Mercado Pago não conectada e como resolver.",
+  MARGIN_NEGATIVE: "Explique por que a margem de contribuição deste mês está negativa.",
+  COST_MISSING: "Explique o alerta de pedidos pagos sem custo cadastrado neste mês.",
+  FEES_UNAVAILABLE: "Explique o alerta de vendas deste mês sem a taxa do Mercado Pago.",
+  ORDERS_EXPIRING: "Explique o alerta de pedidos com reserva perto de terminar.",
+  LOW_STOCK: "Explique o alerta de itens com estoque baixo.",
+  WITHOUT_SALES: "Explique o alerta de itens sem venda nos últimos 30 dias.",
+};
+
+/** The fixed question of a topic, or null for anything unknown (the page then opens empty). */
+export function explainQuestion(topic: string | undefined, period: string | undefined): string | null {
+  if (!topic) return null;
+  if (topic.startsWith("ALERT_")) return ALERT_QUESTIONS[topic.slice("ALERT_".length)] ?? null;
+  const build = CARD_QUESTIONS[topic];
+  if (!build) return null;
+  const label = PERIODS.find(item => item.key === period)?.label ?? "Este mês";
+  return build(label.toLowerCase());
+}
+
+export function explainHref(tenantId: string, topic: ExplainTopic, period?: string): string {
+  const query = new URLSearchParams({ explicar: topic });
+  if (period && PERIODS.some(item => item.key === period)) query.set("periodo", period);
+  return `/lojas/${encodeURIComponent(tenantId)}/assistente?${query}`;
+}

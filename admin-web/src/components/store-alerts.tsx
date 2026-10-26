@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/auth-api";
 import { alertLink, alertText, parseAlerts, SEVERITY_TEXT, type StoreAlert } from "@/lib/alerts";
+import { explainHref } from "@/lib/advisor";
 
 // SC-024: deterministic store alerts on the overview. They work without the assistant; the
 // severity is written out, never conveyed by color alone.
-export default function StoreAlerts({ tenantId }: { tenantId: string }) {
+export default function StoreAlerts({ tenantId, explain = false }: { tenantId: string; explain?: boolean }) {
   const [alerts, setAlerts] = useState<StoreAlert[] | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
@@ -37,6 +38,8 @@ export default function StoreAlerts({ tenantId }: { tenantId: string }) {
             <span className="alert-severity">{SEVERITY_TEXT[alert.severity]}</span>
             <span className="alert-text">{alertText(alert)}</span>
             <Link href={link.href}>{link.label}</Link>
+            {explain ? <Link className="explain-link" href={explainHref(tenantId, `ALERT_${alert.code}`)} prefetch={false}>
+              Explicar<span className="visually-hidden"> o alerta: {alertText(alert)}</span></Link> : null}
           </li>;
         })}
       </ul> : null}
