@@ -149,7 +149,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           {mode !== "registration" && mode !== "forgot" ? <div className="grid gap-2">
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="password">{mode === "reset" ? "Nova senha" : "Senha"}</Label>
-              {mode === "login" ? <Link href="/esqueci-senha" className="text-sm font-medium">Esqueci minha senha</Link> : null}
+              {mode === "login" ? <Link href="/esqueci-senha" className="inline-flex min-h-6 items-center text-sm font-medium">Esqueci minha senha</Link> : null}
             </div>
             {newPassword ? <p id="password-help" className="m-0 text-sm text-muted-foreground">Use de 15 a 128 caracteres Unicode. Espaços são permitidos. Acentos equivalentes são normalizados (NFC). Senhas comuns ou previsíveis são recusadas.</p> : null}
             <PasswordInput ref={password} id="password" name="password" required

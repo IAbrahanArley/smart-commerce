@@ -213,7 +213,14 @@ Aprovado pelo responsável em 2026-10-26. O pedido foi uma interface de "nível 
 - **Cabeçalho de página:** título de 24px em negrito e trilha em texto menor.
 - **Ícones:** os estados vazios e de erro (`PageState`) passaram a usar lucide, como o resto do painel. O conjunto antigo (`components/icons.tsx`) foi removido.
 
-**Próxima fase:** revisão completa de acessibilidade, com teclado, leitor de tela, zoom de 200% e 400%, espaçamento de texto e as larguras de referência, registrando as evidências.
+**Fase 5 (2026-10-26), revisão de acessibilidade:** feita com as Web Interface Guidelines e a WCAG 2.2 AA. Achados, correções, contraste calculado e limitações estão em [UI-A11Y-REVIEW.md](../quality/UI-A11Y-REVIEW.md). Mudanças de padrão:
+- `scroll-padding-top` de 5rem, para o cabeçalho fixo não esconder o foco;
+- sidebar sem animação de largura;
+- `overscroll-contain` em gaveta e listas roláveis;
+- filtros dos produtos refletidos na URL;
+- a busca global lista produtos e pedidos só enquanto se digita, até 20 de cada;
+- `touch-action: manipulation` e destaque de toque intencional no admin;
+- links isolados com alvo de pelo menos 24px.
 
 ## Plataforma e temas futuros das lojas
 

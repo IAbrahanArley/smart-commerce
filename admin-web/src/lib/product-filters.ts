@@ -53,3 +53,29 @@ export function resultText(shown: number, total: number): string {
   if (shown === total) return total === 1 ? "1 produto" : `${format(total)} produtos`;
   return `${format(shown)} de ${format(total)} produtos`;
 }
+
+const VISIBILITIES: Visibility[] = ["all", "visible", "hidden"];
+const SORTS: ProductSort[] = ["default", "name", "price-asc", "price-desc"];
+type Query = { busca?: string; categoria?: string; vitrine?: string; ordem?: string };
+
+/** Filters from the URL (?busca=&categoria=&vitrine=&ordem=); anything unexpected falls back to the default. */
+export function filtersFromQuery(query: Query): ProductFilters {
+  const category = query.categoria ?? "";
+  return {
+    query: (query.busca ?? "").slice(0, 200),
+    category: category === NO_CATEGORY || /^[0-9a-f-]{36}$/i.test(category) ? category : "",
+    visibility: VISIBILITIES.includes(query.vitrine as Visibility) ? query.vitrine as Visibility : "all",
+    sort: SORTS.includes(query.ordem as ProductSort) ? query.ordem as ProductSort : "default",
+  };
+}
+
+/** Query string that reflects the filters, empty for the defaults, so the list can be reloaded or shared. */
+export function filtersQuery(filters: ProductFilters): string {
+  const query = new URLSearchParams();
+  if (filters.query.trim()) query.set("busca", filters.query.trim());
+  if (filters.category) query.set("categoria", filters.category);
+  if (filters.visibility !== "all") query.set("vitrine", filters.visibility);
+  if (filters.sort !== "default") query.set("ordem", filters.sort);
+  const text = query.toString();
+  return text ? `?${text}` : "";
+}

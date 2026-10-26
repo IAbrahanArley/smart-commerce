@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./smoke-ui.mjs";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { coverUrl, decimalInput, formatBRL, photoCountText } from "../src/lib/catalog.ts";
@@ -10,8 +11,6 @@ import { alertLink, alertText, parseAlerts } from "../src/lib/alerts.ts";
 import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outcomeText, parseAnswer, parseStatus, questionError, quotaText, sourceText } from "../src/lib/advisor.ts";
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
 import { legalDraft, operatorText, updatedText } from "../src/lib/legal.ts";
-import { accountItems, parseCollapsed, searchScore, storeItems } from "../src/lib/navigation.ts";
-import { EMPTY_FILTERS, filterProducts, filtersActive, NO_CATEGORY, resultText } from "../src/lib/product-filters.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
 import { categoryError, categoryName, categoryNameError, parseCategories, productCountText } from "../src/lib/categories.ts";
 import { instagramHandle, logoFileError, profileErrors, profileFields, profilePayload, whatsappText } from "../src/lib/store-profile.ts";
@@ -43,39 +42,6 @@ assert.equal(parseCategories({}), null);
 assert.equal(productCountText(0), "Nenhum produto"); assert.equal(productCountText(1), "1 produto"); assert.equal(productCountText(3), "3 produtos");
 assert.match(categoryError(409, "NAME_CONFLICT"), /Já existe/); assert.match(categoryError(409, "LIMIT"), /50 categorias/);
 
-// Design system Dashtail: navigation shared by the sidebar and the search; strict, accent-insensitive search.
-const navigation = storeItems("t 1", "/lojas/t%201/produtos/abc");
-assert.equal(navigation.length, 10);
-assert.ok(navigation.every(item => item.href.startsWith("/lojas/t%201")), "Links só do tenant da rota");
-assert.deepEqual(navigation.filter(item => item.current).map(item => item.label), ["Produtos"]);
-assert.deepEqual(storeItems("t", "/lojas/t").filter(item => item.current).map(item => item.label), ["Visão geral"]);
-assert.deepEqual(storeItems("t", "/lojas/t/categorias").filter(item => item.current).map(item => item.label), ["Categorias"]);
-assert.deepEqual(accountItems("/conta").filter(item => item.current).map(item => item.href), ["/conta"]);
-assert.equal(searchScore("produto Boné de algodão SKU-3", "bone"), 1);
-assert.equal(searchScore("Visão geral painel dashboard", "bone"), 0, "Sem correspondência difusa");
-assert.equal(searchScore("pedido 1042 Maria Silva", "1042 maria"), 1);
-assert.equal(searchScore("pedido 1041 João", "1042"), 0);
-assert.equal(searchScore("Entrega frete retirada", "  "), 1);
-assert.equal(parseCollapsed("true"), true); assert.equal(parseCollapsed(null), false); assert.equal(parseCollapsed("1"), false);
-// Design system phase 3: product list filters run on the loaded catalog; prices sort as exact cents.
-const sample = [
-  { name: "Camiseta Básica", sku: "CAM-1", price: "49.90", published: true, categoryId: "c1", variants: [] },
-  { name: "Boné", sku: "BON-1", price: "9.99", published: false, categoryId: null, variants: [] },
-  { name: "Caneca", sku: "CAN-1", price: "100.00", published: true, categoryId: "c2", variants: [{ sku: "CAN-AZUL" }] },
-];
-const names = (filters) => filterProducts(sample, { ...EMPTY_FILTERS, ...filters }).map(item => item.name);
-assert.deepEqual(names({}), ["Camiseta Básica", "Boné", "Caneca"]);
-assert.deepEqual(names({ query: "bone" }), ["Boné"]);
-assert.deepEqual(names({ query: "azul" }), ["Caneca"], "Busca também pelo SKU da combinação");
-assert.deepEqual(names({ query: "camiseta basica" }), ["Camiseta Básica"]);
-assert.deepEqual(names({ visibility: "hidden" }), ["Boné"]);
-assert.deepEqual(names({ category: "c2" }), ["Caneca"]);
-assert.deepEqual(names({ category: NO_CATEGORY }), ["Boné"]);
-assert.deepEqual(names({ sort: "price-asc" }), ["Boné", "Camiseta Básica", "Caneca"], "100.00 vem depois de 49.90");
-assert.deepEqual(names({ sort: "price-desc" }), ["Caneca", "Camiseta Básica", "Boné"]);
-assert.deepEqual(names({ sort: "name" }), ["Boné", "Camiseta Básica", "Caneca"]);
-assert.equal(filtersActive(EMPTY_FILTERS), false); assert.equal(filtersActive({ ...EMPTY_FILTERS, query: " x " }), true);
-assert.equal(resultText(3, 3), "3 produtos"); assert.equal(resultText(1, 1), "1 produto"); assert.equal(resultText(1, 3), "1 de 3 produtos");
 // MVP block 1d: the legal pages stay a draft until the operator is identified.
 assert.equal(legalDraft({ operatorName: null, cnpj: null, contactEmail: "a@b.example", updatedAt: "2026-10-26" }), true);
 assert.equal(legalDraft({ operatorName: "Empresa Ltda", cnpj: "00.000.000/0001-00", contactEmail: "a@b.example", updatedAt: "2026-10-26" }), false);

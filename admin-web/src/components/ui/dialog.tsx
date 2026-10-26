@@ -19,7 +19,7 @@ function DialogContent({ className, children, side, closeLabel = "Fechar", ...pr
     <DialogPrimitive.Content className={cn(
       "fixed z-50 bg-card text-card-foreground shadow-overlay outline-none",
       side === "left"
-        ? "inset-y-0 left-0 flex h-full w-[min(18rem,85vw)] flex-col border-r border-border"
+        ? "inset-y-0 left-0 flex h-full w-[min(18rem,85vw)] flex-col overscroll-contain border-r border-border"
         : "left-1/2 top-[12vh] w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-border",
       className)} {...props}>
       {children}

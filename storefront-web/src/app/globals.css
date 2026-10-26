@@ -321,7 +321,7 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
    availability badge, name, price and a full-width outline call to action. The whole card is one link;
    the photo zooms slightly on hover, never under reduced motion. */
 .product-card { height: 100%; }
-.product-link { display: flex; flex-direction: column; height: 100%; gap: var(--store-space-4); padding: var(--store-space-4); background: var(--store-surface); color: var(--store-text); border: 1px solid var(--store-divider); border-radius: var(--store-radius-surface); box-shadow: var(--store-shadow-surface); text-decoration: none; transition: box-shadow 200ms ease, border-color 200ms ease; }
+.product-link { display: flex; flex-direction: column; height: 100%; gap: var(--store-space-4); padding: var(--store-space-4); background: var(--store-surface); color: var(--store-text); border: 1px solid var(--store-divider); border-radius: var(--store-radius-surface); box-shadow: var(--store-shadow-surface); text-decoration: none; }
 .product-link:hover { color: var(--store-text); border-color: var(--store-control-border); box-shadow: var(--store-shadow-raised); }
 .product-media { position: relative; overflow: hidden; border-radius: var(--store-radius-control); }
 .product-media .availability { position: absolute; top: var(--store-space-3); left: var(--store-space-3); max-width: calc(100% - var(--store-space-6)); font-size: 0.75rem; box-shadow: var(--store-shadow-surface); }

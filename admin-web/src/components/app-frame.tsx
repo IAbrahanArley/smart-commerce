@@ -44,7 +44,7 @@ export default function AppFrame({ navLabel, context, groups, tenantId, children
 
   return <TooltipProvider delayDuration={150}>
     <div className="flex min-h-screen flex-1 bg-background">
-      <aside className={cn("sticky top-0 hidden h-screen shrink-0 border-r border-border bg-card transition-[width] duration-200 motion-reduce:transition-none lg:block", collapsed ? "w-[4.5rem]" : "w-64")}>
+      <aside className={cn("sticky top-0 hidden h-screen shrink-0 border-r border-border bg-card lg:block", collapsed ? "w-[4.5rem]" : "w-64")}>
         <Sidebar navLabel={navLabel} context={context} groups={groups} collapsed={collapsed} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
@@ -86,7 +86,7 @@ function Sidebar({ navLabel, context, groups, collapsed, onNavigate }: {
       </Link>
     </div>
     {context && !collapsed ? <div className="mx-4 mt-4 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-semibold">{context}</div> : null}
-    <nav aria-label={navLabel} className={cn("flex-1 overflow-y-auto py-4", collapsed ? "px-2" : "px-3")}>
+    <nav aria-label={navLabel} className={cn("flex-1 overflow-y-auto overscroll-contain py-4", collapsed ? "px-2" : "px-3")}>
       {groups.map((group, index) => <div key={group.label} className={cn(index > 0 && "mt-5")}>
         {collapsed
           ? (index > 0 ? <hr className="mx-2 mb-3 border-border" /> : null)

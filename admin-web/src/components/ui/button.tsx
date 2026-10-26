@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 // Adapted from Dashtail's button (shadcn/ui). Unlike the template, keyboard focus stays visible and
 // every variant keeps AA contrast on the admin palette.
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md py-0 text-sm font-semibold no-underline transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer hover:no-underline",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md py-0 text-sm font-semibold no-underline transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer touch-manipulation hover:no-underline",
   {
     variants: {
       variant: {
