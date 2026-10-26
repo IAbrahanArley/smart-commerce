@@ -34,6 +34,15 @@ Aplicação das regras aprovadas, sem mudar valores:
 - **D2:** a anonimização também substitui o motivo de cancelamento escrito pela loja, que pode citar o comprador. A rotina diária processa a fila até esvaziar, com limite de 10 minutos por execução, e o backend avisa na inicialização se o checkout estiver ligado com as rotinas desligadas.
 - **FK reserva → pedido:** validada pela V16 quando o banco não tem reservas sem pedido. Em bancos locais antigos que ainda tenham essas reservas, ela fica `NOT VALID` com um aviso, sem apagar dados.
 
+### D6 revisado para produção (bloco 2b do MVP, 2026-10-26)
+
+Aprovado pelo responsável: fora de `dev` e do ambiente de teste hospedado, o checkout **só liga com pagamento real**. O backend recusa iniciar com `orders.checkout.enabled=true` sem:
+- a integração do Mercado Pago configurada;
+- o segredo do webhook;
+- `MERCADO_PAGO_TEST_TOKEN=false`.
+
+Também continua exigindo o segredo do IP assinado. A vitrine só mostra o checkout em build de produção com `STOREFRONT_CHECKOUT_ENABLED=true` e `DEPLOYMENT_ENVIRONMENT=production` (ou `hosted-test`). Uma loja sem conta conectada continua recusando pedidos novos (`PAYMENT_UNAVAILABLE`). Checkout sem pagamento em produção continua proibido.
+
 ### Exceção ao D6 no ambiente de teste hospedado (2026-10-19)
 
 O [ADR-0014](0014-hosted-test-environment.md) (H2) permite checkout sem pagamento **somente** no ambiente de teste hospedado (`DEPLOYMENT_ENVIRONMENT=hosted-test`), com dados sintéticos e aviso permanente. O backend recusa iniciar com checkout fora de `dev` sem esse valor. A produção comercial continua proibida de aceitar pedido sem pagamento.

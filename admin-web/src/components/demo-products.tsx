@@ -1,4 +1,3 @@
-import Link from "next/link";
 import StatusBadge from "@/components/status-badge";
 
 export const demoProducts = [
@@ -10,10 +9,10 @@ export const demoProducts = [
 
 export default function DemoProducts({ availableOnly = false }: { availableOnly?: boolean }) {
   return <div className="demo-table-wrap" data-ui>
-    <table className="demo-table"><caption>Catálogo de demonstração · dados fictícios</caption>
+    <table className="demo-table"><caption>Exemplo de catálogo · dados fictícios</caption>
       <thead><tr><th scope="col">Produto</th><th scope="col">Preço</th><th scope="col">Estoque</th><th scope="col">Vitrine</th></tr></thead>
       <tbody>{demoProducts.filter(item => !availableOnly || item.active).map(item => <tr key={item.sku}>
-        <th scope="row"><Link href="/loja/produto">{item.name}</Link><small>{item.sku} · {item.options}</small></th>
+        <th scope="row">{item.name}<small>{item.sku} · {item.options}</small></th>
         <td data-label="Preço">{item.price}</td><td data-label="Estoque">{item.stock}</td>
         <td data-label="Vitrine"><StatusBadge tone={item.active ? "positive" : "neutral"}>{item.active ? "Visível" : "Oculto"}</StatusBadge></td>
       </tr>)}</tbody>
