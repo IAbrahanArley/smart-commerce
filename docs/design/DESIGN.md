@@ -137,7 +137,7 @@ Aprovado em 2026-10-17 a partir da [proposta de referências de mercado](PROPOST
 
 ## Repaginação 2026-10 (referência Dashtail)
 
-Aprovada pelo responsável em 2026-10-20. O template comercial Dashtail v1.3.0 (ThemeForest; Next 14, Tailwind 3 e shadcn/Radix) foi usado **somente como referência visual e estrutural**. Nenhum código, ícone, ilustração, texto ou dependência foi copiado, porque a adoção de Tailwind/Radix contrariaria a política de dependências. **Licença (2026-10-20):** o responsável informou ter uma licença que permite usar o template em qualquer projeto, então copiar código ou recursos dele é permitido. Mesmo assim, uma cópia não pode trazer dependência nova sem aprovação e deve ser adaptada aos tokens e componentes locais. Paleta violeta, fonte Inter, tema escuro, customizador, RTL, busca, notificações, gráficos e toasts do template não foram adotados.
+Aprovada pelo responsável em 2026-10-20. O template comercial Dashtail v1.3.0 (ThemeForest; Next 14, Tailwind 3 e shadcn/Radix) foi usado **somente como referência visual e estrutural** (decisão substituída em 2026-10-26: ver "Design system Dashtail"). Nenhum código, ícone, ilustração, texto ou dependência foi copiado, porque a adoção de Tailwind/Radix contrariaria a política de dependências. **Licença (2026-10-20):** o responsável informou ter uma licença que permite usar o template em qualquer projeto, então copiar código ou recursos dele é permitido. Mesmo assim, uma cópia não pode trazer dependência nova sem aprovação e deve ser adaptada aos tokens e componentes locais. Paleta violeta, fonte Inter, tema escuro, customizador, RTL, busca, notificações, gráficos e toasts do template não foram adotados.
 
 Padrões adotados com CSS e componentes locais:
 
@@ -147,6 +147,42 @@ Padrões adotados com CSS e componentes locais:
 Validação em 2026-10-20: lint, typecheck, build e test:smoke das duas aplicações. No navegador do app (Chromium), em 1024 CSS px e 375 CSS px, com backend sintético local: moldura, menu móvel, cards de resumo, tabelas, diálogo e fluxo da vitrine até o pedido. O diálogo foi conferido pelo DOM: abre centrado, foca "Cancelar", fecha com Escape e devolve o foco. Revisão com as Web Interface Guidelines atuais, consultadas na mesma data. Com 1024 CSS px, a tabela de produtos rola dentro do card, sem rolagem da página. Axe, leitor de tela e zoom manual não foram executados; não há alegação de conformidade WCAG completa.
 
 Tokens novos: `--sc-shadow-surface`, `--sc-shadow-overlay`, `--store-shadow-surface`, `--store-shadow-raised` e `--store-header-height`. Nenhuma cor, fonte ou raio-base mudou; o aviso "Ambiente de teste" e a separação admin/vitrine foram preservados.
+
+## Design system Dashtail (2026-10-26)
+
+Aprovado pelo responsável em 2026-10-26. O pedido foi uma interface de "nível empresa grande" com os componentes do Dashtail: páginas de login, botões, sidebar retrátil e busca. Esta decisão substitui a restrição "somente referência" da repaginação de 2026-10-20. A licença do responsável permite copiar o código do template.
+
+**Decisões:**
+- **Stack, só no admin:** Tailwind CSS 4 e componentes no padrão shadcn/ui copiados do Dashtail e adaptados ao Next 16 e ao React 19.
+- **Dependências aprovadas:**
+  - `tailwindcss`, `@tailwindcss/postcss` e `postcss` (desenvolvimento);
+  - `clsx`, `tailwind-merge` e `class-variance-authority`;
+  - `@radix-ui/react-slot`, `react-dialog`, `react-dropdown-menu` e `react-tooltip`;
+  - `cmdk` (busca) e `lucide-react` (ícones).
+
+  `recharts` está aprovado para a fase dos gráficos e ainda não foi instalado. A vitrine não muda.
+- **Convivência:** o Tailwind entra sem o preflight. O CSS anterior fica na camada `legacy`, abaixo das utilities, então as telas ainda não migradas mantêm a aparência e os componentes novos vencem por camada, não por especificidade.
+- **Tokens:** as cores do Tailwind (`primary`, `muted`, `accent`, `border`, `ring`, `destructive`, `success`…) apontam para os tokens `--sc-*` existentes. A paleta e o contraste não mudaram.
+- **Tipografia:** Inter, a fonte do Dashtail, servida pelo `next/font`, sem requisição do navegador ao Google. Arial fica como fallback.
+- **Tema:** só claro nesta etapa. O escuro fica como melhoria.
+
+**O que foi aplicado:**
+- **Componentes (`src/components/ui`):** `Button`, `Input`, `Label`, `PasswordInput`, `Card`, `Badge`, `Kbd`, `DropdownMenu`, `Tooltip` e `Dialog` (também como gaveta lateral). Diferenças em relação ao template:
+  - foco visível (o Dashtail usa `focus-visible:ring-0`);
+  - alvo de 44px nos controles principais;
+  - contraste AA na paleta do admin;
+  - nomes acessíveis em todos os botões só com ícone.
+- **Moldura (`app-frame.tsx`):** sidebar de 16rem que recolhe para 4.5rem só com ícones. No modo recolhido, o nome de cada link continua acessível e aparece em tooltip. A preferência fica no `localStorage`. Abaixo de 64rem, a sidebar vira gaveta (diálogo com foco preso e Escape). O cabeçalho fixo tem o botão de recolher, a busca e o menu da conta (dropdown com e-mail, lojas, conta e sair). "Categorias" entrou no menu da loja.
+- **Busca global (`global-search.tsx`):** Ctrl+K (ou ⌘K) abre a busca em qualquer tela do painel. Ela lista:
+  - ações e páginas da navegação;
+  - dentro de uma loja, os produtos e os pedidos recentes, carregados só quando a busca abre.
+
+  O filtro é estrito: todas as palavras precisam aparecer, sem diferenciar acentos ou maiúsculas. A regra está em `lib/navigation.ts`, coberta pelo smoke.
+- **Autenticação (`(auth)/layout.tsx`):** tela dividida a partir de 64rem, com painel da marca à esquerda e formulário à direita. Os campos são maiores, a senha tem botão de mostrar e ocultar (`aria-pressed`), e o link "Esqueci minha senha" fica junto do campo. As URLs não mudaram.
+- **Links:** sem sublinhado por padrão. O sublinhado aparece no hover e continua em links dentro de texto corrido (`p a`, ajuda de campo e páginas legais), para não depender só da cor (WCAG 1.4.1). Botões e links com aparência de botão nunca sublinham.
+- **Botões do CSS anterior:** raio de controle de 6px e peso 600, para combinar com os componentes novos.
+
+**Próximas fases** (cada uma com revisão própria): gráficos no painel e no financeiro (`recharts`), tabelas com filtros, formulários e telas operacionais migradas para os componentes novos e, por fim, a revisão completa de acessibilidade.
 
 ## Plataforma e temas futuros das lojas
 

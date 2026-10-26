@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Loader2 } from "lucide-react";
 import { authRequest, requestError } from "@/lib/auth-api";
+import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 // "forgot" and "reset": password recovery (MVP block 1a, RELEASE_PLAN.md).
 type Mode = "registration" | "login" | "activation" | "forgot" | "reset";
@@ -115,48 +119,62 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     }
   }
 
+  const description = mode === "registration" ? "Informe seu e-mail. Você definirá a senha somente depois de confirmar que o endereço pertence a você."
+    : mode === "activation" ? "Escolha sua senha e confirme explicitamente a ativação. Abrir este link não ativa a conta."
+      : mode === "forgot" ? "Informe o e-mail da sua conta. Enviaremos um link para você escolher uma nova senha."
+        : mode === "reset" ? "Escolha uma nova senha. Abrir este link não altera nada até você salvar."
+          : "Use o e-mail confirmado e a senha da sua conta.";
+  const describedBy = (help: string) => [newPassword ? help : "", passwordError ? "password-error" : ""].filter(Boolean).join(" ") || undefined;
+
   return (
-    <section className="auth-panel" aria-labelledby="auth-title">
-      <h1 id="auth-title">{labels[mode].title}</h1>
-      <p>{mode === "registration" ? "Informe seu e-mail. Você definirá a senha somente depois de confirmar que o endereço pertence a você."
-        : mode === "activation" ? "Escolha sua senha e confirme explicitamente a ativação. Abrir este link não ativa a conta."
-          : mode === "forgot" ? "Informe o e-mail da sua conta. Enviaremos um link para você escolher uma nova senha."
-            : mode === "reset" ? "Escolha uma nova senha. Abrir este link não altera nada até você salvar."
-              : "Use o e-mail confirmado e a senha da sua conta."}</p>
+    <section className="w-full max-w-[26rem]" aria-labelledby="auth-title">
+      <Link href="/" className="inline-flex items-center gap-3 rounded-md text-foreground no-underline hover:no-underline focus-visible:ring-2 focus-visible:ring-ring lg:hidden">
+        <span className="inline-flex size-10 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground" aria-hidden="true">SC</span>
+        <span className="text-lg font-bold" translate="no">Smart Commerce</span>
+      </Link>
+      <h1 id="auth-title" className="mb-0 mt-8 text-2xl font-bold lg:mt-0">{labels[mode].title}</h1>
+      <p className="mb-0 mt-2 text-muted-foreground">{description}</p>
       <p ref={feedback} tabIndex={-1} role="status" aria-live="polite"
-        className={error ? "feedback feedback-error" : success ? "feedback feedback-success" : "feedback-empty"}>
+        className={error ? "mb-0 mt-6 rounded-md border border-destructive/30 bg-destructive-soft px-4 py-3 text-sm text-destructive"
+          : success ? "mb-0 mt-6 rounded-md border border-success/30 bg-success-soft px-4 py-3 text-sm text-success" : "sr-only"}>
         {error || success}
       </p>
       {(newPassword || mode === "forgot") && success ? null : (
-        <form onSubmit={(event) => void submit(event)} aria-busy={pending}>
-          {!newPassword ? <div className="form-field">
-            <label htmlFor="email">E-mail</label>
-            <input id="email" name="email" type="email" autoComplete={mode === "login" ? "username" : "email"}
+        <form onSubmit={(event) => void submit(event)} aria-busy={pending} className="mt-8 grid gap-5">
+          {!newPassword ? <div className="grid gap-2">
+            <Label htmlFor="email">E-mail</Label>
+            <Input id="email" name="email" type="email" autoComplete={mode === "login" ? "username" : "email"}
               inputMode="email" spellCheck={false} autoCapitalize="none" required maxLength={1024} />
           </div> : null}
-          {mode !== "registration" && mode !== "forgot" ? <div className="form-field">
-            <label htmlFor="password">{mode === "reset" ? "Nova senha" : "Senha"}</label>
-            {newPassword ? <p id="password-help" className="field-help">Use de 15 a 128 caracteres Unicode. Espaços são permitidos. Acentos equivalentes são normalizados (NFC). Senhas comuns ou previsíveis são recusadas.</p> : null}
-            <input ref={password} id="password" name="password" type="password" required
+          {mode !== "registration" && mode !== "forgot" ? <div className="grid gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="password">{mode === "reset" ? "Nova senha" : "Senha"}</Label>
+              {mode === "login" ? <Link href="/esqueci-senha" className="text-sm font-medium">Esqueci minha senha</Link> : null}
+            </div>
+            {newPassword ? <p id="password-help" className="m-0 text-sm text-muted-foreground">Use de 15 a 128 caracteres Unicode. Espaços são permitidos. Acentos equivalentes são normalizados (NFC). Senhas comuns ou previsíveis são recusadas.</p> : null}
+            <PasswordInput ref={password} id="password" name="password" required
               autoComplete={mode === "login" ? "current-password" : "new-password"} maxLength={1024}
-              aria-invalid={passwordError ? true : undefined}
-              aria-describedby={newPassword ? `password-help${passwordError ? " password-error" : ""}` : undefined} />
-            {passwordError ? <p id="password-error" className="field-error" role="alert">{passwordError}</p> : null}
+              aria-invalid={passwordError ? true : undefined} aria-describedby={describedBy("password-help")} />
+            {passwordError ? <p id="password-error" className="m-0 text-sm text-destructive" role="alert">{passwordError}</p> : null}
           </div> : null}
-          {newPassword ? <div className="form-field">
-            <label htmlFor="confirmation">{mode === "reset" ? "Confirme a nova senha" : "Confirme a senha"}</label>
-            <input id="confirmation" name="confirmation" type="password" autoComplete="new-password" required maxLength={1024}
+          {newPassword ? <div className="grid gap-2">
+            <Label htmlFor="confirmation">{mode === "reset" ? "Confirme a nova senha" : "Confirme a senha"}</Label>
+            <PasswordInput id="confirmation" name="confirmation" autoComplete="new-password" required maxLength={1024} toggleLabel="Mostrar confirmação da senha"
               aria-invalid={passwordError ? true : undefined} aria-describedby={passwordError ? "password-error" : undefined} />
           </div> : null}
-          {mode === "registration" ? <p id="legal-notice" className="legal-notice">Ao criar a conta, você concorda com os <Link href="/termos">Termos de uso</Link> e declara ter lido a <Link href="/privacidade">Política de privacidade</Link>.</p> : null}
-          <button type="submit" disabled={pending} aria-describedby={mode === "registration" ? "legal-notice" : undefined}>{pending ? labels[mode].pending : labels[mode].action}</button>
+          {mode === "registration" ? <p id="legal-notice" className="m-0 text-sm text-muted-foreground">Ao criar a conta, você concorda com os <Link href="/termos">Termos de uso</Link> e declara ter lido a <Link href="/privacidade">Política de privacidade</Link>.</p> : null}
+          <Button type="submit" size="lg" className="w-full" disabled={pending} aria-describedby={mode === "registration" ? "legal-notice" : undefined}>
+            {pending ? <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : null}
+            {pending ? labels[mode].pending : labels[mode].action}
+          </Button>
         </form>
       )}
-      <nav className="auth-links" aria-label="Opções da conta">
-        {mode !== "login" ? <Link href="/entrar">Entrar</Link> : null}
-        {mode === "login" ? <Link href="/esqueci-senha">Esqueci minha senha</Link> : null}
-        {mode === "reset" ? <Link href="/esqueci-senha">Pedir um novo link</Link> : null}
-        {mode !== "registration" && mode !== "forgot" && mode !== "reset" ? <Link href="/cadastro">Criar conta ou solicitar outro link</Link> : null}
+      <nav className="mt-8 flex flex-wrap gap-x-6 gap-y-1 border-t border-border pt-6 text-sm" aria-label="Opções da conta">
+        {mode === "login" ? <p className="m-0 inline-flex min-h-11 items-center gap-1.5 text-muted-foreground">Ainda não tem conta? <Link href="/cadastro" className="font-semibold">Criar conta</Link></p> : null}
+        {mode === "registration" || mode === "forgot" ? <p className="m-0 inline-flex min-h-11 items-center gap-1.5 text-muted-foreground">Já tem conta? <Link href="/entrar" className="font-semibold">Entrar</Link></p> : null}
+        {mode === "reset" ? <Link href="/esqueci-senha" className="inline-flex min-h-11 items-center font-semibold">Pedir um novo link</Link> : null}
+        {mode === "activation" || mode === "reset" ? <Link href="/entrar" className="inline-flex min-h-11 items-center font-semibold">Entrar</Link> : null}
+        {mode === "activation" ? <Link href="/cadastro" className="inline-flex min-h-11 items-center font-semibold">Solicitar outro link</Link> : null}
       </nav>
     </section>
   );
