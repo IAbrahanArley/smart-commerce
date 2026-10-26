@@ -51,16 +51,18 @@ export default async function StorePage({ params, searchParams }: Props) {
               {store.products.map(product => (
                 <li key={product.id}>
                   <article className="product-card">
+                    {/* Dashtail e-commerce card: framed photo with the availability badge, name, price and
+                        a full-width outline call to action. The whole card is one link. */}
                     <Link className="product-link" href={`${url}/produtos/${product.id}`} prefetch={false}>
-                      <ProductCover slug={store.slug} productId={product.id} name={product.name} />
-                      <div className="product-description">
-                        <h3>{product.name}</h3>
+                      <div className="product-media">
+                        <ProductCover slug={store.slug} productId={product.id} name={product.name} />
                         <Availability available={product.available} />
                       </div>
-                      <div className="product-summary">
+                      <div className="product-description">
+                        <h3>{product.name}</h3>
                         <p className="price">{product.kind === "VARIABLE" ? <span className="price-from">A partir de </span> : null}{formatBRL(product.price)}</p>
-                        <span className="product-action">Ver detalhes <Arrow /></span>
                       </div>
+                      <span className="product-action">Ver produto <Arrow /></span>
                     </Link>
                   </article>
                 </li>

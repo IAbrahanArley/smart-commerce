@@ -8,6 +8,7 @@ import { ORDER_STATUSES, type OrderPage, type OrderStatus, STATUS_LABELS, format
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 import PageState from "@/components/page-state";
+import { Loading } from "@/components/ui/loading";
 
 const SHORT_FULFILLMENT = { PICKUP: "Retirada", FIXED_SHIPPING: "Frete fixo" } as const;
 
@@ -42,7 +43,7 @@ export default function OrderList({ tenantId, status, after }: { tenantId: strin
       </select>
       <button type="submit">Filtrar pedidos</button>
     </form>
-    {state === "loading" ? <PageState kind="loading" icon="receipt" title="Consultando pedidos…">Carregando os pedidos da sua loja.</PageState> : null}
+    {state === "loading" ? <Loading context="pedidos da loja" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar os pedidos.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="receipt" title="Não foi possível consultar os pedidos" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar pedidos novamente">Confira a conexão e tente carregar a lista novamente.</PageState> : null}

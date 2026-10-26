@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { apiRequest } from "@/lib/auth-api";
 import { useConfirm } from "@/components/confirm-dialog";
 import StatusBadge from "@/components/status-badge";
+import { Loading } from "@/components/ui/loading";
 
 type Photo = { id: string; alt: string; width: number; height: number };
 type Images = { images: Photo[]; version: number };
@@ -81,7 +82,7 @@ export default function ProductImages({ tenantId, productId, version, locked, on
     {locked ? <p className="notice">Salve as alterações do produto antes de modificar as fotos.</p> : null}
     {stale || uncertain ? <><p role="alert" className="feedback feedback-error">Atualize o produto para consultar a versão atual das fotos.</p><button type="button" disabled={busy || locked} onClick={onReload}>Carregar versão atual do produto</button></> : null}
     {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}
-    {!data ? <>{!feedback ? <p role="status">Consultando fotos…</p> : null}<button type="button" onClick={() => { setFeedback(null); setAttempt(current => current + 1); }}>Consultar fotos novamente</button></> : !data.images.length ? <p>Nenhuma foto cadastrada.</p> : <ol className="photo-list">{data.images.map((photo, index) => <li key={photo.id} className="photo-item">
+    {!data ? <>{!feedback ? <Loading context="fotos" className="py-4" /> : null}<button type="button" onClick={() => { setFeedback(null); setAttempt(current => current + 1); }}>Consultar fotos novamente</button></> : !data.images.length ? <p>Nenhuma foto cadastrada.</p> : <ol className="photo-list">{data.images.map((photo, index) => <li key={photo.id} className="photo-item">
       <Image src={`${path}/${encodeURIComponent(photo.id)}/content`} alt={photo.alt} width={photo.width} height={photo.height} unoptimized className="product-photo" />
       <p>{index === 0 ? <StatusBadge tone="positive">Capa</StatusBadge> : `Foto ${index + 1}`} — {photo.alt}</p>
       <div className="editor-tools">{index > 0 ? <><button type="button" disabled={disabled} onClick={() => move(index, 0)} aria-label={`Usar foto ${index + 1} como capa`}>Usar como capa</button><button type="button" disabled={disabled} onClick={() => move(index, index - 1)} aria-label={`Mover foto ${index + 1} para antes`}>Mover para antes</button></> : null}

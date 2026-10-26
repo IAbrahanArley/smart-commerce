@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { apiRequest, requestError } from "@/lib/auth-api";
 import type { TenantStore } from "@/lib/tenant-api";
 import PageHeader from "@/components/page-header";
+import { Loading } from "@/components/ui/loading";
 
 export default function StoresPanel() {
   const [signedOut, setSignedOut] = useState(false);
@@ -76,7 +77,7 @@ export default function StoresPanel() {
   return <section className="page" aria-labelledby="stores-title">
     <PageHeader id="stores-title" title="Minhas lojas" description="Escolha uma loja para gerenciar produtos, vitrine e entrega, ou crie uma nova." />
     <div className="stores-panel">
-    {loading ? <p role="status">Consultando suas lojas…</p> : loadError ? <div>
+    {loading ? <Loading context="suas lojas" /> : loadError ? <div>
       <p role="alert" className="feedback feedback-error">{loadError}</p>
       <button type="button" onClick={() => { setLoading(true); setLoadError(""); setAttempt(current => current + 1); }}>Consultar lojas novamente</button>
     </div> : stores.length === 0 ? <p>Você ainda não tem uma loja. Preencha os dados abaixo para criar a primeira.</p> : <ul className="store-list">

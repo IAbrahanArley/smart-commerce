@@ -72,16 +72,13 @@ for (const invalid of ["http://api.example.test", "https://user:pw@api.example.t
 assert.equal(hostedTestEnvironment("hosted-test"), true);
 for (const value of [undefined, "", "production", "HOSTED-TEST"]) assert.equal(hostedTestEnvironment(value), false);
 import { cancelReason, formatDateTime, formatPhone, formatPostalCode, orderCursor, orderStatus, ordersApiPath, ordersPagePath, paymentDivergence } from "../src/lib/orders.ts";
-import { missingText, percentText, reportPeriod } from "../src/lib/finance.ts";
-import { bars, optionsText, shortDay } from "../src/lib/dashboard.ts";
+import { marginBreakdown, missingText, percentText, reportPeriod } from "../src/lib/finance.ts";
+import { optionsText, salesPoints, shortDay } from "../src/lib/dashboard.ts";
 
-// Dashboard (SC-022): bars scale to the busiest day, an empty period draws flat, labels in pt-BR.
-const chart = bars([{ day: "2026-10-01", revenue: "50.00" }, { day: "2026-10-02", revenue: "100.00" }, { day: "2026-10-03", revenue: "0.00" }], 300, 100);
-assert.deepEqual(chart.map(bar => bar.height), [50, 100, 0]);
-assert.deepEqual(chart.map(bar => bar.y), [50, 0, 100]);
-assert.ok(chart.every(bar => bar.x >= 0 && bar.x + bar.width <= 300));
-assert.ok(bars([{ day: "2026-10-01", revenue: "0.00" }], 300, 100).every(bar => bar.height === 0), "Período vazio não divide por zero.");
-assert.deepEqual(bars([], 300, 100), []);
+// Dashboard (SC-022, design system phase 2): chart points keep the backend string for labels.
+const points = salesPoints([{ day: "2026-10-01", orders: 2, revenue: "50.10" }, { day: "2026-10-02", orders: 0, revenue: "invalido" }]);
+assert.deepEqual(points.map(point => [point.label, point.revenue, point.orders, point.revenueText]), [["01/10", 50.1, 2, "50.10"], ["02/10", 0, 0, "invalido"]]);
+assert.deepEqual(salesPoints([]), []);
 assert.equal(shortDay("2026-10-05"), "05/10");
 assert.equal(optionsText([{ name: "Cor", value: "Azul" }, { name: "Tamanho", value: "M" }]), "Cor: Azul · Tamanho: M");
 import { expenseDateErrors, expenseMonth, formatDay, lineText, monthLabel, monthOf, parseAmount, shiftMonth } from "../src/lib/expenses.ts";
@@ -99,6 +96,8 @@ assert.ok(expenseDateErrors("2025-03-01", "", new Date("2024-02-29T15:00:00Z")).
 
 // Finance report (SC-021): period from the URL, missing data and percentages in Portuguese.
 assert.equal(reportPeriod("LAST_MONTH"), "LAST_MONTH");
+const breakdown = marginBreakdown({ grossRevenue: "100.00", refunds: "-10.00", fees: "5.00", cogs: "40.00", variableExpenses: "0.00", contributionMargin: "45.00" });
+assert.deepEqual(breakdown.map(row => [row.label, row.amount, row.amountText, row.kind]), [["Receita bruta", 100, "100.00", "revenue"], ["Reembolsos", 10, "-10.00", "deduction"], ["Taxas", 5, "5.00", "deduction"], ["Custo dos produtos", 40, "40.00", "deduction"], ["Despesas variáveis", 0, "0.00", "deduction"], ["Margem de contribuição", 45, "45.00", "result"]]);
 for (const invalid of [undefined, "", "last_month", "FOREVER"]) assert.equal(reportPeriod(invalid), "THIS_MONTH");
 assert.equal(missingText({ code: "FEES_UNAVAILABLE", count: 1 }), "1 venda sem a taxa do Mercado Pago informada");
 assert.equal(missingText({ code: "COST_MISSING", count: 2 }), "2 pedidos com produto sem custo cadastrado");
@@ -323,19 +322,19 @@ try {
     ["/redefinir-senha", "Redefinir senha", 'autoComplete="new-password"'],
     ["/entrar", "Entrar", 'href="/esqueci-senha"'],
     ["/conta", "Minha conta", 'aria-label="Navegação da conta"'],
-    ["/lojas", "Minhas lojas", "Consultando suas lojas"],
-    ["/lojas/00000000-0000-0000-0000-000000000000", "Minha loja", "Consultando sua loja"],
-    ["/lojas/00000000-0000-0000-0000-000000000000/entrega", "Entrega", "Consultando a configuração de entrega"],
-    ["/lojas/00000000-0000-0000-0000-000000000000/dados", "Dados da loja", "Consultando os dados da loja"],
+    ["/lojas", "Minhas lojas", "Carregando suas lojas…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000", "Minha loja", "Carregando sua loja…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/entrega", "Entrega", "Carregando configuração de entrega…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/dados", "Dados da loja", "Carregando dados da loja…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/pagamentos?mercadoPago=negado", "Pagamentos", "A autorização foi recusada no Mercado Pago"],
     ["/lojas/00000000-0000-0000-0000-000000000000/despesas?mes=2026-09", "Despesas", "Setembro de 2026"],
     ["/lojas/00000000-0000-0000-0000-000000000000/financeiro?periodo=LAST_7_DAYS", "Financeiro", 'value="LAST_7_DAYS" selected'],
-    ["/lojas/00000000-0000-0000-0000-000000000000/assistente", "Assistente", "Consultando o assistente"],
-    ["/lojas/00000000-0000-0000-0000-000000000000/assistente?explicar=REVENUE&periodo=LAST_7_DAYS", "Assistente", "Consultando o assistente"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/assistente", "Assistente", "Carregando assistente…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/assistente?explicar=REVENUE&periodo=LAST_7_DAYS", "Assistente", "Carregando assistente…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'name="situacao"'],
-    ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Consultando pedido", 'aria-label="Trilha de navegação"'],
-    ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Consultando catálogo"],
-    ["/lojas/00000000-0000-0000-0000-000000000000/categorias", "Categorias", "Consultando categorias"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Carregando pedido…", 'aria-label="Trilha de navegação"'],
+    ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Carregando catálogo…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/categorias", "Categorias", "Carregando categorias…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/novo", "Novo produto", 'aria-label="Navegação da loja"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001", "Editar produto", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001/estoque", "Estoque do produto", 'aria-label="Trilha de navegação"'],
@@ -362,7 +361,7 @@ try {
     assert.ok([200, 404].includes(invalid.status), path);
     const html = await invalid.text();
     assert.match(html, /Página não encontrada/, path);
-    assert.ok(!html.includes('name="situacao"') && !html.includes("Consultando pedido"), path);
+    assert.ok(!html.includes('name="situacao"') && !html.includes("Carregando pedido…"), path);
   }
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);

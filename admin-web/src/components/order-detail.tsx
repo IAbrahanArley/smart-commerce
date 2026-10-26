@@ -8,6 +8,7 @@ import { CANCEL_REASON_MAX, FULFILLMENT_LABELS, type OrderDetail as Order, STATU
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 import OrderRefund from "@/components/order-refund";
+import { Loading } from "@/components/ui/loading";
 
 export default function OrderDetail({ tenantId, orderId }: { tenantId: string; orderId: string }) {
   const [order, setOrder] = useState<Order | null>(null);
@@ -74,7 +75,7 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
   return <section className="page" aria-labelledby="order-title">
     <PageHeader id="order-title" title={title} breadcrumbs={[{ href: `${storePath}/pedidos`, label: "Pedidos" }]}
       description={order ? <>Criado em {formatDateTime(order.createdAt)} (horário de Brasília)</> : undefined} />
-    {state === "loading" ? <p role="status">Consultando pedido…</p> : null}
+    {state === "loading" ? <Loading context="pedido" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar o pedido.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <p role="status">Pedido indisponível. Volte para a lista de pedidos da sua loja.</p> : null}
     {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar o pedido. Tente novamente.</p><button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar pedido novamente</button></> : null}

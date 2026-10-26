@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useSignOut } from "@/lib/use-sign-out";
 import { apiRequest } from "@/lib/auth-api";
+import { Loading } from "@/components/ui/loading";
 
 type Account = { id: string; email: string };
 
@@ -34,7 +35,7 @@ export default function AccountPanel() {
   return <section className="account-summary" aria-labelledby="account-title">
     <h1 id="account-title">Minha conta</h1>
     <p ref={feedback} role="status" tabIndex={-1} aria-live="polite" className={error ? "feedback feedback-error" : "feedback-empty"}>{error}</p>
-    {loading ? <p role="status">Consultando sua conta…</p> : account ? <>
+    {loading ? <Loading context="sua conta" /> : account ? <>
       <p>Você está conectado ao Smart Commerce. Suas lojas ficam em <Link href="/lojas">Minhas lojas</Link>.</p>
       <dl><dt>E-mail</dt><dd className="account-email">{account.email}</dd></dl>
       <button type="button" onClick={() => void signOut()} disabled={pending}>{pending ? "Saindo…" : "Sair da conta"}</button>

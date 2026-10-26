@@ -5,10 +5,14 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/auth-api";
 import { formatBRL } from "@/lib/catalog";
 import { formatDay } from "@/lib/expenses";
-import { PERIODS, type FinanceReport, type ReportPeriodKey, missingText, percentText } from "@/lib/finance";
+import { PERIODS, marginBreakdown, type FinanceReport, type ReportPeriodKey, missingText, percentText } from "@/lib/finance";
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 import PageState from "@/components/page-state";
+import { Loading } from "@/components/ui/loading";
+import { HandCoins, Landmark, Receipt, ShoppingBag } from "lucide-react";
+import { KpiCard } from "@/components/ui/kpi-card";
+import { MarginChart } from "@/components/charts";
 
 // SC-021: the period's figures from the backend ledger (ADR-0015 F1–F5). Sale, receivable and cash
 // are shown apart, and the margin says "parcial", with what is missing, whenever a component is
@@ -52,19 +56,23 @@ export default function StoreFinance({ tenantId, period }: { tenantId: string; p
       </select>
       <button type="submit">Ver período</button>
     </form>
-    {state === "loading" ? <PageState kind="loading" icon="chart" title="Consultando o financeiro…">Carregando os lançamentos e os indicadores do período.</PageState> : null}
+    {state === "loading" ? <Loading context="financeiro" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar o financeiro.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="chart" title="Não foi possível consultar o financeiro" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar novamente">Confira a conexão e tente carregar o resumo novamente.</PageState> : null}
     {state === "ready" && report ? <>
       <p>De {formatDay(report.period.firstDay)} a {formatDay(report.period.lastDay)} (horário de Brasília).</p>
       <div className="stat-grid">
-        <Stat label="Pedidos pagos" value={new Intl.NumberFormat("pt-BR").format(report.paidOrders)} />
-        <Stat label="Ticket médio" value={report.averageTicket ? formatBRL(report.averageTicket) : "—"} />
-        <Stat label="A receber do Mercado Pago" value={formatBRL(report.receivable.amount)}
+        <KpiCard icon={<ShoppingBag />} label="Pedidos pagos" value={new Intl.NumberFormat("pt-BR").format(report.paidOrders)} />
+        <KpiCard icon={<Receipt />} label="Ticket médio" value={report.averageTicket ? formatBRL(report.averageTicket) : "—"} />
+        <KpiCard icon={<HandCoins />} label="A receber do Mercado Pago" value={formatBRL(report.receivable.amount)}
           detail={report.receivable.feesUnknown ? "Antes das taxas ainda não informadas; data de liberação desconhecida." : "Já descontadas as taxas informadas."} />
-        <Stat label="Caixa do período" value={formatBRL(report.cashMovement)} detail="Dinheiro que entrou ou saiu no período: despesas pagas e valores liberados." />
+        <KpiCard icon={<Landmark />} label="Caixa do período" value={formatBRL(report.cashMovement)} detail="Dinheiro que entrou ou saiu no período: despesas pagas e valores liberados." />
       </div>
+      <figure className="dashboard-chart">
+        <figcaption>Da receita bruta à margem de contribuição <span className="cell-hint">Os valores estão na tabela logo abaixo.</span></figcaption>
+        <MarginChart rows={marginBreakdown(report)} />
+      </figure>
       <div className="data-table-wrap"><table className="data-table" role="table">
         <caption>Margem de contribuição do período {report.complete ? null : <StatusBadge tone="neutral">Parcial</StatusBadge>}</caption>
         <tbody role="rowgroup">{rows.map(row => <tr role="row" key={row.label}>
@@ -83,12 +91,4 @@ export default function StoreFinance({ tenantId, period }: { tenantId: string; p
       <p className="field-help">Despesas fixas não entram na margem de contribuição. <Link href={`${storePath}/despesas`}>Ver despesas</Link>. Este resumo não é um demonstrativo contábil ou fiscal.</p>
     </> : null}
   </section>;
-}
-
-function Stat({ label, value, detail }: { label: string; value: string; detail?: string }) {
-  return <div className="stat-card"><div>
-    <p className="field-help">{label}</p>
-    <p><strong>{value}</strong></p>
-    {detail ? <p className="field-help">{detail}</p> : null}
-  </div></div>;
 }
