@@ -17,9 +17,9 @@ import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import { type Category, parseCategories } from "@/lib/categories";
-import { EMPTY_FILTERS, filterProducts, filtersActive, NO_CATEGORY, type ProductFilters, type ProductSort, resultText, type Visibility } from "@/lib/product-filters";
+import { EMPTY_FILTERS, filterProducts, filtersActive, filtersQuery, NO_CATEGORY, type ProductFilters, type ProductSort, resultText, type Visibility } from "@/lib/product-filters";
 
-export default function Catalog({ tenantId, productId, view, created = false }: { tenantId: string; productId?: string; view: "list" | "new" | "edit"; created?: boolean }) {
+export default function Catalog({ tenantId, productId, view, created = false, initialFilters = EMPTY_FILTERS }: { tenantId: string; productId?: string; view: "list" | "new" | "edit"; created?: boolean; initialFilters?: ProductFilters }) {
   const router = useRouter();
   const [state, setState] = useState<"loading" | "ready" | "missing" | "signed-out" | "error">("loading");
   const [store, setStore] = useState<TenantStore | null>(null);
@@ -28,7 +28,13 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
   const [attempt, setAttempt] = useState(0);
   const [notice, setNotice] = useState(created ? "Produto cadastrado no catálogo interno. Ele começa oculto na vitrine. Inclua fotos e registre o estoque quando quiser." : "");
   const [draftDirty, setDraftDirty] = useState(false);
-  const [filters, setFilters] = useState<ProductFilters>(EMPTY_FILTERS);
+  const [filters, setFilterState] = useState<ProductFilters>(initialFilters);
+  // The URL reflects the filters, so a reload or a shared link keeps them (Next keeps its router in sync).
+  function setFilters(update: ProductFilters | ((current: ProductFilters) => ProductFilters)) {
+    const next = typeof update === "function" ? update(filters) : update;
+    setFilterState(next);
+    window.history.replaceState(null, "", `${window.location.pathname}${filtersQuery(next)}`);
+  }
   const [categories, setCategories] = useState<Category[]>([]);
   const noticeRef = useRef<HTMLParagraphElement>(null);
   const storePath = `/lojas/${encodeURIComponent(tenantId)}`;
@@ -115,7 +121,7 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
       {view === "list" ? <>
         <p className="notice">{store.store.status === "PUBLISHED" ? "Sua vitrine está publicada. Somente os produtos selecionados individualmente ficam visíveis para consulta pública." : "Sua vitrine está oculta. Você pode selecionar produtos agora; eles só ficarão visíveis quando publicar a loja."}</p>
         {products.length ? <div className="table-toolbar" role="search" aria-label="Filtrar produtos">
-          <SearchInput className="min-w-[min(100%,16rem)] flex-[2_1_16rem]" value={filters.query} onChange={event => setFilters(current => ({ ...current, query: event.target.value }))} placeholder="Buscar por nome ou SKU" aria-label="Buscar por nome ou SKU" />
+          <SearchInput className="min-w-[min(100%,16rem)] flex-[2_1_16rem]" value={filters.query} onChange={event => setFilters(current => ({ ...current, query: event.target.value }))} placeholder="Buscar por nome ou SKU…" aria-label="Buscar por nome ou SKU" />
           {categories.length ? <Select className="flex-[1_1_11rem]" aria-label="Categoria" value={filters.category} onChange={event => setFilters(current => ({ ...current, category: event.target.value }))}>
             <option value="">Todas as categorias</option>
             {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}

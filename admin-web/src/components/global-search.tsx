@@ -16,6 +16,7 @@ type ProductHit = { id: string; name: string; sku: string };
 type OrderHit = { id: string; number: number; buyerName: string | null; total: string };
 type Results = { products: ProductHit[]; orders: OrderHit[] } | "loading" | "error" | null;
 
+const MAX_HITS = 20;
 const ITEM = "flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-3 text-sm text-foreground data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground";
 const HEADING = "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground";
 
@@ -26,6 +27,7 @@ export default function GlobalSearch({ groups, tenantId }: { groups: NavGroup[];
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<Results>(null);
+  const [search, setSearch] = useState("");
   const loadedFor = useRef<string | null>(null);
 
   function load() {
@@ -46,6 +48,7 @@ export default function GlobalSearch({ groups, tenantId }: { groups: NavGroup[];
 
   function change(next: boolean) {
     setOpen(next);
+    if (!next) setSearch("");
     if (next) load();
   }
 
@@ -64,13 +67,19 @@ export default function GlobalSearch({ groups, tenantId }: { groups: NavGroup[];
   }
 
   const base = tenantId ? storeBase(tenantId) : null;
-  const found = results && typeof results === "object" ? results : null;
+  // Products and orders appear only while typing, at most MAX_HITS each, so a large catalog never
+  // renders a long list (Web Interface Guidelines: virtualize or cap long lists).
+  const data = results && typeof results === "object" && search.trim().length >= 2 ? results : null;
+  const found = data ? {
+    products: data.products.filter(product => searchScore(`produto ${product.name} ${product.sku}`, search)).slice(0, MAX_HITS),
+    orders: data.orders.filter(order => searchScore(`pedido ${order.number} ${order.buyerName ?? ""}`, search)).slice(0, MAX_HITS),
+  } : null;
   return <>
     <button type="button" onClick={() => change(true)} aria-keyshortcuts="Control+K Meta+K"
       className="flex h-10 min-h-0 w-full max-w-sm items-center gap-2.5 rounded-md border border-border bg-background px-3 py-0 text-sm font-normal text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring">
       <Search className="size-4 shrink-0" aria-hidden="true" />
       <span className="flex-1 truncate text-left">Buscar páginas{tenantId ? ", produtos e pedidos" : ""}…</span>
-      <Kbd className="hidden md:inline-flex">Ctrl K</Kbd>
+      <Kbd className="hidden md:inline-flex">Ctrl{" "}K</Kbd>
     </button>
     <Dialog open={open} onOpenChange={change}>
       <DialogContent className="overflow-hidden p-0">
@@ -79,9 +88,9 @@ export default function GlobalSearch({ groups, tenantId }: { groups: NavGroup[];
         <Command label="Busca" filter={searchScore} className="flex max-h-[70vh] flex-col">
           <div className="flex items-center gap-2.5 border-b border-border px-4 pr-14">
             <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <Command.Input placeholder="O que você procura?" className="h-14 w-full min-w-0 border-0 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground" />
+            <Command.Input value={search} onValueChange={setSearch} placeholder="Buscar páginas, produtos ou pedidos…" className="h-14 w-full min-w-0 border-0 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground" />
           </div>
-          <Command.List className={`overflow-y-auto p-2 ${HEADING}`}>
+          <Command.List className={`overflow-y-auto overscroll-contain p-2 ${HEADING}`}>
             <Command.Empty className="px-3 py-8 text-center text-sm text-muted-foreground">Nada encontrado.</Command.Empty>
             {base ? <Command.Group heading="Ações">
               <Command.Item className={ITEM} value="novo produto cadastrar" onSelect={() => go(`${base}/produtos/novo`)}><Plus aria-hidden="true" /> Novo produto</Command.Item>

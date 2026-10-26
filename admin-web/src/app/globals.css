@@ -417,4 +417,8 @@ button:disabled { cursor: not-allowed; }
 .notice { border-left-width: 4px; border-radius: var(--sc-radius-control); }
 .status-badge { padding: .125rem .625rem; border-radius: 999px; font-size: .75rem; font-weight: 600; }
 .page-state-icon { border-radius: 999px; }
+/* Accessibility review (phase 5): the sticky 4rem header never hides the focused element (WCAG 2.4.11);
+   taps act at once and show a deliberate highlight. */
+html { scroll-padding-top: 5rem; }
+a, button, select, summary { touch-action: manipulation; -webkit-tap-highlight-color: rgb(23 78 115 / 20%); }
 }
