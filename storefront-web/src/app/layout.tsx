@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import "./globals.css";
 import { checkoutConfigured, hostedTestEnvironment } from "@/lib/checkout-input";
 
@@ -28,7 +29,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 ? "Produtos e preços publicados pela loja. Pedidos feitos aqui são de teste: ainda não há pagamento."
                 : "Produtos e preços publicados pela loja para você consultar. A compra por aqui ainda não está disponível."}</p>
             </div>
-            <p className="platform-credit">Tecnologia <span className="platform-name" translate="no">Smart Commerce</span></p>
+            <div className="platform-credit">
+              <p>Tecnologia <span className="platform-name" translate="no">Smart Commerce</span></p>
+              <p><Link href="/privacidade" prefetch={false}>Privacidade</Link></p>
+            </div>
           </div>
         </footer>
       </body>

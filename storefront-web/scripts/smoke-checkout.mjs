@@ -22,6 +22,9 @@ export async function checkoutSmoke({ base, page, cartCookie, port, upstreamPort
   assert.match(checkout.html, /Sem custo de entrega · Total R\$\s99,80/);
   assert.match(checkout.html, /são usados apenas pela <span translate="no">Loja de teste da vitrine<\/span>/);
   assert.match(checkout.html, /anonimizados em até 90 dias/);
+  // MVP block 1d: payment goes to Mercado Pago and the notice links the shopper privacy page.
+  assert.match(checkout.html, /O pagamento é feito no Mercado Pago/);
+  assert.ok(checkout.html.includes('href="/privacidade"'), "Link da política no checkout.");
   assert.match(checkout.html, /autoComplete="email"|autocomplete="email"/);
   const formRequestId = hiddenValue(checkout.html, "requestId");
   assert.match(formRequestId ?? "", /^[0-9a-f-]{36}$/);

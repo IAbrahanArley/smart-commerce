@@ -11,7 +11,7 @@ export default function PresentationLayout({ children }: { children: ReactNode }
     <main id="conteudo" tabIndex={-1}>{children}</main>
     <footer className="presentation-footer"><div className="landing-wrap">
       <Link className="brand" href="/" translate="no">Smart Commerce</Link>
-      <nav aria-label="Rodapé"><Link href="/">Início</Link><Link href="/admin/produtos">Demonstração do admin</Link><Link href="/loja/produto">Demonstração da loja</Link><Link href="/componentes">Componentes</Link></nav>
+      <nav aria-label="Rodapé"><Link href="/">Início</Link><Link href="/admin/produtos">Demonstração do admin</Link><Link href="/loja/produto">Demonstração da loja</Link><Link href="/componentes">Componentes</Link><Link href="/termos">Termos de uso</Link><Link href="/privacidade">Política de privacidade</Link></nav>
       <p>Produto em desenvolvimento. Demonstrações com dados fictícios.</p>
     </div></footer>
   </PresentationShell>;

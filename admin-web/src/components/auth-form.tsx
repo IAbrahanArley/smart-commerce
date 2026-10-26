@@ -148,7 +148,8 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             <input id="confirmation" name="confirmation" type="password" autoComplete="new-password" required maxLength={1024}
               aria-invalid={passwordError ? true : undefined} aria-describedby={passwordError ? "password-error" : undefined} />
           </div> : null}
-          <button type="submit" disabled={pending}>{pending ? labels[mode].pending : labels[mode].action}</button>
+          {mode === "registration" ? <p id="legal-notice" className="legal-notice">Ao criar a conta, você concorda com os <Link href="/termos">Termos de uso</Link> e declara ter lido a <Link href="/privacidade">Política de privacidade</Link>.</p> : null}
+          <button type="submit" disabled={pending} aria-describedby={mode === "registration" ? "legal-notice" : undefined}>{pending ? labels[mode].pending : labels[mode].action}</button>
         </form>
       )}
       <nav className="auth-links" aria-label="Opções da conta">

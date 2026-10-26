@@ -46,6 +46,13 @@ try {
   assert.match(catalogPage.html, /class="test-environment-banner" role="note"><strong>Ambiente de teste\.<\/strong>/, "Aviso de ambiente de teste em toda página.");
   assert.match(catalogPage.html, /Pedidos feitos aqui são de teste/);
   assert.match(home.html, /Vitrines de lojas/);
+  // MVP block 1d: shopper privacy notice, linked from every footer.
+  assert.ok(home.html.includes('href="/privacidade"'), "Link de privacidade no rodapé.");
+  const privacy = await page("/privacidade");
+  assert.equal(privacy.response.status, 200);
+  assert.match(privacy.html, /Privacidade nas vitrines/);
+  assert.match(privacy.html, /controladora dos seus dados/);
+  assert.match(privacy.html, /Rascunho em validação/);
   assert.match(home.html, /href="#conteudo"/);
   const catalog = await page("/lojas/loja-teste");
   assert.equal(catalog.response.status, 200);
