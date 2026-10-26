@@ -112,6 +112,8 @@ O agente só lê: não altera pedidos, valores nem estoque, e não inventa núme
 
 ## SC-028 — "Explicar" alertas e indicadores
 
+**Estado (2026-10-26):** implementada e validada com backend sintético ([validação](../quality/SC-028-VALIDATION.md)). Só admin; o botão some com o assistente desligado.
+
 - Botão **"Explicar"** nos alertas (SC-024) e nos cartões do dashboard (SC-022), que abre o assistente com a pergunta e o contexto daquele item.
 - Sem o assistente ligado, o botão não aparece.
 

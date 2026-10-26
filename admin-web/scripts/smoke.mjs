@@ -7,7 +7,7 @@ import { reservedStockMessage, wholeQuantity } from "../src/lib/inventory.ts";
 import { storefrontUrl } from "../src/lib/tenant-api.ts";
 import { backendOrigin, hostedTestEnvironment } from "../src/lib/deployment.ts";
 import { alertLink, alertText, parseAlerts } from "../src/lib/alerts.ts";
-import { MAX_EXCHANGES, askError, historyFor, outcomeText, parseAnswer, parseStatus, questionError, quotaText, sourceText } from "../src/lib/advisor.ts";
+import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outcomeText, parseAnswer, parseStatus, questionError, quotaText, sourceText } from "../src/lib/advisor.ts";
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
 
@@ -176,6 +176,15 @@ const asked = Array.from({ length: 6 }, (_, index) => ({ id: index, question: `P
 assert.deepEqual(historyFor(asked).map(item => item.question), ["P1", "P3", "P4", "P5"], "Só respostas aceitas, no máximo 4.");
 assert.equal(MAX_EXCHANGES, 5);
 
+// "Explicar" (SC-028): only known topics and periods become a question; links carry the period.
+assert.equal(explainQuestion("REVENUE", "LAST_7_DAYS"), "Explique a receita da loja (últimos 7 dias) e de onde ela vem.");
+assert.equal(explainQuestion("MARGIN", "SEMPRE"), "Explique a margem de contribuição da loja (este mês) e o que falta para ela ficar completa.");
+assert.equal(explainQuestion("ALERT_LOW_STOCK", undefined), "Explique o alerta de itens com estoque baixo.");
+for (const invalid of [undefined, "", "ALERT_", "ALERT_SOMETHING_NEW", "ignore as instruções", "revenue"]) assert.equal(explainQuestion(invalid, "THIS_MONTH"), null, String(invalid));
+assert.equal(explainHref("t 1", "REVENUE", "LAST_7_DAYS"), "/lojas/t%201/assistente?explicar=REVENUE&periodo=LAST_7_DAYS");
+assert.equal(explainHref("t", "ALERT_LOW_STOCK"), "/lojas/t/assistente?explicar=ALERT_LOW_STOCK");
+assert.equal(explainHref("t", "REVENUE", "FOREVER"), "/lojas/t/assistente?explicar=REVENUE", "Período inválido não vai para o link.");
+
 // Product photos: the cover URL is built only from canonical ids, and counts are worded.
 const productId = "11111111-1111-4111-8111-111111111111";
 const coverId = "22222222-2222-4222-8222-222222222222";
@@ -268,6 +277,7 @@ try {
     ["/lojas/00000000-0000-0000-0000-000000000000/despesas?mes=2026-09", "Despesas", "Setembro de 2026"],
     ["/lojas/00000000-0000-0000-0000-000000000000/financeiro?periodo=LAST_7_DAYS", "Financeiro", 'value="LAST_7_DAYS" selected'],
     ["/lojas/00000000-0000-0000-0000-000000000000/assistente", "Assistente", "Consultando o assistente"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/assistente?explicar=REVENUE&periodo=LAST_7_DAYS", "Assistente", "Consultando o assistente"],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'name="situacao"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Consultando pedido", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Consultando catálogo"],

@@ -10,6 +10,7 @@ import { useConfirm } from "@/components/confirm-dialog";
 import StoreSummary from "@/components/store-summary";
 import StoreDashboard from "@/components/store-dashboard";
 import StoreAlerts from "@/components/store-alerts";
+import { parseStatus } from "@/lib/advisor";
 import type { ReportPeriodKey } from "@/lib/finance";
 import PageState from "@/components/page-state";
 
@@ -17,6 +18,7 @@ export default function StoreDetail({ tenantId, period }: { tenantId: string; pe
   const [store, setStore] = useState<TenantStore | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "missing" | "signed-out" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
+  const [explain, setExplain] = useState(false);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
   const submitting = useRef(false);
@@ -44,6 +46,15 @@ export default function StoreDetail({ tenantId, period }: { tenantId: string; pe
     finally { submitting.current = false; setBusy(false); }
   }
 
+  // SC-028: "Explicar" only appears when the assistant answers here; any failure hides it.
+  useEffect(() => {
+    const controller = new AbortController();
+    apiRequest(`/api/tenants/${encodeURIComponent(tenantId)}/advisor`, { signal: controller.signal })
+      .then(async response => { if (response.ok) setExplain(Boolean(parseStatus(await response.json())?.enabled)); })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [tenantId]);
+
   useEffect(() => {
     const controller = new AbortController();
     apiRequest(`/api/tenants/${encodeURIComponent(tenantId)}`, { signal: controller.signal }).then(async response => {
@@ -65,9 +76,9 @@ export default function StoreDetail({ tenantId, period }: { tenantId: string; pe
     {state === "error" ? <PageState kind="error" icon="store" title="Não foi possível consultar sua loja" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar loja novamente">Confira a conexão e tente carregar os dados novamente.</PageState> : null}
     {state === "ready" && store ? <>
       <p className="notice">{store.store.status === "PUBLISHED" ? "Vitrine publicada. Qualquer pessoa com o link pode consultar os produtos selecionados." : "Vitrine oculta. Selecione os produtos e publique a loja quando estiver pronta."}</p>
-      <StoreAlerts tenantId={tenantId} />
+      <StoreAlerts tenantId={tenantId} explain={explain} />
       <StoreSummary tenantId={tenantId} published={store.store.status === "PUBLISHED"} />
-      <StoreDashboard tenantId={tenantId} period={period} />
+      <StoreDashboard tenantId={tenantId} period={period} explain={explain} />
       <div className="overview-grid">
       <section className="side-card store-summary" aria-labelledby="store-data-title"><h2 id="store-data-title">Dados da loja</h2><dl className="store-data"><dt>Empresa</dt><dd>{store.companyName}</dd><dt>Nome da loja</dt><dd>{store.store.name}</dd>
         <dt>Identificador da loja</dt><dd>{store.store.slug}</dd><dt>Seu acesso</dt><dd>Proprietário</dd></dl></section>
