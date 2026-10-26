@@ -80,38 +80,6 @@
 .presentation-footer nav { display: flex; flex-wrap: wrap; gap: .5rem 2rem; margin: 1.5rem 0; }
 .presentation-footer nav a { padding-block: .75rem; }
 .presentation-footer p { margin: 0; }
-.demo-page { padding-block: 2rem 5rem; }
-.demo-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 2rem; margin-bottom: 2rem; font-size: .875rem; }
-.demo-banner a { margin-left: auto; min-height: 44px; display: inline-flex; align-items: center; }
-.demo-admin-shell { display: grid; grid-template-columns: 13rem minmax(0, 1fr); border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-surface); }
-.demo-sidebar { padding: 1.5rem; background: var(--landing-field); }
-.demo-sidebar nav ul { list-style: none; padding: 0; margin-top: 2rem; }
-.demo-sidebar li { padding-block: .75rem; }
-.demo-sidebar small { display: block; color: var(--sc-color-text-secondary); margin-top: .25rem; }
-.demo-sidebar a { font-weight: 700; display: block; padding: .75rem; border-left: 3px solid var(--sc-color-action); background: var(--sc-color-surface); }
-.demo-secondary { border-top: 1px solid var(--sc-color-divider); padding-top: 1rem !important; }
-.demo-admin-content { min-width: 0; padding: 2rem; }
-.demo-filter { margin: 1.5rem 0; }
-.demo-store { border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-surface); padding: clamp(1rem, 3vw, 3rem); }
-.demo-store-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 2rem; }
-.demo-store-header a { min-height: 44px; display: flex; align-items: center; }
-.demo-store-product { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
-.demo-product-placeholder { background: var(--landing-field); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 2rem; text-align: center; border-radius: var(--sc-radius-surface); }
-.demo-product-placeholder p { font-size: 2rem; font-weight: 700; letter-spacing: -.035em; }
-.demo-product-placeholder span { font-size: .875rem; line-height: 1.5; }
-.demo-price { font-size: 1.5rem; font-weight: 700; }
-.demo-sizes { border: 0; padding: 0; margin-block: 2rem; display: flex; gap: .75rem; }
-.demo-sizes legend { font-weight: 700; margin-bottom: .75rem; }
-.demo-sizes label { display: flex; align-items: center; gap: .5rem; border: 1px solid var(--sc-color-control-border); border-radius: var(--sc-radius-control); min-height: 44px; padding: .5rem .75rem; }
-.demo-sizes input { width: 1rem; height: 1rem; min-height: 0; margin: 0; accent-color: var(--sc-color-action); }
-.demo-cart { padding-top: 3rem; margin-top: 3rem; border-top: 1px solid var(--sc-color-divider); }
-.component-gallery > section { margin-top: 3rem; }
-.component-gallery h2 { font-size: 1.5rem; margin-bottom: 1.5rem; }
-.component-gallery .form-field { max-width: 28rem; }
-.gallery-colors { display: flex; flex-wrap: wrap; gap: 1rem; }
-.gallery-colors > div { padding: 1.5rem; line-height: 1.5; border-radius: var(--sc-radius-surface); background: var(--landing-ink); color: var(--sc-color-surface); }
-.gallery-colors > div:nth-child(2) { background: var(--landing-field); color: var(--landing-ink); }
-.gallery-colors > div:nth-child(3) { background: var(--landing-accent); color: var(--landing-ink); }
 .presentation [id] { scroll-margin-top: 2rem; }
 @media (max-width: 70rem) {
   .presentation-header-inner { flex-wrap: wrap; gap: 1rem; }
@@ -132,12 +100,6 @@
   .landing-steps { grid-template-columns: 1fr; gap: 1.5rem; }
   .landing-closing .landing-wrap { grid-template-columns: 1fr; }
   .landing-closing .landing-button { justify-self: start; }
-  .demo-admin-shell { grid-template-columns: 1fr; }
-  .demo-sidebar-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-  .demo-sidebar nav { display: none; }
-  .demo-sidebar nav[data-open="true"] { display: block; }
-  .demo-admin-content { padding: 1rem; }
-  .demo-store-product { grid-template-columns: 1fr; gap: 1.5rem; }
 }
 @media (max-width: 38rem) {
   .hero-product-heading { align-items: start; flex-direction: column; }
@@ -151,5 +113,4 @@
   .demo-table th, .demo-table td { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; border: 0; padding: .5rem 0; }
   .demo-table tbody th { display: block; }
   .demo-table td::before { content: attr(data-label); color: var(--sc-color-text-secondary); }
-  .demo-sidebar-heading { flex-wrap: wrap; }
 }

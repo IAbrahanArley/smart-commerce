@@ -105,7 +105,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       } else if (mode === "forgot") {
         setSuccess("Se houver uma conta ativa com este e-mail, você receberá um link para redefinir a senha. Ele vale por 30 minutos. Aguarde pelo menos 60 segundos antes de pedir outro.");
       } else {
-        setSuccess("Se a solicitação puder ser atendida, você receberá um link de confirmação. Em desenvolvimento, consulte a caixa local configurada. Aguarde pelo menos 60 segundos antes de reenviar.");
+        setSuccess("Se a solicitação puder ser atendida, você receberá um link de confirmação. Aguarde pelo menos 60 segundos antes de reenviar.");
       }
     } catch {
       setError("Não foi possível conectar. Verifique a conexão e tente novamente.");

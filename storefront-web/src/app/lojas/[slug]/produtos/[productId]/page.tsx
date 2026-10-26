@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StoreHeader } from "@/components/store-header";
 import { loadProduct } from "@/lib/public-store";
+import { checkoutConfigured } from "@/lib/checkout-input";
 import { Arrow } from "@/components/arrow";
 import ProductGallery from "@/components/product-gallery";
 import ProductOffer from "@/components/product-offer";
@@ -29,7 +30,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <ProductOffer slug={store.slug} product={product} />
             <div className="consultation-note">
               <h2>Gostou deste produto?</h2>
-              <p>Adicione ao carrinho para conferir o total calculado pela loja. A finalização da compra ainda não está disponível.</p>
+              <p>{checkoutConfigured() ? "Adicione ao carrinho para conferir o total calculado pela loja e finalizar a compra." : "Adicione ao carrinho para conferir o total calculado pela loja. A finalização da compra ainda não está disponível."}</p>
             </div>
           </div>
           <div className="detail-description">

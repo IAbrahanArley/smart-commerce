@@ -34,8 +34,8 @@ Itens do PRD que ainda não existem ou estão incompletos, em ordem de execuçã
 
 ## Bloco 2 — Remover o que é de teste e preparar a produção
 
-- **Páginas de demonstração do admin:** `/componentes`, `/admin/produtos` e `/loja/produto` são retiradas, ou ficam só fora de produção. A landing (`/`) continua.
-- **Marcações do ambiente de teste:** o banner e o checkout sem pagamento ficam restritos a `hosted-test` (já é a regra D6) e são conferidos na configuração de produção.
+- **Páginas de demonstração do admin** (removidas em 2026-10-26, bloco 2a, [validação](../quality/MVP-2A-PRODUCTION-PREP.md)): `/componentes`, `/admin/produtos` e `/loja/produto`. A landing (`/`) continua, com o texto atualizado.
+- **Marcações do ambiente de teste** (2026-10-26, blocos 2a e 2b): o banner e o checkout sem pagamento ficam restritos a `hosted-test`. Os textos de "desenvolvimento" e "teste" saíram dos rodapés. O D6 foi revisado: em produção, o checkout só liga com pagamento real.
 - **Configuração de produção:**
   - Mercado Pago com credenciais de produção (`MERCADO_PAGO_TEST_TOKEN=false`);
   - webhook com o evento "Pagamentos" e `MERCADO_PAGO_NOTIFICATION_URL`;

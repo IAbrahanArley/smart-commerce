@@ -47,7 +47,7 @@ assert.equal(legalDraft({ operatorName: "Empresa Ltda", cnpj: "00.000.000/0001-0
 assert.equal(operatorText({ operatorName: "Empresa Ltda", cnpj: "00.000.000/0001-00", contactEmail: "a@b.example", updatedAt: "2026-10-26" }), "Empresa Ltda, inscrita no CNPJ sob o nº 00.000.000/0001-00");
 assert.match(operatorText({ operatorName: "Empresa Ltda", cnpj: null, contactEmail: "a@b.example", updatedAt: "2026-10-26" }), /a preencher/);
 assert.equal(updatedText({ operatorName: null, cnpj: null, contactEmail: "a@b.example", updatedAt: "2026-10-26" }), "Atualizado em 26/10/2026.");
-for (const path of ["/", "/entrar", "/cadastro", "/termos", "/privacidade", "/loja/produto", "/lojas-publicas"]) assert.equal(isProtectedPath(path), false, path);
+for (const path of ["/", "/entrar", "/cadastro", "/termos", "/privacidade", "/lojas-publicas"]) assert.equal(isProtectedPath(path), false, path);
 
 // ADR-0014: the /api rewrite only targets HTTPS (or loopback HTTP); the notice needs the exact flag.
 assert.equal(backendOrigin(undefined), "http://127.0.0.1:8080");
@@ -290,15 +290,12 @@ try {
   assert.ok(html.includes('class="presentation landing-page"'), "Direção visual restrita à home");
   assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1);
   assert.ok(!html.includes('class="site-header"'), "Landing sem cabeçalho operacional");
-  for (const [path, title] of [["/componentes", "Fundamentos e componentes"], ["/admin/produtos", "Demonstração do admin"], ["/loja/produto", "Demonstração da loja"]]) {
+  // Block 2a: the landing leads to sign-up, says nothing is "in development" and the demos are gone.
+  assert.ok(html.includes('href="/cadastro"') && html.includes('href="/entrar"'), "Landing leva ao cadastro e ao login");
+  assert.ok(!/em desenvolvimento|demonstraç/i.test(html), "Landing sem menção a desenvolvimento ou demonstração");
+  for (const path of ["/componentes", "/admin/produtos", "/loja/produto"]) {
     const response = await fetch(`${baseUrl}${path}`, { signal: AbortSignal.timeout(5000) });
-    assert.equal(response.status, 200, path);
-    const page = await response.text();
-    assert.ok(page.includes(title), `${path}: título`);
-    assert.ok(!page.includes('class="presentation landing-page"'), `${path}: sem tema da landing`);
-    assert.equal((page.match(/<main[\s>]/g) ?? []).length, 1, `${path}: main único`);
-    assert.equal((page.match(/<h1[\s>]/g) ?? []).length, 1, `${path}: h1 único`);
-    assert.equal(response.headers.get("referrer-policy"), "no-referrer", path);
+    assert.equal(response.status, 404, `${path}: demonstração removida`);
   }
   for (const [path, title, field] of [
     ["/cadastro", "Criar conta", 'name="email"'],

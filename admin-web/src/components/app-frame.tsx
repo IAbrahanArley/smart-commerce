@@ -36,7 +36,7 @@ export default function AppFrame({ navLabel, context, groups, children }: { navL
     </nav>
     <div className="app-content">
       <main id="conteudo" className="app-main" tabIndex={-1}>{children}</main>
-      <footer className="app-footer">Smart Commerce · Ambiente de desenvolvimento</footer>
+      <footer className="app-footer"><span translate="no">Smart Commerce</span></footer>
     </div>
   </div>;
 }

@@ -17,7 +17,7 @@ Agentes de IA: instruções em [AGENTS.md](AGENTS.md) (Claude via [CLAUDE.md](CL
 
 ## Estrutura
 
-A página inicial do admin (`/`) apresenta a plataforma. `/admin/produtos` e `/loja/produto` são demonstrações locais com dados fictícios, sem API, autenticação ou persistência; `/componentes` reúne amostras dos componentes locais. Para operar lojas reais, use `/entrar` e `/lojas`; a vitrine real continua na aplicação `storefront-web`. As URLs operacionais foram preservadas. Ver [validação da landing](docs/quality/LANDING-VALIDATION.md).
+A página inicial do admin (`/`) apresenta a plataforma e leva ao cadastro e ao login. As demonstrações `/admin/produtos`, `/loja/produto` e `/componentes` foram removidas no bloco 2a do MVP ([validação](docs/quality/MVP-2A-PRODUCTION-PREP.md)). Para operar lojas reais, use `/entrar` e `/lojas`; a vitrine real continua na aplicação `storefront-web`. As URLs operacionais foram preservadas. Ver [validação da landing](docs/quality/LANDING-VALIDATION.md).
 
 ```text
 backend/          Spring Boot, Maven Wrapper, Flyway e testes
@@ -233,7 +233,7 @@ Decisões no [ADR-0015](docs/architecture/adr/0015-finance-dashboard.md). Detalh
 Para observar o sistema fora da máquina local, o [guia de deploy](docs/deploy/HOSTED-TEST-ENVIRONMENT.md) descreve o backend no Render (imagem `backend/Dockerfile`), o admin e a vitrine na Vercel e o e-mail de cadastro pelo Brevo, com todas as variáveis.
 
 - **Natureza do ambiente:** de teste, com dados fictícios e sem pagamento, conforme o [ADR-0014](docs/architecture/adr/0014-hosted-test-environment.md).
-- **Checkout fora de DEV:** só existe com `DEPLOYMENT_ENVIRONMENT=hosted-test`, como exceção H2 ao D6.
+- **Checkout fora de DEV:** existe com `DEPLOYMENT_ENVIRONMENT=hosted-test` (exceção H2 ao D6) ou, em produção, com `DEPLOYMENT_ENVIRONMENT=production` na vitrine e, no backend, a integração do Mercado Pago com o segredo do webhook e `MERCADO_PAGO_TEST_TOKEN=false` (D6 revisado no bloco 2b). Sem isso, o backend recusa iniciar com o checkout ligado.
 - **Aviso:** todas as páginas mostram que se trata de um ambiente de teste.
 
 ## Entrega da loja e carrinho (Sprint 3, parcial)
