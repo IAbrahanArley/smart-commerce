@@ -144,7 +144,11 @@ class AdvisorAssistantIT {
         n ->
             n == 0
                 ? toolUse("toolu_1", "relatorio_periodo", Map.of("periodo", "THIS_MONTH"))
-                : text(answer));
+                // "alertas" never ran in this question, so it is not shown as a source.
+                : text(
+                    answer,
+                    source("relatorio_periodo", "receita bruta"),
+                    source("alertas", "pagamentos")));
     Browser a = login("assistente-ia-a@example.test");
 
     var response = a.ask(tenantA, question);
@@ -155,6 +159,11 @@ class AdvisorAssistantIT {
     assertThat(body.get("answer").asString()).isEqualTo(answer);
     assertThat(body.get("tools").get(0).asString()).isEqualTo("relatorio_periodo");
     assertThat(body.get("toolCalls").asInt()).isEqualTo(1);
+    assertThat(body.get("sources")).hasSize(1);
+    JsonNode cited = body.get("sources").get(0);
+    assertThat(cited.get("tool").asString()).isEqualTo("relatorio_periodo");
+    assertThat(cited.get("period").asString()).isEqualTo("THIS_MONTH");
+    assertThat(cited.get("metric").asString()).isEqualTo("receita bruta");
 
     assertThat(REQUESTS).hasSize(2);
     assertThat(KEYS).containsOnly(KEY);
@@ -162,6 +171,10 @@ class AdvisorAssistantIT {
     assertThat(first.get("model").asString()).isEqualTo("claude-opus-5-5");
     assertThat(first.get("max_tokens").asInt()).isEqualTo(4000);
     assertThat(first.get("output_config").get("effort").asString()).isEqualTo("low");
+    // A5: the final answer is structured (text plus sources), with a closed schema.
+    JsonNode schema = first.get("output_config").get("format").get("schema");
+    assertThat(schema.get("additionalProperties").asBoolean()).isFalse();
+    assertThat(schema.get("required").toString()).contains("answer", "sources");
     assertThat(first.get("tool_choice").get("type").asString()).isEqualTo("auto");
     assertThat(first.get("system").get(0).get("cache_control").get("type").asString())
         .isEqualTo("ephemeral");
@@ -212,6 +225,82 @@ class AdvisorAssistantIT {
     assertThat(a.get("/api/tenants/" + tenantB + "/advisor").statusCode()).isEqualTo(404);
     assertThat(REQUESTS).hasSize(2);
     assertThat(output.getAll()).doesNotContain(KEY, question, answer, "150.00");
+  }
+
+  @Test
+  void answersWithANumberWithoutASourceNeverReachTheOwner() throws Exception {
+    sale(tenantA, "150.00");
+    Browser a = login("assistente-ia-a@example.test");
+    String invented = "A receita foi R$ 150,00 e o lucro chegou a R$ 1.000.000,00.";
+    SCRIPT.set(
+        n ->
+            n == 0
+                ? toolUse("toolu_r", "relatorio_periodo", Map.of("periodo", "THIS_MONTH"))
+                : text(invented, source("relatorio_periodo", "receita e lucro")));
+    JsonNode rejected = JSON.readTree(a.ask(tenantA, "Qual foi meu lucro?").body());
+    assertThat(rejected.get("outcome").asString()).isEqualTo("UNGROUNDED");
+    assertThat(rejected.get("answer").isNull()).isTrue();
+    assertThat(rejected.get("sources")).isEmpty();
+    assertThat(rejected.toString()).doesNotContain("1.000.000");
+
+    // A number with no tool call at all (from "memory") is rejected the same way.
+    REQUESTS.clear();
+    SCRIPT.set(n -> text("Você vendeu R$ 150,00 neste mês."));
+    assertThat(JSON.readTree(a.ask(tenantA, "Quanto vendi?").body()).get("outcome").asString())
+        .isEqualTo("UNGROUNDED");
+
+    // Grounded numbers but no source named: the tools that ran are shown instead.
+    REQUESTS.clear();
+    SCRIPT.set(
+        n ->
+            n == 0
+                ? toolUse("toolu_r2", "relatorio_periodo", Map.of("periodo", "LAST_7_DAYS"))
+                : text("A receita bruta foi R$ 150,00."));
+    JsonNode fallback = JSON.readTree(a.ask(tenantA, "E na semana?").body());
+    assertThat(fallback.get("outcome").asString()).isEqualTo("ANSWERED");
+    assertThat(fallback.get("sources").get(0).get("tool").asString())
+        .isEqualTo("relatorio_periodo");
+    assertThat(fallback.get("sources").get(0).get("period").asString()).isEqualTo("LAST_7_DAYS");
+    assertThat(fallback.get("sources").get(0).get("metric").isNull()).isTrue();
+
+    // A final answer that is not the structured format is never shown.
+    REQUESTS.clear();
+    SCRIPT.set(n -> raw("Texto solto fora do formato."));
+    assertThat(JSON.readTree(a.ask(tenantA, "Tudo bem?").body()).get("outcome").asString())
+        .isEqualTo("UNGROUNDED");
+    assertThat(
+            jdbc.queryForList(
+                "SELECT outcome FROM advisor_usage ORDER BY created_at", String.class))
+        .containsExactly("UNGROUNDED", "UNGROUNDED", "ANSWERED", "UNGROUNDED");
+  }
+
+  @Test
+  void aConversationCarriesAtMostFourEarlierExchanges() throws Exception {
+    Browser a = login("assistente-ia-a@example.test");
+    SCRIPT.set(n -> text("Posso ajudar com vendas, pedidos, estoque e finanças."));
+    List<Map<String, String>> two =
+        List.of(
+            Map.of("question", "Oi", "answer", "Olá! Como posso ajudar?"),
+            Map.of("question", "O que você faz?", "answer", "Respondo sobre a sua loja."));
+    var response = a.ask(tenantA, "E sobre clima?", two);
+    assertThat(response.statusCode()).isEqualTo(200);
+    JsonNode messages = REQUESTS.getFirst().get("messages");
+    assertThat(messages).hasSize(5);
+    assertThat(messages.get(0).get("content").asString()).isEqualTo("Oi");
+    assertThat(messages.get(1).get("role").asString()).isEqualTo("assistant");
+    assertThat(messages.get(3).get("content").asString()).isEqualTo("Respondo sobre a sua loja.");
+    assertThat(messages.get(4).get("content").asString()).isEqualTo("E sobre clima?");
+
+    // A fifth earlier exchange, or an exchange without an answer, is refused before the model.
+    REQUESTS.clear();
+    List<Map<String, String>> five = new java.util.ArrayList<>();
+    for (int i = 0; i < 5; i++) five.add(Map.of("question", "Pergunta " + i, "answer", "Resposta"));
+    assertThat(a.ask(tenantA, "Mais uma?", five).statusCode()).isEqualTo(400);
+    assertThat(
+            a.ask(tenantA, "Mais uma?", List.of(Map.of("question", "Oi", "answer", " ")))
+                .statusCode())
+        .isEqualTo(400);
+    assertThat(REQUESTS).isEmpty();
   }
 
   @Test
@@ -305,7 +394,17 @@ class AdvisorAssistantIT {
             Map.of("type", "tool_use", "id", id, "name", name, "input", input)));
   }
 
-  private static Reply text(String text) {
+  /** The structured final answer (A5): text plus the sources the model names. */
+  @SafeVarargs
+  private static Reply text(String answer, Map<String, String>... sources) {
+    return raw(JSON.writeValueAsString(Map.of("answer", answer, "sources", List.of(sources))));
+  }
+
+  private static Map<String, String> source(String tool, String metric) {
+    return Map.of("tool", tool, "metric", metric);
+  }
+
+  private static Reply raw(String text) {
     return message("end_turn", List.of(Map.of("type", "text", "text", text)));
   }
 
@@ -447,10 +546,15 @@ class AdvisorAssistantIT {
     }
 
     HttpResponse<String> ask(UUID tenant, String question) throws Exception {
+      return ask(tenant, question, List.of());
+    }
+
+    HttpResponse<String> ask(UUID tenant, String question, List<Map<String, String>> history)
+        throws Exception {
       return send(
           "POST",
           "/api/tenants/" + tenant + "/advisor/questions",
-          JSON.writeValueAsString(Map.of("question", question)),
+          JSON.writeValueAsString(Map.of("question", question, "history", history)),
           csrfToken);
     }
 

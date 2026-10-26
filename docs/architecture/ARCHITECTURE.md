@@ -44,6 +44,7 @@ O módulo `advisor` ([ADR-0016](adr/0016-consultative-agent.md)) tem três parte
   - registro só de metadados em `advisor_usage`;
   - ferramentas só leitura com esquema fechado, que devolvem agregados e catálogo, nunca dados de comprador.
 - **Integração com o modelo (SC-026):** `AdvisorAssistantService` chama a API Claude pelo SDK Java oficial (`com.anthropic`), só no backend, com laço de no máximo 6 chamadas de ferramenta. As ferramentas rodam sempre com o ator e a loja da sessão. Os dados da loja vão delimitados e escapados. O uso e o custo estimado de cada pergunta ficam em `advisor_usage`, mesmo quando há erro. Só funciona com `ADVISOR_ENABLED=true` e `ANTHROPIC_API_KEY`.
+- **Explicabilidade (SC-027):** a resposta final é estruturada (texto e fontes). `AdvisorGrounding` recusa qualquer resposta com número ou data que não esteja nos resultados das ferramentas daquela pergunta. As fontes só citam ferramentas que rodaram. A conversa tem até 5 perguntas e vive só na página do admin: o servidor recebe as trocas anteriores com cada pergunta e não guarda texto.
 
 A dependência é de `advisor` para `finance`, `analytics`, `inventory`, `orders` e `payments`, nunca no sentido contrário.
 

@@ -95,6 +95,8 @@ O agente só lê: não altera pedidos, valores nem estoque, e não inventa núme
 
 ## SC-027 — Página "Assistente" e explicabilidade
 
+**Estado (2026-10-25):** implementada e validada com servidores falsos ([validação](../quality/SC-027-VALIDATION.md)). A página fica em `/lojas/[id]/assistente`; o assistente continua desligado por padrão.
+
 - **Página no admin (A12):**
   - pergunta e sugestões prontas;
   - resposta com **fontes** (ferramenta, período, métrica) e aviso de IA;
