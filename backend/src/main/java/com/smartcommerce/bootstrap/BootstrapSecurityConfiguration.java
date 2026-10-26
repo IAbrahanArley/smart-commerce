@@ -37,6 +37,7 @@ public class BootstrapSecurityConfiguration {
                         HttpMethod.GET,
                         "/api/public/stores/*",
                         "/api/public/stores/*/fulfillment",
+                        "/api/public/stores/*/logo",
                         "/api/public/stores/*/products/*",
                         "/api/public/stores/*/products/*/images",
                         "/api/public/stores/*/products/*/images/*/content",
@@ -145,6 +146,16 @@ public class BootstrapSecurityConfiguration {
                     .requestMatchers(HttpMethod.POST, "/api/tenants")
                     .authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/tenants/*/fulfillment")
+                    .authenticated()
+                    // MVP block 1b: store name, contacts and logo (OWNER checked in the query).
+                    .requestMatchers(
+                        HttpMethod.GET, "/api/tenants/*/profile", "/api/tenants/*/profile/logo")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.PUT, "/api/tenants/*/profile")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/tenants/*/profile/logo")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/tenants/*/profile/logo")
                     .authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/tenants/*/fulfillment")
                     .authenticated()

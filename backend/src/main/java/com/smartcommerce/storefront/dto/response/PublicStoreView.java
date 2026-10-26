@@ -1,3 +1,3 @@
 package com.smartcommerce.storefront.dto.response;
 
-public record PublicStoreView(String name, String slug) {}
+public record PublicStoreView(String name, String slug, PublicStoreProfileView profile) {}

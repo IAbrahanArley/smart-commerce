@@ -308,3 +308,10 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
 .order-timeline li[data-state="done"]::before { background: var(--store-action); border-color: var(--store-action); }
 .order-timeline li[data-state="current"] { font-weight: 700; }
 .order-timeline li[data-state="current"]::before { border-color: var(--store-action); background: var(--store-muted-background); }
+/* MVP block 1b: store logo beside the name, and the store's own contacts. */
+.store-name { display: inline-flex; align-items: center; gap: var(--store-space-3); }
+.store-logo { display: block; max-height: 2.5rem; max-width: 8rem; width: auto; height: auto; object-fit: contain; flex-shrink: 0; }
+.store-contacts { margin-top: var(--store-space-6); }
+.store-contacts h2 { font-size: 1rem; }
+.store-contacts ul { display: flex; flex-wrap: wrap; gap: var(--store-space-2) var(--store-space-6); margin: var(--store-space-2) 0 0; padding: 0; list-style: none; }
+.store-contacts a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; overflow-wrap: anywhere; }

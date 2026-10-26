@@ -55,6 +55,14 @@ try {
   assert.match(catalog.html, /Disponível/);
   assert.ok(catalog.html.includes(`/lojas/loja-teste/produtos/${id}`));
   assert.ok(catalog.html.includes(`?after=${id}`));
+  // MVP block 1b: logo beside the name and the store's own contacts.
+  assert.match(catalog.html, /Fale com a loja/);
+  assert.ok(catalog.html.includes('href="https://wa.me/5511988887777"') && catalog.html.includes("(11) 98888-7777"), "WhatsApp formatado.");
+  assert.ok(catalog.html.includes('href="mailto:contato@loja.example"'));
+  assert.ok(catalog.html.includes('href="https://www.instagram.com/loja.teste/"'));
+  assert.ok(catalog.html.includes('src="/midia/lojas/loja-teste/logo"'));
+  const logo = await fetch(`${base}/midia/lojas/loja-teste/logo`);
+  assert.equal(logo.status, 200); assert.equal(logo.headers.get("content-type"), "image/png");
   const detail = await page(`/lojas/loja-teste/produtos/${id}`);
   assert.equal(detail.response.status, 200);
   assert.match(detail.html, /id="product-title">Produto público de teste/);
@@ -85,6 +93,8 @@ try {
   assert.ok(!next.html.includes("Ver mais produtos"));
   const empty = await page("/lojas/loja-vazia");
   assert.match(empty.html, /Nenhum produto publicado/);
+  assert.ok(!empty.html.includes("Fale com a loja") && !empty.html.includes("<script>alert"), "Contatos inválidos são descartados.");
+  assert.ok(!empty.html.includes("/midia/lojas/loja-vazia/logo"), "Sem logo, só o nome.");
   for (const path of ["/pagina-inexistente", "/entrar", "/api/auth/me"]) {
     const missing = await page(path);
     assert.equal(missing.response.status, 404, path);

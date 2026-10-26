@@ -5,6 +5,7 @@ import com.smartcommerce.catalog.domain.VariantValues;
 import com.smartcommerce.inventory.domain.ReservationPolicy;
 import com.smartcommerce.storefront.domain.PublicLocator;
 import com.smartcommerce.storefront.domain.PublicProduct;
+import com.smartcommerce.storefront.domain.PublicStore;
 import com.smartcommerce.storefront.domain.StorefrontException;
 import com.smartcommerce.storefront.dto.response.*;
 import com.smartcommerce.storefront.repositories.StorefrontRepository;
@@ -34,6 +35,7 @@ public class StorefrontService {
     return new PublicStorefrontView(
         store.name(),
         store.slug(),
+        profile(store),
         page,
         products.size() > 20 ? page.getLast().id().toString() : null);
   }
@@ -44,7 +46,7 @@ public class StorefrontService {
     var now = ReservationPolicy.now(clock);
     var found = storefront.find(slug, product, now).orElseThrow(StorefrontException::new);
     return new PublicProductDetailsView(
-        new PublicStoreView(store.name(), store.slug()),
+        new PublicStoreView(store.name(), store.slug(), profile(store)),
         view(
             found,
             storefront.variants(slug, product, now).stream()
@@ -73,5 +75,16 @@ public class StorefrontService {
         ProductDescription.sanitize(product.descriptionHtml()),
         product.kind(),
         variants);
+  }
+
+  /** The published store's logo bytes and type (MVP block 1b). */
+  @Transactional(readOnly = true)
+  public StorefrontRepository.StoreLogo logo(String slug) {
+    return storefront.logo(PublicLocator.slug(slug)).orElseThrow(StorefrontException::new);
+  }
+
+  private static PublicStoreProfileView profile(PublicStore store) {
+    return new PublicStoreProfileView(
+        store.contactEmail(), store.whatsapp(), store.instagram(), store.logo());
   }
 }

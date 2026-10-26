@@ -8,6 +8,7 @@ import { Arrow } from "@/components/arrow";
 import { FocusNotice } from "@/components/focus-notice";
 import { PaymentForm } from "@/components/payment-form";
 import { loadCatalog } from "@/lib/public-store";
+import { StoreContacts } from "@/components/store-contacts";
 import { orderCookieName, validOrderId, validOrderToken } from "@/lib/order-cookie";
 import { loadOrder, type OrderStatus } from "@/lib/orders";
 import { formatBRL } from "@/lib/price";
@@ -89,6 +90,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
             <p className="cart-note">Guarde o número do pedido. Esta página fica disponível somente neste navegador.</p>
           </aside>
         </div>
+        <StoreContacts store={store} />
       </main>
     </>
   );

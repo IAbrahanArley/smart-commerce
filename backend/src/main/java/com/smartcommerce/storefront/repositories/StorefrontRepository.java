@@ -37,17 +37,51 @@ public class StorefrontRepository {
     List<?> rows =
         entities
             .createNativeQuery(
-                "SELECT s.name,s.slug FROM store s WHERE s.slug=:slug AND s.status='PUBLISHED'")
+                """
+                SELECT s.name,s.slug,p.contact_email,p.whatsapp,p.instagram,
+                  p.logo_content IS NOT NULL
+                FROM store s LEFT JOIN store_profile p ON p.store_id=s.id AND p.tenant_id=s.tenant_id
+                WHERE s.slug=:slug AND s.status='PUBLISHED'
+                """)
             .setParameter("slug", slug)
             .getResultList();
     return rows.stream()
         .map(
             raw -> {
               Object[] row = (Object[]) raw;
-              return new PublicStore((String) row[0], (String) row[1]);
+              return new PublicStore(
+                  (String) row[0],
+                  (String) row[1],
+                  (String) row[2],
+                  (String) row[3],
+                  (String) row[4],
+                  Boolean.TRUE.equals(row[5]));
             })
         .findFirst();
   }
+
+  /** The logo of a published store (MVP block 1b); empty when hidden or absent. */
+  public Optional<StoreLogo> logo(String slug) {
+    List<?> rows =
+        entities
+            .createNativeQuery(
+                """
+                SELECT p.logo_content,p.logo_media_type FROM store s
+                JOIN store_profile p ON p.store_id=s.id AND p.tenant_id=s.tenant_id
+                WHERE s.slug=:slug AND s.status='PUBLISHED' AND p.logo_content IS NOT NULL
+                """)
+            .setParameter("slug", slug)
+            .getResultList();
+    return rows.stream()
+        .map(
+            raw -> {
+              Object[] row = (Object[]) raw;
+              return new StoreLogo((byte[]) row[0], (String) row[1]);
+            })
+        .findFirst();
+  }
+
+  public record StoreLogo(byte[] bytes, String mediaType) {}
 
   public List<PublicProduct> list(String slug, UUID after, Instant now) {
     var query =

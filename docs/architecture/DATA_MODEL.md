@@ -104,6 +104,8 @@ V24 (SC-025), aditiva: `advisor_usage`, uma linha por pergunta ao assistente, **
 
 V26 (mudança da P1 do ADR-0013, 2026-10-24), aditiva: `payment.provider_payment_id`, o id do pagamento aprovado no Mercado Pago (só dígitos, único por provedor), usado no reembolso. Com preferências, `payment.provider_order_id` guarda o id da preferência e `payment_event.provider_order_id` o id do pagamento notificado (tópico `payment`).
 
+V29 (bloco 1b do MVP, 2026-10-26), aditiva: `store_profile`, uma linha opcional por loja com contatos públicos (e-mail, WhatsApp em E.164 e usuário do Instagram) e o logo (bytes JPEG/PNG normalizados no banco, como as fotos do ADR-0011), com versão otimista. O nome continua em `store.name`. Depende da V28 (bloco 1a).
+
 V27 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
 - **`DELETE`:** recusado sempre;
 - **`UPDATE`:** só para preencher `settled_at` uma única vez, a partir de nulo, que é o caminho da SC-018;

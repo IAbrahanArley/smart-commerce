@@ -20,7 +20,18 @@ public final class ImageNormalizer {
   public static final int MAX_BYTES = 5 * 1024 * 1024;
   private final Semaphore processing = new Semaphore(2);
 
+  /** Product photos: at least 300 pixels on each side. */
+  public static final int PHOTO_MIN_SIDE = 300;
+
   public ImageContent normalize(byte[] bytes, String filename, String declaredType) {
+    return normalize(bytes, filename, declaredType, PHOTO_MIN_SIDE);
+  }
+
+  /**
+   * Same checks with another minimum side, for images that are legitimately small or wide (the
+   * store logo, MVP block 1b).
+   */
+  public ImageContent normalize(byte[] bytes, String filename, String declaredType, int minSide) {
     if (bytes.length == 0 || bytes.length > MAX_BYTES)
       throw invalid("Use uma imagem de até 5 MiB.");
     String lower = filename == null ? "" : filename.toLowerCase(Locale.ROOT);
@@ -46,12 +57,15 @@ public final class ImageNormalizer {
           throw invalid("O tipo e a extensão devem corresponder ao conteúdo da imagem.");
         reader.setInput(input, true, true);
         int width = reader.getWidth(0), height = reader.getHeight(0);
-        if (width < 300
-            || height < 300
+        if (width < minSide
+            || height < minSide
             || width > 4096
             || height > 4096
             || (long) width * height > 16_000_000)
-          throw invalid("Use imagens entre 300 e 4096 pixels em cada lado, com até 16 megapixels.");
+          throw invalid(
+              "Use imagens entre "
+                  + minSide
+                  + " e 4096 pixels em cada lado, com até 16 megapixels.");
         BufferedImage original = reader.read(0);
         double scale = Math.min(1d, 2048d / Math.max(width, height));
         int scaledWidth = Math.max(1, (int) Math.round(width * scale));
