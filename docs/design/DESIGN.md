@@ -128,6 +128,7 @@ Aprovado em 2026-10-17 a partir da [proposta de referências de mercado](PROPOST
 - **Páginas:** conteúdo até cerca de 80rem ao lado do menu; formulários com no máximo 45rem por coluna.
 - **Listas operacionais:** tabela semântica com `caption` e cabeçalhos a partir de 48rem; abaixo disso, lista de linhas com os mesmos dados. Sem seleção em massa, filtros ou ordenação enquanto não houver funcionalidade.
 - **Criação em rota própria:** "Novo produto" é uma página (`/produtos/novo`) acionada pelo cabeçalho da lista; após cadastrar, o lojista segue para a edição do produto.
+- **Assistente (SC-027, 2026-10-25):** uma coluna de até 48rem. A pergunta do lojista fica num balão à direita, com o fundo de seleção. A resposta fica num cartão de superfície com borda esquerda de ação; quando o assistente não responde, a borda é neutra. As fontes aparecem em lista menor abaixo de um divisor. O aviso de IA usa o componente `notice`. Tudo com os tokens existentes, sem cor nova.
 - **Edição em duas colunas:** a partir de 64rem, coluna principal (identificação, descrição, fotos e variações) e lateral com publicação e estoque. Em telas menores, uma coluna na ordem do DOM.
 
 ## Repaginação 2026-10 (referência Dashtail)

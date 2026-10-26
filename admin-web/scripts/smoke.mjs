@@ -7,6 +7,7 @@ import { reservedStockMessage, wholeQuantity } from "../src/lib/inventory.ts";
 import { storefrontUrl } from "../src/lib/tenant-api.ts";
 import { backendOrigin, hostedTestEnvironment } from "../src/lib/deployment.ts";
 import { alertLink, alertText, parseAlerts } from "../src/lib/alerts.ts";
+import { MAX_EXCHANGES, askError, historyFor, outcomeText, parseAnswer, parseStatus, questionError, quotaText, sourceText } from "../src/lib/advisor.ts";
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
 
@@ -151,6 +152,30 @@ assert.equal(alertLink(parsedAlerts[0], "t-1").href, "/lojas/t-1/produtos");
 assert.equal(alertLink({ ...parsedAlerts[0], target: "ORDERS" }, "t-1").href, "/lojas/t-1/pedidos?situacao=PENDING_PAYMENT");
 assert.equal(parseAlerts(null), null);
 
+// Assistant (SC-027): answers keep only known sources, outcomes are worded, the conversation is short.
+assert.deepEqual(parseStatus({ enabled: true, monthlyQuota: 100, usedThisMonth: 3, remaining: 97 }), { enabled: true, monthlyQuota: 100, usedThisMonth: 3, remaining: 97 });
+for (const invalid of [null, {}, { enabled: "yes", monthlyQuota: 1, usedThisMonth: 0, remaining: 1 }, { enabled: true, monthlyQuota: -1, usedThisMonth: 0, remaining: 0 }]) assert.equal(parseStatus(invalid), null);
+const advisorAnswer = parseAnswer({ outcome: "ANSWERED", answer: "Receita de R$ 150,00.", sources: [
+  { tool: "relatorio_periodo", period: "THIS_MONTH", metric: "receita bruta" },
+  { tool: "apagar_pedidos", period: null, metric: "x" },
+  { tool: "alertas", period: "SEMPRE", metric: " " },
+] });
+assert.equal(advisorAnswer.sources.length, 2, "Ferramenta desconhecida descartada.");
+assert.equal(sourceText(advisorAnswer.sources[0]), "Relatório financeiro · Este mês · receita bruta");
+assert.equal(sourceText(advisorAnswer.sources[1]), "Alertas", "Período inválido e métrica vazia omitidos.");
+assert.equal(parseAnswer({ outcome: "ANSWERED", answer: " ", sources: [] }), null, "Resposta sem texto não é exibida.");
+assert.equal(parseAnswer({ outcome: "UNGROUNDED", answer: "R$ 1 milhão", sources: [] }).answer, null, "Texto só em respostas aceitas.");
+assert.equal(parseAnswer({ outcome: "UNKNOWN" }), null);
+assert.match(outcomeText("UNGROUNDED"), /com segurança/); assert.equal(outcomeText("ANSWERED"), null);
+assert.equal(questionError("   "), "Escreva uma pergunta."); assert.equal(questionError("Oi"), null);
+assert.match(questionError("x".repeat(501)), /500/);
+assert.match(askError(429), /todas as perguntas/); assert.match(askError(503), /indisponível/);
+assert.equal(quotaText({ enabled: true, monthlyQuota: 100, usedThisMonth: 99, remaining: 1 }), "Resta 1 pergunta de 100 neste mês.");
+const asked = Array.from({ length: 6 }, (_, index) => ({ id: index, question: `P${index}`, result: index === 2
+  ? { outcome: "REFUSED", answer: null, sources: [] } : { outcome: "ANSWERED", answer: `R${index}`, sources: [] } }));
+assert.deepEqual(historyFor(asked).map(item => item.question), ["P1", "P3", "P4", "P5"], "Só respostas aceitas, no máximo 4.");
+assert.equal(MAX_EXCHANGES, 5);
+
 // Product photos: the cover URL is built only from canonical ids, and counts are worded.
 const productId = "11111111-1111-4111-8111-111111111111";
 const coverId = "22222222-2222-4222-8222-222222222222";
@@ -242,6 +267,7 @@ try {
     ["/lojas/00000000-0000-0000-0000-000000000000/pagamentos?mercadoPago=negado", "Pagamentos", "A autorização foi recusada no Mercado Pago"],
     ["/lojas/00000000-0000-0000-0000-000000000000/despesas?mes=2026-09", "Despesas", "Setembro de 2026"],
     ["/lojas/00000000-0000-0000-0000-000000000000/financeiro?periodo=LAST_7_DAYS", "Financeiro", 'value="LAST_7_DAYS" selected'],
+    ["/lojas/00000000-0000-0000-0000-000000000000/assistente", "Assistente", "Consultando o assistente"],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'name="situacao"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Consultando pedido", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Consultando catálogo"],

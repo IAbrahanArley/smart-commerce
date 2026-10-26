@@ -55,7 +55,8 @@ public final class AdvisorController {
             assistant.ask(
                 UUID.fromString(actor.getName()),
                 tenantId,
-                request == null ? null : request.question()));
+                request == null ? null : request.question(),
+                request == null ? null : request.history()));
   }
 
   @ExceptionHandler(AdvisorException.class)

@@ -12,6 +12,7 @@ const PATHS = {
   eye: <><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
   external: <><path d="M14 4h6v6" /><path d="m20 4-9 9" /><path d="M18 14v6H4V6h6" /></>,
   chart: <><path d="M4 20V4" /><path d="M4 20h16" /><path d="M8 16v-4M12 16V8M16 16v-6" /></>,
+  spark: <><path d="M12 3v4M12 17v4M3 12h4M17 12h4" /><path d="m6.5 6.5 2 2M15.5 15.5l2 2M6.5 17.5l2-2M15.5 8.5l2-2" /></>,
   wallet: <><path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4Z" /><path d="M4 7V6a2 2 0 0 1 2-2h10v3" /><path d="M16 13h4" /></>,
 };
 
