@@ -47,6 +47,15 @@ public final class BrevoVerificationMail implements VerificationMail {
 
   @Override
   public void send(String recipient, String activationLink) {
+    deliver(body(recipient, activationLink));
+  }
+
+  @Override
+  public void sendPasswordReset(String recipient, String resetLink) {
+    deliver(resetBody(recipient, resetLink));
+  }
+
+  private void deliver(String json) {
     HttpResponse<Void> response;
     try {
       response =
@@ -56,7 +65,7 @@ public final class BrevoVerificationMail implements VerificationMail {
                   .header("api-key", apiKey)
                   .header("Content-Type", "application/json")
                   .header("Accept", "application/json")
-                  .POST(HttpRequest.BodyPublishers.ofString(body(recipient, activationLink)))
+                  .POST(HttpRequest.BodyPublishers.ofString(json))
                   .build(),
               HttpResponse.BodyHandlers.discarding());
     } catch (IOException failure) {
@@ -84,6 +93,28 @@ public final class BrevoVerificationMail implements VerificationMail {
             + html(activationLink)
             + "\">Confirmar e-mail e definir senha</a></p>"
             + "<p>O link expira em 30 minutos. Se não solicitou, ignore esta mensagem.</p>");
+    return JSON.writeValueAsString(body);
+  }
+
+  String resetBody(String recipient, String resetLink) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("sender", Map.of("email", senderEmail, "name", senderName));
+    body.put("to", List.of(Map.of("email", recipient)));
+    body.put("subject", "Redefina sua senha — Smart Commerce");
+    body.put(
+        "textContent",
+        "Recebemos um pedido para redefinir a senha da sua conta. Abra o link e escolha uma nova"
+            + " senha:\n"
+            + resetLink
+            + "\n\nO link expira em 30 minutos e só pode ser usado uma vez. Se não pediu, ignore"
+            + " esta mensagem: sua senha atual continua valendo.\n");
+    body.put(
+        "htmlContent",
+        "<p>Recebemos um pedido para redefinir a senha da sua conta.</p><p><a href=\""
+            + html(resetLink)
+            + "\">Escolher uma nova senha</a></p>"
+            + "<p>O link expira em 30 minutos e só pode ser usado uma vez. Se não pediu, ignore"
+            + " esta mensagem: sua senha atual continua valendo.</p>");
     return JSON.writeValueAsString(body);
   }
 
