@@ -150,7 +150,6 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .saved-description { padding: var(--sc-space-4); border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-control); overflow-wrap: anywhere; }
 
 /* Admin frame (DESIGN.md: Moldura e padrões do admin; Repaginação 2026-10). */
-.icon { flex: none; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .app-main { flex: 1; min-width: 0; width: 100%; max-width: 90rem; padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 4vw, 2.5rem); }
 .app-footer { padding: var(--sc-space-6) clamp(1rem, 4vw, 2.5rem); text-align: left; }
@@ -386,4 +385,36 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .status-tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--sc-space-4); white-space: nowrap; color: var(--sc-color-text-secondary); font-size: .875rem; font-weight: 600; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .status-tabs a:hover { color: var(--sc-color-action); text-decoration: none; }
 .status-tabs a[aria-current="page"] { color: var(--sc-color-action); border-bottom-color: var(--sc-color-action); }
+
+/* Design system Dashtail, phase 4: forms, cards, alerts and page headers for every operational screen.
+   These rules come last in the legacy layer, so they win over the original ones at equal specificity.
+   Control borders keep 3:1 against the surface; targets stay at 44px. */
+:root { --sc-color-card-border: #dfe5ec; --sc-shadow-card: 0 1px 2px rgb(23 43 58 / 4%), 0 2px 8px rgb(23 43 58 / 6%); }
+:focus-visible { outline: 2px solid var(--sc-color-focus); outline-offset: 2px; }
+label, dt { font-weight: 600; }
+.form-field > label, .form-field > legend { font-size: .875rem; }
+input, select, textarea { padding: 0 var(--sc-space-3); font-size: .9375rem; transition: border-color .15s ease, box-shadow .15s ease; }
+textarea { padding: var(--sc-space-3); line-height: 1.5; }
+input:hover, select:hover, textarea:hover { border-color: var(--sc-color-text-secondary); }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--sc-color-focus); outline-offset: 1px; border-color: var(--sc-color-action); }
+input:disabled, select:disabled, textarea:disabled { color: var(--sc-color-disabled-text); background: var(--sc-color-disabled-background); cursor: not-allowed; }
+select:not([multiple]) { appearance: none; padding-right: 2.5rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23365165' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .75rem center; background-size: 1rem; cursor: pointer; }
+input[type="checkbox"], input[type="radio"] { width: 1.125rem; height: 1.125rem; min-height: 0; padding: 0; flex: none; accent-color: var(--sc-color-action); cursor: pointer; }
+input[type="file"] { padding: var(--sc-space-2); cursor: pointer; }
+button, .button-link { display: inline-flex; align-items: center; justify-content: center; gap: var(--sc-space-2); padding: 0 1.125rem; font-size: .9375rem; font-weight: 600; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+.button-secondary:hover, .button-secondary:active { border-color: var(--sc-color-action); }
+button:disabled { cursor: not-allowed; }
+.page-header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.01em; }
+.breadcrumb ol { font-size: .8125rem; }
+.page h2, .side-card h2 { font-weight: 600; }
+.side-card, .data-table-wrap, .empty-panel, .page-state, .page-panel, .account-summary, .stores-panel, .table-toolbar, .workspace-main,
+.product-new > form, .product-workspace > .product-section, .store-card, .category-item { border-color: var(--sc-color-card-border); border-radius: var(--sc-radius-surface); box-shadow: var(--sc-shadow-card); }
+.side-card > h2:first-child, .stores-panel > h2:first-child { border-bottom-color: var(--sc-color-card-border); }
+.empty-panel { text-align: center; }
+.empty-panel p { margin-inline: auto; }
+/* Alerts (Dashtail): soft background with a strong left edge; the text keeps the meaning. */
+.feedback { padding: var(--sc-space-3) var(--sc-space-4); border: 0; border-left: 4px solid currentColor; border-radius: var(--sc-radius-control); font-size: .9375rem; }
+.notice { border-left-width: 4px; border-radius: var(--sc-radius-control); }
+.status-badge { padding: .125rem .625rem; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+.page-state-icon { border-radius: 999px; }
 }
