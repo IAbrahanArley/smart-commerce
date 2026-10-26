@@ -7,6 +7,7 @@ import { type Category, MAX_CATEGORIES, categoryError, categoryName, categoryNam
 import PageHeader from "@/components/page-header";
 import PageState from "@/components/page-state";
 import { useConfirm } from "@/components/confirm-dialog";
+import { Loading } from "@/components/ui/loading";
 
 // MVP block 1c: flat categories of the store. Removing one keeps its products, without a category.
 export default function StoreCategories({ tenantId }: { tenantId: string }) {
@@ -95,7 +96,7 @@ export default function StoreCategories({ tenantId }: { tenantId: string }) {
   return <section className="page store-categories" aria-labelledby="categories-title" aria-busy={state === "loading" || busy}>{dialog}
     <PageHeader id="categories-title" title="Categorias" breadcrumbs={[{ href: `${storePath}/produtos`, label: "Produtos" }]}
       description="Organize os produtos para o comprador encontrar o que procura na vitrine. Cada produto pode ter uma categoria; escolha-a na edição do produto." />
-    {state === "loading" ? <PageState kind="loading" icon="box" title="Consultando categorias…">Carregando as categorias da loja.</PageState> : null}
+    {state === "loading" ? <Loading context="categorias" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para gerenciar as categorias.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="box" title="Não foi possível consultar as categorias" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar novamente">Confira a conexão e tente novamente.</PageState> : null}

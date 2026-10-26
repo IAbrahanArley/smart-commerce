@@ -7,6 +7,7 @@ import type { Product } from "@/lib/catalog";
 import { MOVEMENT_LABELS, reservedStockMessage, wholeQuantity, type InventorySnapshot, type MovementRequest } from "@/lib/inventory";
 import { variantLabel } from "@/components/variant-builder";
 import PageHeader from "@/components/page-header";
+import { Loading } from "@/components/ui/loading";
 
 const integer = new Intl.NumberFormat("pt-BR");
 const date = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "medium", timeZone: "America/Sao_Paulo" });
@@ -142,7 +143,7 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
   return <section className="page page-panel" aria-labelledby="inventory-title">
     <PageHeader id="inventory-title" title="Estoque do produto" current="Estoque"
       breadcrumbs={[{ href: `/lojas/${encodeURIComponent(tenantId)}/produtos`, label: "Produtos" }, { href: productPath, label: product?.name ?? "Produto" }]} />
-    {state === "loading" ? <p role="status">Consultando estoque…</p> : null}
+    {state === "loading" ? <Loading context="estoque" /> : null}
     {state === "signed-out" ? <><p role="status">Entre novamente para consultar o estoque.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <p role="status">Produto ou loja indisponível. Escolha uma loja à qual você tem acesso.</p> : null}
     {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar o estoque. Tente novamente.</p><button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar estoque novamente</button></> : null}

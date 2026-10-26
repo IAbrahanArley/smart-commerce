@@ -12,6 +12,7 @@ import ProductImages from "@/components/product-images";
 import ProductVariants from "@/components/product-variants";
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
+import { Loading } from "@/components/ui/loading";
 
 export default function Catalog({ tenantId, productId, view, created = false }: { tenantId: string; productId?: string; view: "list" | "new" | "edit"; created?: boolean }) {
   const router = useRouter();
@@ -72,7 +73,7 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
       breadcrumbs={view === "list" ? undefined : [{ href: `${storePath}/produtos`, label: "Produtos" }]}
       description={state === "ready" && store ? <>Loja: <strong translate="no">{store.store.name}</strong></> : undefined}
       action={view === "list" && state === "ready" ? <span className="form-actions"><Link className="button-link button-secondary" href={`${storePath}/categorias`}>Categorias</Link><Link className="button-link" href={`${storePath}/produtos/novo`}>Novo produto</Link></span> : undefined} />
-    {state === "loading" ? <p role="status">Consultando catálogo…</p> : null}
+    {state === "loading" ? <Loading context="catálogo" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar os produtos.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <p role="status">Produto ou loja indisponível. Volte para suas lojas e escolha uma loja à qual você tem acesso.</p> : null}
     {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar o catálogo. Tente novamente.</p><button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar catálogo novamente</button></> : null}

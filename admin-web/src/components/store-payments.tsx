@@ -9,6 +9,7 @@ import { authorizationTarget, callbackMessage, parseConnection, STATUS_TEXT, typ
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 import { useConfirm } from "@/components/confirm-dialog";
+import { Loading } from "@/components/ui/loading";
 
 // SC-012: connect the store's own Mercado Pago account (ADR-0003). The backend owns the OAuth state,
 // the PKCE verifier and the encrypted tokens; this page only starts the attempt, shows the
@@ -97,7 +98,7 @@ export default function StorePayments({ tenantId, result }: { tenantId: string; 
     <PageHeader id="payments-title" title="Pagamentos"
       description="Conecte a conta Mercado Pago da sua loja. O pagamento cai direto na sua conta; a plataforma não guarda dados de cartão." />
     {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}
-    {state === "loading" ? <p role="status">Consultando a conexão de pagamentos…</p> : null}
+    {state === "loading" ? <Loading context="conexão de pagamentos" /> : null}
     {state === "signed-out" ? <><p role="status">Entre novamente para consultar os pagamentos. Sua sessão pode ter expirado.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <p role="status">Loja indisponível. Volte para suas lojas e escolha uma loja à qual você tem acesso.</p> : null}
     {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar a conexão de pagamentos.</p>

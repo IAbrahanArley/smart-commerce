@@ -9,6 +9,7 @@ import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 import { useConfirm } from "@/components/confirm-dialog";
 import PageState from "@/components/page-state";
+import { Loading } from "@/components/ui/loading";
 
 type Draft = { category: ExpenseCategory | ""; kind: ExpenseKind | ""; description: string; amount: string; competenceDate: string; paidOn: string };
 type Errors = Partial<Record<keyof Draft, string>>;
@@ -157,7 +158,7 @@ export default function StoreExpenses({ tenantId, month }: { tenantId: string; m
       <Link className="button-link button-secondary" href={`${storePath}/despesas?mes=${shiftMonth(month, 1)}`} prefetch={false}>Próximo mês <span aria-hidden="true">›</span></Link>
     </nav>
     {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback ${feedback.error ? "feedback-error" : "feedback-success"}`}>{feedback.text}</p> : null}
-    {state === "loading" ? <PageState kind="loading" icon="wallet" title="Consultando despesas…">Carregando os lançamentos do mês selecionado.</PageState> : null}
+    {state === "loading" ? <Loading context="despesas" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar as despesas.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="wallet" title="Não foi possível consultar as despesas" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar despesas novamente">Confira a conexão e tente novamente. Seus lançamentos continuam registrados.</PageState> : null}

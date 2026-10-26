@@ -47,3 +47,22 @@ export function percentText(value: string | null): string {
   const number = Number(value);
   return Number.isFinite(number) ? `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number)}%` : "—";
 }
+
+export type BreakdownRow = { label: string; amount: number; amountText: string; kind: "revenue" | "deduction" | "result" };
+
+// Path from gross revenue to the contribution margin, in the order of the report. Deductions are drawn
+// as positive bars; the text always comes from the backend.
+export function marginBreakdown(report: Pick<FinanceReport, "grossRevenue" | "refunds" | "fees" | "cogs" | "variableExpenses" | "contributionMargin">): BreakdownRow[] {
+  const row = (label: string, value: string, kind: BreakdownRow["kind"]): BreakdownRow => {
+    const amount = Math.abs(Number(value));
+    return { label, amount: Number.isFinite(amount) ? amount : 0, amountText: value, kind };
+  };
+  return [
+    row("Receita bruta", report.grossRevenue, "revenue"),
+    row("Reembolsos", report.refunds, "deduction"),
+    row("Taxas", report.fees, "deduction"),
+    row("Custo dos produtos", report.cogs, "deduction"),
+    row("Despesas variáveis", report.variableExpenses, "deduction"),
+    row("Margem de contribuição", report.contributionMargin, "result"),
+  ];
+}

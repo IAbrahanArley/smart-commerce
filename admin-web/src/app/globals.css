@@ -31,6 +31,9 @@
   --color-success: var(--sc-color-success);
   --color-success-soft: var(--sc-color-success-background);
   --color-link: var(--sc-color-link);
+  /* Second series (paid orders, margin) and deductions in charts: 3:1 or more against the card. */
+  --color-chart-2: #0f766e;
+  --color-chart-deduction: #657888;
   --radius-sm: .25rem;
   --radius-md: .375rem;
   --radius-lg: .5rem;
@@ -267,14 +270,6 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 /* Safety net: a table wider than its card scrolls inside the card, never the page. */
 .data-table-wrap { overflow-x: auto; }
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--sc-space-4); max-width: none; margin-block: var(--sc-space-6); }
-.stat-card { display: flex; align-items: flex-start; gap: var(--sc-space-4); min-width: 0; padding: var(--sc-space-6); background: var(--sc-color-surface); border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-surface); }
-.stat-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; flex: none; color: var(--sc-color-action); background: var(--sc-color-selected-background); border-radius: var(--sc-radius-surface); }
-.stat-body { display: grid; gap: var(--sc-space-1); min-width: 0; overflow-wrap: anywhere; }
-.stat-label, .stat-value, .stat-detail { margin: 0; }
-.stat-label { font-size: .875rem; font-weight: 700; color: var(--sc-color-text-secondary); }
-.stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.stat-detail { font-size: .875rem; color: var(--sc-color-text-secondary); }
-.stat-body a { display: inline-flex; align-items: center; min-height: 44px; }
 .overview-grid { display: grid; gap: var(--sc-space-4); }
 .overview-grid .store-summary { margin-block: 0; }
 @media (min-width: 64rem) { .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
@@ -287,10 +282,6 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 /* SC-022 dashboard: plain SVG chart with the platform tokens (ADR-0015 F9). */
 .dashboard-chart { margin: var(--sc-space-6) 0 var(--sc-space-3); }
 .dashboard-chart figcaption { font-weight: 700; margin-bottom: var(--sc-space-2); }
-.dashboard-chart svg { display: block; width: 100%; height: auto; max-height: 14rem; }
-.dashboard-bar { fill: var(--sc-color-action); }
-.dashboard-axis { stroke: var(--sc-color-divider); stroke-width: 1; }
-.dashboard-label { fill: var(--sc-color-text-secondary); font-size: 12px; }
 .dashboard-list { margin-top: var(--sc-space-6); }
 .dashboard-list h3 { font-size: 1rem; }
 .dashboard-list ul { margin: var(--sc-space-2) 0 0; padding-left: var(--sc-space-6); display: grid; gap: var(--sc-space-2); }
@@ -368,7 +359,6 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .advisor-form .form-field { margin-block: 0; }
 /* SC-028: "Explicar" opens the assistant; a quiet text link so it never competes with the figure. */
 .explain-link { display: inline-flex; align-items: center; min-height: 44px; font-size: .875rem; font-weight: 700; }
-.stat-card .explain-link { margin-top: var(--sc-space-1); }
 /* MVP block 1b: logo preview on the store data page; never stretched, on a neutral background. */
 .store-profile { max-width: 45rem; }
 .store-logo-preview { display: block; max-width: min(100%, 16rem); max-height: 8rem; width: auto; height: auto; object-fit: contain; margin-bottom: var(--sc-space-4); padding: var(--sc-space-3); background: var(--sc-color-background); border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-control); }

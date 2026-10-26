@@ -7,6 +7,7 @@ import { type ProfileErrors, type ProfileFields, type StoreProfile, logoFileErro
 import PageHeader from "@/components/page-header";
 import PageState from "@/components/page-state";
 import { useConfirm } from "@/components/confirm-dialog";
+import { Loading } from "@/components/ui/loading";
 
 // MVP block 1b (PRD item 10): what the storefront shows about the store. Contacts are public by
 // choice: empty fields are not shown. Name/contacts and the logo share the profile version, so a
@@ -114,7 +115,7 @@ export default function StoreProfileEditor({ tenantId }: { tenantId: string }) {
 
   return <section className="page store-profile" aria-labelledby="profile-title" aria-busy={state === "loading" || busy}>{dialog}
     <PageHeader id="profile-title" title="Dados da loja" description="Nome, logo e contatos que aparecem na vitrine publicada. Contatos em branco não são mostrados." />
-    {state === "loading" ? <PageState kind="loading" icon="store" title="Consultando os dados da loja…">Carregando nome, logo e contatos.</PageState> : null}
+    {state === "loading" ? <Loading context="dados da loja" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para editar os dados da loja.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="store" title="Não foi possível consultar os dados da loja" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar novamente">Confira a conexão e tente novamente.</PageState> : null}

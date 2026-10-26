@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/auth-api";
 import { alertLink, alertText, parseAlerts, SEVERITY_TEXT, type StoreAlert } from "@/lib/alerts";
 import { explainHref } from "@/lib/advisor";
+import { Loading } from "@/components/ui/loading";
 
 // SC-024: deterministic store alerts on the overview. They work without the assistant; the
 // severity is written out, never conveyed by color alone.
@@ -26,7 +27,7 @@ export default function StoreAlerts({ tenantId, explain = false }: { tenantId: s
 
   return <section className="side-card store-alerts" aria-labelledby="alerts-title" aria-busy={state === "loading"}>
     <h2 id="alerts-title">Alertas</h2>
-    {state === "loading" ? <p role="status">Consultando alertas…</p> : null}
+    {state === "loading" ? <Loading context="alertas" className="py-4" /> : null}
     {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar os alertas.</p>
       <button type="button" onClick={() => { setState("loading"); setAttempt(current => current + 1); }}>Consultar alertas novamente</button></> : null}
     {state === "ready" && alerts ? alerts.length === 0

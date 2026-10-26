@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/auth-api";
 import type { Product } from "@/lib/catalog";
 import { type Category, categoryError, parseCategories } from "@/lib/categories";
+import { Loading } from "@/components/ui/loading";
 
 // MVP block 1c: the category of one product, saved as soon as it is chosen. It does not touch the
 // product version, so it never conflicts with unsaved edits in the main form.
@@ -49,7 +50,7 @@ export default function ProductCategory({ tenantId, product, onSaved }: {
   return <section className="side-card" aria-labelledby="product-category-title">
     <h2 id="product-category-title">Categoria</h2>
     {failed ? <p role="alert" className="feedback feedback-error">Não foi possível consultar as categorias.</p> : null}
-    {!categories && !failed ? <p role="status">Consultando categorias…</p> : null}
+    {!categories && !failed ? <Loading context="categorias" className="py-4" /> : null}
     {categories ? categories.length === 0
       ? <p>A loja ainda não tem categorias. <Link href={`${storePath}/categorias`}>Criar categorias</Link></p>
       : <div className="form-field">

@@ -182,7 +182,17 @@ Aprovado pelo responsável em 2026-10-26. O pedido foi uma interface de "nível 
 - **Links:** sem sublinhado por padrão. O sublinhado aparece no hover e continua em links dentro de texto corrido (`p a`, ajuda de campo e páginas legais), para não depender só da cor (WCAG 1.4.1). Botões e links com aparência de botão nunca sublinham.
 - **Botões do CSS anterior:** raio de controle de 6px e peso 600, para combinar com os componentes novos.
 
-**Próximas fases** (cada uma com revisão própria): gráficos no painel e no financeiro (`recharts`), tabelas com filtros, formulários e telas operacionais migradas para os componentes novos e, por fim, a revisão completa de acessibilidade.
+**Fase 2 (2026-10-26):**
+- **Carregamento padronizado:** `Loading` no admin (`ui/loading.tsx`) e na vitrine (`components/loading.tsx`). O texto visível é só "Carregando…", com pulso suave que para quando o sistema pede menos movimento. O que está carregando ("Carregando pedidos da loja…") vai só para leitores de tela, dentro de `role="status"`. Ele substitui os estados "Consultando…" de todas as telas; botões em andamento continuam com o próprio texto.
+- **Gráficos (`recharts`, aprovado):**
+  - na visão geral, receita por dia em barras e pedidos pagos em linha, com eixo próprio;
+  - no financeiro, barras horizontais da receita bruta até a margem de contribuição.
+
+  Os tooltips mostram os valores do backend como texto, sem cálculo no front. O SVG fica oculto para tecnologia assistiva porque a legenda e a tabela ao lado trazem os mesmos números. Para a segunda série e as deduções há dois tokens novos, `--color-chart-2` (#0f766e) e `--color-chart-deduction` (#657888), ambos com 3:1 ou mais sobre o card.
+- **Cards de indicador (`ui/kpi-card.tsx`):** ícone em círculo suave, rótulo, valor e detalhe, no estilo das estatísticas do Dashtail. São usados no resumo da loja, no desempenho e no financeiro.
+- **Card de produto da vitrine:** portado do card de e-commerce do Dashtail em CSS próprio, sem Tailwind na vitrine. Tem foto emoldurada com zoom leve no hover (desligado com movimento reduzido), selo de disponibilidade sobre a foto, nome, preço e botão contornado "Ver produto" de 44px que se preenche no hover. O card inteiro continua sendo um único link. Favoritos, visualização rápida e avaliação do template ficaram de fora porque não existem no produto.
+
+**Próximas fases** (cada uma com revisão própria): tabelas com filtros, formulários e telas operacionais nos componentes novos e, por fim, a revisão completa de acessibilidade.
 
 ## Plataforma e temas futuros das lojas
 
