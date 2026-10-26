@@ -204,7 +204,16 @@ Aprovado pelo responsável em 2026-10-26. O pedido foi uma interface de "nível 
   Tudo roda sobre o catálogo já carregado (`lib/product-filters.ts`, coberto pelo smoke).
 - **Pedidos:** o select de situação virou abas (links com `aria-current`), que funcionam sem JavaScript e rolam para o lado no celular. Não há busca por texto, porque a API filtra só por situação e pagina de 20 em 20: buscar dentro de uma página daria um resultado enganoso. Para buscar um pedido específico, use a busca global (Ctrl+K), que lista os pedidos recentes.
 
-**Próximas fases** (cada uma com revisão própria): formulários e telas operacionais nos componentes novos e, por fim, a revisão completa de acessibilidade.
+**Fase 4 (2026-10-26), formulários e telas operacionais:** as telas usam classes compartilhadas, então a mudança foi central, num bloco no fim da camada `legacy` que vence as regras originais com a mesma especificidade. Assim todas as telas mudam de uma vez, sem reescrever cada componente.
+- **Campos (`input`, `select` e `textarea`):** 44px de altura, borda de controle com 3:1 que escurece no hover, e foco com borda de ação mais contorno de 2px. O select ganhou o chevron do Dashtail sem perder o controle nativo. Caixas de seleção e opções usam a cor de ação. Campos desabilitados aparecem em cinza, com cursor de bloqueio.
+- **Botões e links-botão:** layout flexível com espaço para ícone, peso 600, transição suave. O botão secundário ganha borda de ação no hover. O contorno global de foco ficou mais fino (2px, afastado 2px) e continua laranja, visível sobre qualquer fundo.
+- **Cards** (cartões laterais, tabelas, painéis vazios, estados, barra de filtros, editor de produto, lojas e categorias): borda clara `--sc-color-card-border` (#dfe5ec), raio de 8px e sombra suave `--sc-shadow-card`. A borda do card é decorativa, porque os controles de dentro mantêm a própria borda com 3:1. Painéis vazios ficam centralizados.
+- **Alertas (`.feedback` e `.notice`):** fundo suave com borda esquerda de 4px na cor da mensagem, como no Dashtail. O texto continua dizendo o que aconteceu.
+- **Selos:** em pílula, menores, com peso 600.
+- **Cabeçalho de página:** título de 24px em negrito e trilha em texto menor.
+- **Ícones:** os estados vazios e de erro (`PageState`) passaram a usar lucide, como o resto do painel. O conjunto antigo (`components/icons.tsx`) foi removido.
+
+**Próxima fase:** revisão completa de acessibilidade, com teclado, leitor de tela, zoom de 200% e 400%, espaçamento de texto e as larguras de referência, registrando as evidências.
 
 ## Plataforma e temas futuros das lojas
 
