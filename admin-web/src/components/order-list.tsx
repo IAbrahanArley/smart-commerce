@@ -35,14 +35,11 @@ export default function OrderList({ tenantId, status, after }: { tenantId: strin
   const filtered = status ? `com situação “${STATUS_LABELS[status]}”` : "";
   return <section className="page" aria-labelledby="orders-title">
     <PageHeader id="orders-title" title="Pedidos" description="Pedidos feitos na vitrine. Pedidos aguardando pagamento reservam o estoque por 30 minutos." />
-    <form className="order-filter" method="get" action={`${storePath}/pedidos`}>
-      <label htmlFor="order-status">Situação</label>
-      <select id="order-status" name="situacao" defaultValue={status ?? ""}>
-        <option value="">Todas</option>
-        {ORDER_STATUSES.map(value => <option key={value} value={value}>{STATUS_LABELS[value]}</option>)}
-      </select>
-      <button type="submit">Filtrar pedidos</button>
-    </form>
+    {/* Status filter as tabs (design system phase 3); each tab is a plain link, so it works without JavaScript. */}
+    <nav className="status-tabs" aria-label="Filtrar pedidos por situação">
+      <Link href={ordersPagePath(tenantId, null, null)} aria-current={status === null ? "page" : undefined}>Todos</Link>
+      {ORDER_STATUSES.map(value => <Link key={value} href={ordersPagePath(tenantId, value, null)} aria-current={status === value ? "page" : undefined}>{STATUS_LABELS[value]}</Link>)}
+    </nav>
     {state === "loading" ? <Loading context="pedidos da loja" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar os pedidos.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}

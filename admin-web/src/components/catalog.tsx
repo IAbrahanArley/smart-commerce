@@ -13,6 +13,11 @@ import ProductVariants from "@/components/product-variants";
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 import { Loading } from "@/components/ui/loading";
+import { Button } from "@/components/ui/button";
+import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
+import { type Category, parseCategories } from "@/lib/categories";
+import { EMPTY_FILTERS, filterProducts, filtersActive, NO_CATEGORY, type ProductFilters, type ProductSort, resultText, type Visibility } from "@/lib/product-filters";
 
 export default function Catalog({ tenantId, productId, view, created = false }: { tenantId: string; productId?: string; view: "list" | "new" | "edit"; created?: boolean }) {
   const router = useRouter();
@@ -23,6 +28,8 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
   const [attempt, setAttempt] = useState(0);
   const [notice, setNotice] = useState(created ? "Produto cadastrado no catálogo interno. Ele começa oculto na vitrine. Inclua fotos e registre o estoque quando quiser." : "");
   const [draftDirty, setDraftDirty] = useState(false);
+  const [filters, setFilters] = useState<ProductFilters>(EMPTY_FILTERS);
+  const [categories, setCategories] = useState<Category[]>([]);
   const noticeRef = useRef<HTMLParagraphElement>(null);
   const storePath = `/lojas/${encodeURIComponent(tenantId)}`;
   const apiPath = `/api/tenants/${encodeURIComponent(tenantId)}`;
@@ -46,6 +53,16 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
     return () => controller.abort();
   }, [apiPath, productId, view, attempt]);
 
+  // Categories only feed the list filter; without them the filter is simply not offered.
+  useEffect(() => {
+    if (view !== "list") return;
+    const controller = new AbortController();
+    apiRequest(`${apiPath}/categories`, { signal: controller.signal })
+      .then(async response => { const parsed = response.ok ? parseCategories(await response.json()) : null; if (parsed && !controller.signal.aborted) setCategories(parsed); })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [apiPath, view]);
+
   useEffect(() => { if (notice && state === "ready") noticeRef.current?.focus(); }, [notice, product, state]);
 
   function saved(savedProduct: Product, customNotice?: string) {
@@ -68,6 +85,7 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
     return store?.store.status === "PUBLISHED" ? <StatusBadge tone="positive">Visível na vitrine</StatusBadge> : <StatusBadge tone="neutral">Selecionado · Loja oculta</StatusBadge>;
   }
 
+  const shown = filterProducts(products, filters);
   return <section className="page" aria-labelledby="catalog-title">
     <PageHeader id="catalog-title" title={title}
       breadcrumbs={view === "list" ? undefined : [{ href: `${storePath}/produtos`, label: "Produtos" }]}
@@ -96,10 +114,31 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
       </div> : null}
       {view === "list" ? <>
         <p className="notice">{store.store.status === "PUBLISHED" ? "Sua vitrine está publicada. Somente os produtos selecionados individualmente ficam visíveis para consulta pública." : "Sua vitrine está oculta. Você pode selecionar produtos agora; eles só ficarão visíveis quando publicar a loja."}</p>
-        {products.length ? <div className="data-table-wrap"><table className="data-table data-table-wrapping" role="table">
-          <caption>Produtos cadastrados ({new Intl.NumberFormat("pt-BR").format(products.length)})</caption>
+        {products.length ? <div className="table-toolbar" role="search" aria-label="Filtrar produtos">
+          <SearchInput className="min-w-[min(100%,16rem)] flex-[2_1_16rem]" value={filters.query} onChange={event => setFilters(current => ({ ...current, query: event.target.value }))} placeholder="Buscar por nome ou SKU" aria-label="Buscar por nome ou SKU" />
+          {categories.length ? <Select className="flex-[1_1_11rem]" aria-label="Categoria" value={filters.category} onChange={event => setFilters(current => ({ ...current, category: event.target.value }))}>
+            <option value="">Todas as categorias</option>
+            {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+            <option value={NO_CATEGORY}>Sem categoria</option>
+          </Select> : null}
+          <Select className="flex-[1_1_11rem]" aria-label="Vitrine" value={filters.visibility} onChange={event => setFilters(current => ({ ...current, visibility: event.target.value as Visibility }))}>
+            <option value="all">Todos na vitrine</option>
+            <option value="visible">Selecionados para a vitrine</option>
+            <option value="hidden">Ocultos na vitrine</option>
+          </Select>
+          <Select className="flex-[1_1_11rem]" aria-label="Ordenar" value={filters.sort} onChange={event => setFilters(current => ({ ...current, sort: event.target.value as ProductSort }))}>
+            <option value="default">Ordem de cadastro</option>
+            <option value="name">Nome (A–Z)</option>
+            <option value="price-asc">Menor preço</option>
+            <option value="price-desc">Maior preço</option>
+          </Select>
+          {filtersActive(filters) ? <Button variant="ghost" size="sm" onClick={() => setFilters(EMPTY_FILTERS)}>Limpar filtros</Button> : null}
+        </div> : null}
+        {products.length && !shown.length ? <div className="empty-panel" role="status"><h2>Nenhum produto encontrado</h2><p>Nenhum produto corresponde aos filtros escolhidos.</p><Button variant="outline" onClick={() => setFilters(EMPTY_FILTERS)}>Limpar filtros</Button></div> : null}
+        {shown.length ? <div className="data-table-wrap"><table className="data-table data-table-wrapping" role="table">
+          <caption><span aria-live="polite">Produtos cadastrados ({resultText(shown.length, products.length)})</span></caption>
           <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Produto</th><th role="columnheader" scope="col">SKU</th><th role="columnheader" scope="col" className="numeric">Preço</th><th role="columnheader" scope="col" className="numeric">Custo</th><th role="columnheader" scope="col">Vitrine</th><th role="columnheader" scope="col">Estoque</th></tr></thead>
-          <tbody role="rowgroup">{products.map(item => <tr role="row" key={item.id}>
+          <tbody role="rowgroup">{shown.map(item => <tr role="row" key={item.id}>
             <th role="rowheader" scope="row"><span className="product-cell">{cover(item, 48)}<span className="product-cell-text"><Link href={`${storePath}/produtos/${encodeURIComponent(item.id)}`}>{item.name}</Link>{item.imageCount > 0 ? <span className="cell-hint">{photoCountText(item.imageCount)}</span> : null}</span></span></th>
             <td role="cell" data-label="SKU">{item.kind === "VARIABLE" ? `${item.variants.length} combinações` : <span translate="no">{item.sku}</span>}</td>
             <td role="cell" data-label="Preço" className="numeric">{item.kind === "VARIABLE" ? <span className="cell-hint">a partir de </span> : null}{formatBRL(item.price)}</td>
@@ -107,7 +146,8 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
             <td role="cell" data-label="Vitrine">{visibility(item)}</td>
             <td role="cell" data-label="Estoque"><Link href={`${storePath}/produtos/${encodeURIComponent(item.id)}/estoque`} aria-label={`Estoque de ${item.name}`}>Estoque</Link></td>
           </tr>)}</tbody>
-        </table></div> : <div className="empty-panel"><h2>Nenhum produto cadastrado</h2><p>Cadastre o primeiro produto para montar o catálogo e escolher o que aparece na vitrine.</p><Link className="button-link" href={`${storePath}/produtos/novo`}>Cadastrar primeiro produto</Link></div>}
+        </table></div> : null}
+        {!products.length ? <div className="empty-panel"><h2>Nenhum produto cadastrado</h2><p>Cadastre o primeiro produto para montar o catálogo e escolher o que aparece na vitrine.</p><Link className="button-link" href={`${storePath}/produtos/novo`}>Cadastrar primeiro produto</Link></div> : null}
       </> : null}
     </> : null}
   </section>;

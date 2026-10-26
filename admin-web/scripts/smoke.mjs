@@ -11,6 +11,7 @@ import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outc
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
 import { legalDraft, operatorText, updatedText } from "../src/lib/legal.ts";
 import { accountItems, parseCollapsed, searchScore, storeItems } from "../src/lib/navigation.ts";
+import { EMPTY_FILTERS, filterProducts, filtersActive, NO_CATEGORY, resultText } from "../src/lib/product-filters.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
 import { categoryError, categoryName, categoryNameError, parseCategories, productCountText } from "../src/lib/categories.ts";
 import { instagramHandle, logoFileError, profileErrors, profileFields, profilePayload, whatsappText } from "../src/lib/store-profile.ts";
@@ -56,6 +57,25 @@ assert.equal(searchScore("pedido 1042 Maria Silva", "1042 maria"), 1);
 assert.equal(searchScore("pedido 1041 João", "1042"), 0);
 assert.equal(searchScore("Entrega frete retirada", "  "), 1);
 assert.equal(parseCollapsed("true"), true); assert.equal(parseCollapsed(null), false); assert.equal(parseCollapsed("1"), false);
+// Design system phase 3: product list filters run on the loaded catalog; prices sort as exact cents.
+const sample = [
+  { name: "Camiseta Básica", sku: "CAM-1", price: "49.90", published: true, categoryId: "c1", variants: [] },
+  { name: "Boné", sku: "BON-1", price: "9.99", published: false, categoryId: null, variants: [] },
+  { name: "Caneca", sku: "CAN-1", price: "100.00", published: true, categoryId: "c2", variants: [{ sku: "CAN-AZUL" }] },
+];
+const names = (filters) => filterProducts(sample, { ...EMPTY_FILTERS, ...filters }).map(item => item.name);
+assert.deepEqual(names({}), ["Camiseta Básica", "Boné", "Caneca"]);
+assert.deepEqual(names({ query: "bone" }), ["Boné"]);
+assert.deepEqual(names({ query: "azul" }), ["Caneca"], "Busca também pelo SKU da combinação");
+assert.deepEqual(names({ query: "camiseta basica" }), ["Camiseta Básica"]);
+assert.deepEqual(names({ visibility: "hidden" }), ["Boné"]);
+assert.deepEqual(names({ category: "c2" }), ["Caneca"]);
+assert.deepEqual(names({ category: NO_CATEGORY }), ["Boné"]);
+assert.deepEqual(names({ sort: "price-asc" }), ["Boné", "Camiseta Básica", "Caneca"], "100.00 vem depois de 49.90");
+assert.deepEqual(names({ sort: "price-desc" }), ["Caneca", "Camiseta Básica", "Boné"]);
+assert.deepEqual(names({ sort: "name" }), ["Boné", "Camiseta Básica", "Caneca"]);
+assert.equal(filtersActive(EMPTY_FILTERS), false); assert.equal(filtersActive({ ...EMPTY_FILTERS, query: " x " }), true);
+assert.equal(resultText(3, 3), "3 produtos"); assert.equal(resultText(1, 1), "1 produto"); assert.equal(resultText(1, 3), "1 de 3 produtos");
 // MVP block 1d: the legal pages stay a draft until the operator is identified.
 assert.equal(legalDraft({ operatorName: null, cnpj: null, contactEmail: "a@b.example", updatedAt: "2026-10-26" }), true);
 assert.equal(legalDraft({ operatorName: "Empresa Ltda", cnpj: "00.000.000/0001-00", contactEmail: "a@b.example", updatedAt: "2026-10-26" }), false);
@@ -331,7 +351,7 @@ try {
     ["/lojas/00000000-0000-0000-0000-000000000000/financeiro?periodo=LAST_7_DAYS", "Financeiro", 'value="LAST_7_DAYS" selected'],
     ["/lojas/00000000-0000-0000-0000-000000000000/assistente", "Assistente", "Carregando assistente…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/assistente?explicar=REVENUE&periodo=LAST_7_DAYS", "Assistente", "Carregando assistente…"],
-    ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'name="situacao"'],
+    ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'aria-label="Filtrar pedidos por situação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Carregando pedido…", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Carregando catálogo…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/categorias", "Categorias", "Carregando categorias…"],
@@ -361,7 +381,7 @@ try {
     assert.ok([200, 404].includes(invalid.status), path);
     const html = await invalid.text();
     assert.match(html, /Página não encontrada/, path);
-    assert.ok(!html.includes('name="situacao"') && !html.includes("Carregando pedido…"), path);
+    assert.ok(!html.includes('aria-label="Filtrar pedidos por situação"') && !html.includes("Carregando pedido…"), path);
   }
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);
