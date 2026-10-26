@@ -150,6 +150,18 @@ public class BootstrapSecurityConfiguration {
                     .authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/tenants/*/fulfillment")
                     .authenticated()
+                    // MVP block 1c: product categories (OWNER checked in the service).
+                    .requestMatchers(HttpMethod.GET, "/api/tenants/*/categories")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/tenants/*/categories")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.PUT,
+                        "/api/tenants/*/categories/*",
+                        "/api/tenants/*/products/*/category")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/tenants/*/categories/*")
+                    .authenticated()
                     // MVP block 1b: store name, contacts and logo (OWNER checked in the query).
                     .requestMatchers(
                         HttpMethod.GET, "/api/tenants/*/profile", "/api/tenants/*/profile/logo")

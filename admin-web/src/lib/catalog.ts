@@ -16,6 +16,8 @@ export type Product = {
   coverImageId: string | null;
   coverImageAlt: string | null;
   imageCount: number;
+  /** MVP block 1c: null when the product has no category. */
+  categoryId: string | null;
 };
 
 export const MAX_PRODUCT_PHOTOS = 6;

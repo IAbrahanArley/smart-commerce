@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { forwardingSecret } from "./smoke-units.mjs";
 import { checkoutSmoke } from "./smoke-checkout.mjs";
-import { id, missingId, nextId, orderToken, png, startNext, startUpstream, upstreamRequests } from "./smoke-upstream.mjs";
+import { categoryId, id, missingId, nextId, orderToken, png, startNext, startUpstream, upstreamRequests } from "./smoke-upstream.mjs";
 
 const port = Number(process.env.SMOKE_PORT ?? 3002);
 assert.ok(Number.isInteger(port) && port > 0 && port < 65536, "SMOKE_PORT deve ser válida.");
@@ -86,6 +86,15 @@ try {
   assert.equal(invalidPhoto.status, 503); assert.ok(!(await invalidPhoto.text()).includes("PRIVATE_UPSTREAM_ERROR_FIXTURE"));
   const invalidPath = await fetch(`${base}/midia/lojas/loja-teste/produtos/invalido/${id}`);
   assert.equal(invalidPath.status, 404);
+  // MVP block 1c: category links, filter and pagination inside the category.
+  assert.ok(catalog.html.includes(`?categoria=${categoryId}#produtos`) && catalog.html.includes(">Camisetas<"), "Link da categoria.");
+  assert.match(catalog.html, /aria-current="page"[^>]*>Todos</);
+  const filtered = await page(`/lojas/loja-teste?categoria=${categoryId}`);
+  assert.match(filtered.html, /aria-current="page"[^>]*>Camisetas</);
+  assert.ok(filtered.html.includes(`?categoria=${categoryId}&amp;after=${id}`), "Paginação mantém a categoria.");
+  const filteredEnd = await page(`/lojas/loja-teste?categoria=${categoryId}&after=${id}`);
+  assert.match(filteredEnd.html, /Fim da lista/);
+  assert.ok(filteredEnd.html.includes(`href="/lojas/loja-teste?categoria=${categoryId}"`), "Volta ao início da categoria.");
   const next = await page(`/lojas/loja-teste?after=${id}`);
   assert.match(next.html, /Outro produto publicado/);
   assert.match(next.html, /Indisponível no momento/);
@@ -100,7 +109,7 @@ try {
     assert.equal(missing.response.status, 404, path);
     assert.match(missing.html, /Página não encontrada/);
   }
-  for (const path of ["/lojas/loja-inexistente", `/lojas/loja-teste/produtos/${nextId}`, "/lojas/loja-teste?after=invalido"]) {
+  for (const path of ["/lojas/loja-inexistente", `/lojas/loja-teste/produtos/${nextId}`, "/lojas/loja-teste?after=invalido", "/lojas/loja-teste?categoria=invalida"]) {
     const missing = await page(path);
     assert.ok([200, 404].includes(missing.response.status), path);
     // Next can stream the loading boundary before notFound; its browser result is still uniform.

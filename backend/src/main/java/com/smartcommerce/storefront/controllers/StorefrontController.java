@@ -21,10 +21,16 @@ public final class StorefrontController {
 
   @GetMapping
   public ResponseEntity<PublicStorefrontView> list(
-      @PathVariable String slug, @RequestParam(required = false) String after) {
+      @PathVariable String slug,
+      @RequestParam(required = false) String after,
+      @RequestParam(required = false) String categoria) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(storefront.list(slug, after == null ? null : PublicLocator.uuid(after)));
+        .body(
+            storefront.list(
+                slug,
+                after == null ? null : PublicLocator.uuid(after),
+                categoria == null ? null : PublicLocator.uuid(categoria)));
   }
 
   /** The store logo (MVP block 1b), only while the store is published. */

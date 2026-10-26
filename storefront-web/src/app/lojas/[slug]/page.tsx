@@ -12,13 +12,15 @@ import { StoreContacts } from "@/components/store-contacts";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Produtos da loja" };
 
-type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ after?: string | string[] }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ after?: string | string[]; categoria?: string | string[] }> };
 
 export default async function StorePage({ params, searchParams }: Props) {
-  const [{ slug }, { after }] = await Promise.all([params, searchParams]);
-  if (Array.isArray(after)) notFound();
-  const store = await loadCatalog(slug, after);
+  const [{ slug }, { after, categoria }] = await Promise.all([params, searchParams]);
+  if (Array.isArray(after) || Array.isArray(categoria)) notFound();
+  const store = await loadCatalog(slug, after, categoria);
   const url = `/lojas/${encodeURIComponent(store.slug)}`;
+  const listUrl = store.category ? `${url}?categoria=${store.category}` : url;
+  const current = store.categories.find(category => category.id === store.category);
   return (
     <>
       <StoreHeader store={store} />
@@ -33,9 +35,15 @@ export default async function StorePage({ params, searchParams }: Props) {
             <h2 id="products-title">Produtos da loja</h2>
             {store.products.length > 0 ? <p>{new Intl.NumberFormat("pt-BR").format(store.products.length)} {store.products.length === 1 ? "produto nesta página" : "produtos nesta página"}</p> : null}
           </div>
+          {store.categories.length > 0 ? <nav className="category-nav" aria-label="Categorias">
+            <ul>
+              <li><Link href={`${url}#produtos`} prefetch={false} aria-current={store.category ? undefined : "page"}>Todos</Link></li>
+              {store.categories.map(category => <li key={category.id}><Link href={`${url}?categoria=${category.id}#produtos`} prefetch={false} aria-current={category.id === store.category ? "page" : undefined}>{category.name}</Link></li>)}
+            </ul>
+          </nav> : null}
           {store.products.length === 0 ? (
             <div className="empty-state">
-              <h3>{after ? "Fim da lista" : "Nenhum produto publicado"}</h3>
+              <h3>{after ? "Fim da lista" : current ? `Nenhum produto em ${current.name}` : "Nenhum produto publicado"}</h3>
               <p>{after ? "Não há mais produtos nesta página." : "Os produtos da loja aparecerão aqui quando forem publicados."}</p>
             </div>
           ) : (
@@ -60,8 +68,8 @@ export default async function StorePage({ params, searchParams }: Props) {
             </ul>
           )}
           <nav className="pagination" aria-label="Páginas de produtos">
-            {after ? <Link href={url} prefetch={false}>Voltar ao início da lista</Link> : null}
-            {store.nextCursor ? <Link className="action-link" href={`${url}?after=${store.nextCursor}#produtos`} prefetch={false}>Ver mais produtos</Link> : null}
+            {after ? <Link href={listUrl} prefetch={false}>Voltar ao início da lista</Link> : null}
+            {store.nextCursor ? <Link className="action-link" href={`${listUrl}${store.category ? "&" : "?"}after=${store.nextCursor}#produtos`} prefetch={false}>Ver mais produtos</Link> : null}
           </nav>
         </section>
       </main>

@@ -18,4 +18,5 @@ public record ProductView(
     List<VariantView> variants,
     UUID coverImageId,
     String coverImageAlt,
-    int imageCount) {}
+    int imageCount,
+    UUID categoryId) {}
