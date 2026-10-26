@@ -28,9 +28,9 @@ Itens do PRD que ainda não existem ou estão incompletos, em ordem de execuçã
 | Item | Por que | Observação |
 | --- | --- | --- |
 | **1a. Recuperação de senha** (implementada em 2026-10-26, [validação](../quality/MVP-1A-PASSWORD-RESET.md)) | sem ela, um lojista que esquece a senha perde o acesso; é indispensável em produção | reaproveita o e-mail transacional (Brevo) e o padrão de token de uso único da ativação |
-| **1b. Configurações da loja: logo e contatos** | PRD item 10 (nome, logo, contatos, política de frete e disponibilidade); hoje só há o nome e a entrega | logo pelo mesmo armazenamento das imagens de produto; contatos (e-mail, WhatsApp, Instagram) na vitrine |
-| **1c. Categorias de produto** | PRD item 3; o catálogo não tem categorias | categoria simples por loja e filtro na vitrine, sem hierarquia profunda |
-| **1d. Páginas legais** | LGPD e termos (PRD, hipóteses e requisitos não funcionais) | termos de uso e política de privacidade da plataforma; aviso no cadastro e no checkout. **O texto precisa de validação do responsável**; a estrutura pode vir antes |
+| **1b. Configurações da loja: logo e contatos** (implementada em 2026-10-26, [validação](../quality/MVP-1B-STORE-PROFILE.md)) | PRD item 10 (nome, logo, contatos, política de frete e disponibilidade); hoje só há o nome e a entrega | logo pelo mesmo armazenamento das imagens de produto; contatos (e-mail, WhatsApp, Instagram) na vitrine |
+| **1c. Categorias de produto** (implementada em 2026-10-26, [validação](../quality/MVP-1C-CATEGORIES.md)) | PRD item 3; o catálogo não tem categorias | categoria simples por loja e filtro na vitrine, sem hierarquia profunda |
+| **1d. Páginas legais** (estrutura e rascunho em 2026-10-26, [validação](../quality/MVP-1D-LEGAL.md); faltam razão social, CNPJ e validação do texto) | LGPD e termos (PRD, hipóteses e requisitos não funcionais) | termos de uso e política de privacidade da plataforma; aviso no cadastro e no checkout. **O texto precisa de validação do responsável**; a estrutura pode vir antes |
 
 ## Bloco 2 — Remover o que é de teste e preparar a produção
 

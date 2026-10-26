@@ -9,6 +9,7 @@ import { backendOrigin, hostedTestEnvironment } from "../src/lib/deployment.ts";
 import { alertLink, alertText, parseAlerts } from "../src/lib/alerts.ts";
 import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outcomeText, parseAnswer, parseStatus, questionError, quotaText, sourceText } from "../src/lib/advisor.ts";
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
+import { legalDraft, operatorText, updatedText } from "../src/lib/legal.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
 import { categoryError, categoryName, categoryNameError, parseCategories, productCountText } from "../src/lib/categories.ts";
 import { instagramHandle, logoFileError, profileErrors, profileFields, profilePayload, whatsappText } from "../src/lib/store-profile.ts";
@@ -40,7 +41,13 @@ assert.equal(parseCategories({}), null);
 assert.equal(productCountText(0), "Nenhum produto"); assert.equal(productCountText(1), "1 produto"); assert.equal(productCountText(3), "3 produtos");
 assert.match(categoryError(409, "NAME_CONFLICT"), /Já existe/); assert.match(categoryError(409, "LIMIT"), /50 categorias/);
 
-for (const path of ["/", "/entrar", "/cadastro", "/loja/produto", "/lojas-publicas"]) assert.equal(isProtectedPath(path), false, path);
+// MVP block 1d: the legal pages stay a draft until the operator is identified.
+assert.equal(legalDraft({ operatorName: null, cnpj: null, contactEmail: "a@b.example", updatedAt: "2026-10-26" }), true);
+assert.equal(legalDraft({ operatorName: "Empresa Ltda", cnpj: "00.000.000/0001-00", contactEmail: "a@b.example", updatedAt: "2026-10-26" }), false);
+assert.equal(operatorText({ operatorName: "Empresa Ltda", cnpj: "00.000.000/0001-00", contactEmail: "a@b.example", updatedAt: "2026-10-26" }), "Empresa Ltda, inscrita no CNPJ sob o nº 00.000.000/0001-00");
+assert.match(operatorText({ operatorName: "Empresa Ltda", cnpj: null, contactEmail: "a@b.example", updatedAt: "2026-10-26" }), /a preencher/);
+assert.equal(updatedText({ operatorName: null, cnpj: null, contactEmail: "a@b.example", updatedAt: "2026-10-26" }), "Atualizado em 26/10/2026.");
+for (const path of ["/", "/entrar", "/cadastro", "/termos", "/privacidade", "/loja/produto", "/lojas-publicas"]) assert.equal(isProtectedPath(path), false, path);
 
 // ADR-0014: the /api rewrite only targets HTTPS (or loopback HTTP); the notice needs the exact flag.
 assert.equal(backendOrigin(undefined), "http://127.0.0.1:8080");
@@ -295,6 +302,9 @@ try {
   }
   for (const [path, title, field] of [
     ["/cadastro", "Criar conta", 'name="email"'],
+    ["/cadastro", "Criar conta", 'href="/termos"'],
+    ["/termos", "Termos de uso", "Rascunho em validação"],
+    ["/privacidade", "Política de privacidade", "Lei nº 13.709/2018"],
     ["/entrar", "Entrar", 'autoComplete="current-password"'],
     ["/confirmar-email", "Confirmar e-mail e definir senha", 'autoComplete="new-password"'],
     ["/esqueci-senha", "Esqueci minha senha", 'name="email"'],

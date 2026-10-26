@@ -387,3 +387,12 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .category-item .form-actions { margin-top: 0; }
 .category-name { display: grid; gap: var(--sc-space-1); font-weight: 700; overflow-wrap: anywhere; }
 .category-edit { flex: 1 1 18rem; display: grid; gap: var(--sc-space-2); }
+/* MVP block 1d: legal pages, a readable single column; the draft notice uses existing neutral tokens. */
+.legal-page { max-width: 45rem; margin-inline: auto; }
+.legal-page h2 { margin-top: var(--sc-space-8, 2rem); font-size: 1.25rem; }
+.legal-page ul { padding-left: 1.25rem; }
+.legal-page li + li { margin-top: var(--sc-space-2); }
+.legal-draft { padding: var(--sc-space-3); background: var(--sc-color-surface); border: 1px solid var(--sc-color-divider); border-left: 4px solid var(--sc-color-text-secondary); border-radius: var(--sc-radius-control); }
+.legal-notice { margin-top: var(--sc-space-4); color: var(--sc-color-text-secondary); font-size: .875rem; }
+.site-footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sc-space-2) var(--sc-space-6); margin-top: var(--sc-space-2); }
+.site-footer-links a { display: inline-flex; align-items: center; min-height: 44px; }

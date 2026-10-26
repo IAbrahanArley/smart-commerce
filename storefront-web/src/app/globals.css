@@ -319,3 +319,11 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
 .category-nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1.5rem; padding: 0; }
 .category-nav a { display: inline-block; min-height: 2.75rem; padding: 0.625rem 1rem; border: 1px solid currentColor; border-radius: 999px; text-decoration: none; }
 .category-nav a[aria-current="page"] { font-weight: 700; text-decoration: underline; text-underline-offset: 0.2em; }
+/* MVP block 1d: shopper privacy notice; the draft notice uses existing neutral tokens. */
+.legal-page h2 { margin-top: var(--store-space-8); font-size: 1.25rem; }
+.legal-page ul { margin-top: var(--store-space-4); padding-left: 1.25rem; }
+.legal-page li + li { margin-top: var(--store-space-2); }
+.legal-page .legal-updated { color: var(--store-secondary); }
+.legal-draft { padding: var(--store-space-4); background: var(--store-surface); border-left: 4px solid var(--store-secondary); border-radius: var(--store-radius-control); }
+.platform-credit p + p { margin-top: var(--store-space-2); }
+.platform-credit a { display: inline-flex; align-items: center; min-height: 44px; }
