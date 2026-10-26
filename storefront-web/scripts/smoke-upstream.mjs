@@ -6,6 +6,9 @@ import { setTimeout as delay } from "node:timers/promises";
 export const id = "00000000-0000-0000-0000-000000000001";
 export const nextId = "00000000-0000-0000-0000-000000000002";
 export const missingId = "00000000-0000-0000-0000-000000000003";
+// MVP block 1c: one public category; the category routes check the filter and pagination keep it.
+export const categoryId = "00000000-0000-0000-0000-0000000000c1";
+const categories = [{ id: categoryId, name: "Camisetas" }];
 export const orderId = "00000000-0000-0000-0000-0000000000a7";
 export const orderToken = "SyntheticOrderToken_0123456789abcdefghijklm";
 export const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=", "base64");
@@ -50,13 +53,15 @@ function checkout(order, headers, response) {
 }
 
 const ROUTES = {
-  "/api/public/stores/loja-teste": () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], cost: "PRIVATE_COST_FIXTURE", sku: "PRIVATE_SKU_FIXTURE", quantity: 784321 }], nextCursor: id }),
-  [`/api/public/stores/loja-teste?after=${id}`]: () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], id: nextId, name: "Outro produto publicado", available: false }], nextCursor: null }),
+  "/api/public/stores/loja-teste": () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], cost: "PRIVATE_COST_FIXTURE", sku: "PRIVATE_SKU_FIXTURE", quantity: 784321 }], categories, category: null, nextCursor: id }),
+  [`/api/public/stores/loja-teste?categoria=${categoryId}`]: () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [] }], categories, category: categoryId, nextCursor: id }),
+  [`/api/public/stores/loja-teste?after=${id}&categoria=${categoryId}`]: () => ({ ...store, products: [], categories, category: categoryId, nextCursor: null }),
+  [`/api/public/stores/loja-teste?after=${id}`]: () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], id: nextId, name: "Outro produto publicado", available: false }], categories, category: null, nextCursor: null }),
   [`/api/public/stores/loja-teste/products/${id}/images`]: () => ({ images: [{ id, alt: "Foto de teste", width: 300, height: 300 }] }),
   [`/api/public/stores/loja-teste/products/${id}`]: () => ({ store, product: item }),
   [`/api/public/stores/loja-variavel/products/${nextId}`]: () => ({ store: { ...store, slug: "loja-variavel" }, product: variantItem }),
   [`/api/public/stores/loja-variavel/products/${nextId}/images`]: () => ({ images: [] }),
-  "/api/public/stores/loja-vazia": () => ({ name: "Loja vazia de teste", slug: "loja-vazia", profile: { contactEmail: "x@y.example\"><script>alert(1)</script>", whatsapp: "123", instagram: "a b", logo: false }, products: [], nextCursor: null }),
+  "/api/public/stores/loja-vazia": () => ({ name: "Loja vazia de teste", slug: "loja-vazia", profile: { contactEmail: "x@y.example\"><script>alert(1)</script>", whatsapp: "123", instagram: "a b", logo: false }, products: [], categories: [], category: null, nextCursor: null }),
 };
 
 function quote(body) {

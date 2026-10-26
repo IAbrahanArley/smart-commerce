@@ -380,3 +380,10 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 /* MVP block 1b: logo preview on the store data page; never stretched, on a neutral background. */
 .store-profile { max-width: 45rem; }
 .store-logo-preview { display: block; max-width: min(100%, 16rem); max-height: 8rem; width: auto; height: auto; object-fit: contain; margin-bottom: var(--sc-space-4); padding: var(--sc-space-3); background: var(--sc-color-background); border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-control); }
+/* MVP block 1c: category list with inline rename; actions wrap under the name on narrow screens. */
+.store-categories { max-width: 45rem; }
+.category-list { list-style: none; display: grid; gap: var(--sc-space-3); margin: 0; padding: 0; }
+.category-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sc-space-3); padding: var(--sc-space-4); background: var(--sc-color-surface); border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-surface); }
+.category-item .form-actions { margin-top: 0; }
+.category-name { display: grid; gap: var(--sc-space-1); font-weight: 700; overflow-wrap: anywhere; }
+.category-edit { flex: 1 1 18rem; display: grid; gap: var(--sc-space-2); }

@@ -83,15 +83,42 @@ public class StorefrontRepository {
 
   public record StoreLogo(byte[] bytes, String mediaType) {}
 
+  /** Categories of a published store that have at least one published product, by name. */
+  public List<Object[]> categories(String slug) {
+    List<?> rows =
+        entities
+            .createNativeQuery(
+                """
+                SELECT c.id,c.name FROM store s
+                JOIN catalog_category c ON c.store_id=s.id AND c.tenant_id=s.tenant_id
+                WHERE s.slug=:slug AND s.status='PUBLISHED' AND EXISTS (
+                  SELECT 1 FROM catalog_product p
+                  WHERE p.category_id=c.id AND p.tenant_id=c.tenant_id AND p.published)
+                ORDER BY c.name_key
+                """)
+            .setParameter("slug", slug)
+            .getResultList();
+    return rows.stream().map(row -> (Object[]) row).toList();
+  }
+
   public List<PublicProduct> list(String slug, UUID after, Instant now) {
+    return list(slug, after, now, null);
+  }
+
+  /** One page of published products, optionally of one category (MVP block 1c). */
+  public List<PublicProduct> list(String slug, UUID after, Instant now, UUID category) {
     var query =
         entities
             .createNativeQuery(
-                PRODUCTS + (after == null ? "" : " AND p.id>:after") + " ORDER BY p.id")
+                PRODUCTS
+                    + (after == null ? "" : " AND p.id>:after")
+                    + (category == null ? "" : " AND p.category_id=:category")
+                    + " ORDER BY p.id")
             .setParameter("slug", slug)
             .setParameter("now", utc(now))
             .setMaxResults(21);
     if (after != null) query.setParameter("after", after);
+    if (category != null) query.setParameter("category", category);
     List<?> rows = query.getResultList();
     return rows.stream().map(StorefrontRepository::product).toList();
   }

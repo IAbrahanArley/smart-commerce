@@ -71,7 +71,7 @@ export default function Catalog({ tenantId, productId, view, created = false }: 
     <PageHeader id="catalog-title" title={title}
       breadcrumbs={view === "list" ? undefined : [{ href: `${storePath}/produtos`, label: "Produtos" }]}
       description={state === "ready" && store ? <>Loja: <strong translate="no">{store.store.name}</strong></> : undefined}
-      action={view === "list" && state === "ready" ? <Link className="button-link" href={`${storePath}/produtos/novo`}>Novo produto</Link> : undefined} />
+      action={view === "list" && state === "ready" ? <span className="form-actions"><Link className="button-link button-secondary" href={`${storePath}/categorias`}>Categorias</Link><Link className="button-link" href={`${storePath}/produtos/novo`}>Novo produto</Link></span> : undefined} />
     {state === "loading" ? <p role="status">Consultando catálogo…</p> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar os produtos.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <p role="status">Produto ou loja indisponível. Volte para suas lojas e escolha uma loja à qual você tem acesso.</p> : null}

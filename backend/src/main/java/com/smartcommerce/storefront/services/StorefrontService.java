@@ -29,13 +29,25 @@ public class StorefrontService {
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
   public PublicStorefrontView list(String slug, UUID after) {
+    return list(slug, after, null);
+  }
+
+  /** {@code category} null lists every published product (MVP block 1c). */
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+  public PublicStorefrontView list(String slug, UUID after, UUID category) {
     var store = storefront.store(PublicLocator.slug(slug)).orElseThrow(StorefrontException::new);
-    var products = storefront.list(slug, after, ReservationPolicy.now(clock));
+    var products = storefront.list(slug, after, ReservationPolicy.now(clock), category);
     var page = products.stream().limit(20).map(StorefrontService::view).toList();
+    var categories =
+        storefront.categories(slug).stream()
+            .map(row -> new PublicCategoryView((UUID) row[0], (String) row[1]))
+            .toList();
     return new PublicStorefrontView(
         store.name(),
         store.slug(),
         profile(store),
+        categories,
+        category,
         page,
         products.size() > 20 ? page.getLast().id().toString() : null);
   }

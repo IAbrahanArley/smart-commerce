@@ -99,6 +99,11 @@ class StorefrontIsolationIT {
                         // MVP block 1b: public contacts and logo, empty until the store sets them.
                         "profile",
                         JSON.readTree(PROFILE),
+                        // MVP block 1c: no categories yet, no filter applied.
+                        "categories",
+                        List.of(),
+                        "category",
+                        JSON.nullNode(),
                         "products",
                         List.of(
                             Map.of(

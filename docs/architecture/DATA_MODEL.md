@@ -106,6 +106,8 @@ V26 (mudança da P1 do ADR-0013, 2026-10-24), aditiva: `payment.provider_payment
 
 V29 (bloco 1b do MVP, 2026-10-26), aditiva: `store_profile`, uma linha opcional por loja com contatos públicos (e-mail, WhatsApp em E.164 e usuário do Instagram) e o logo (bytes JPEG/PNG normalizados no banco, como as fotos do ADR-0011), com versão otimista. O nome continua em `store.name`. Depende da V28 (bloco 1a).
 
+V30 (bloco 1c do MVP, 2026-10-26), aditiva: `catalog_category` (nome de 1 a 60 caracteres e `name_key` minúsculo, único por tenant; FK composta para a loja) e `catalog_product.category_id`, opcional, com FK composta `(category_id, tenant_id)`, de modo que um produto nunca aponta para categoria de outro tenant. Uma categoria por produto, sem hierarquia. Remover a categoria limpa `category_id` dos produtos antes; nenhum produto é apagado. Depende da V29 (bloco 1b).
+
 V27 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
 - **`DELETE`:** recusado sempre;
 - **`UPDATE`:** só para preencher `settled_at` uma única vez, a partir de nulo, que é o caminho da SC-018;

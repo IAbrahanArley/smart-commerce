@@ -10,6 +10,7 @@ import { alertLink, alertText, parseAlerts } from "../src/lib/alerts.ts";
 import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outcomeText, parseAnswer, parseStatus, questionError, quotaText, sourceText } from "../src/lib/advisor.ts";
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
+import { categoryError, categoryName, categoryNameError, parseCategories, productCountText } from "../src/lib/categories.ts";
 import { instagramHandle, logoFileError, profileErrors, profileFields, profilePayload, whatsappText } from "../src/lib/store-profile.ts";
 
 for (const path of ["/conta", "/lojas", "/lojas/uuid/despesas"]) assert.equal(isProtectedPath(path), true, path);
@@ -28,6 +29,16 @@ assert.equal(logoFileError(null), "Selecione uma imagem.");
 assert.equal(logoFileError({ type: "image/gif", size: 10 }), "Use uma imagem JPEG ou PNG.");
 assert.equal(logoFileError({ type: "image/png", size: 6 * 1024 * 1024 }), "Use uma imagem de até 5 MiB.");
 assert.equal(logoFileError({ type: "image/png", size: 1024 }), null);
+// MVP block 1c: category names follow the backend rule; the list parser rejects foreign shapes.
+assert.equal(categoryNameError("  Camisetas   de  verão "), null); assert.equal(categoryName("  Camisetas   de  verão "), "Camisetas de verão");
+assert.equal(categoryNameError("   "), "Informe o nome da categoria.");
+assert.equal(categoryNameError("Linha\nquebrada"), "Use uma única linha.");
+assert.equal(categoryNameError("a".repeat(61)), "Use até 60 caracteres.");
+assert.deepEqual(parseCategories([{ id: "c-1", name: "Camisetas", products: 2, extra: true }]), [{ id: "c-1", name: "Camisetas", products: 2 }]);
+assert.equal(parseCategories([{ id: "c-1", name: "Camisetas" }]), null);
+assert.equal(parseCategories({}), null);
+assert.equal(productCountText(0), "Nenhum produto"); assert.equal(productCountText(1), "1 produto"); assert.equal(productCountText(3), "3 produtos");
+assert.match(categoryError(409, "NAME_CONFLICT"), /Já existe/); assert.match(categoryError(409, "LIMIT"), /50 categorias/);
 
 for (const path of ["/", "/entrar", "/cadastro", "/loja/produto", "/lojas-publicas"]) assert.equal(isProtectedPath(path), false, path);
 
@@ -299,6 +310,7 @@ try {
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'name="situacao"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Consultando pedido", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Consultando catálogo"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/categorias", "Categorias", "Consultando categorias"],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/novo", "Novo produto", 'aria-label="Navegação da loja"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001", "Editar produto", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001/estoque", "Estoque do produto", 'aria-label="Trilha de navegação"'],

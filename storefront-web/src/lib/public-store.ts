@@ -17,7 +17,8 @@ export type PublicImage = { id: string; alt: string; width: number; height: numb
 // MVP block 1b: public contacts and logo the store chose to show; null contacts are not shown.
 export type StoreProfile = { contactEmail: string | null; whatsapp: string | null; instagram: string | null; logo: boolean };
 export type PublicStore = { name: string; slug: string; profile: StoreProfile };
-export type PublicCatalog = PublicStore & { products: PublicProduct[]; nextCursor: string | null };
+export type PublicCategory = { id: string; name: string };
+export type PublicCatalog = PublicStore & { categories: PublicCategory[]; category: string | null; products: PublicProduct[]; nextCursor: string | null };
 export type PublicProductDetail = { store: PublicStore; product: PublicProduct; images: PublicImage[] };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -125,13 +126,24 @@ function product(value: unknown): PublicProduct {
   return { id: input.id, name: name(input.name), price: input.price, currency: "BRL", available: input.available, descriptionHtml: input.descriptionHtml, kind: input.kind as "SIMPLE" | "VARIABLE", variants };
 }
 
-export async function loadCatalog(slug: string, after?: string): Promise<PublicCatalog> {
+export async function loadCatalog(slug: string, after?: string, category?: string): Promise<PublicCatalog> {
   const path = slugPath(slug);
-  if (after !== undefined && !UUID.test(after)) notFound();
-  const input = object(await publicGet(path + (after ? `?after=${encodeURIComponent(after)}` : "")));
+  if ((after !== undefined && !UUID.test(after)) || (category !== undefined && !UUID.test(category))) notFound();
+  const query = new URLSearchParams();
+  if (after) query.set("after", after);
+  if (category) query.set("categoria", category);
+  const input = object(await publicGet(path + (query.size ? `?${query}` : "")));
   if (!Array.isArray(input.products) || input.products.length > 20
-    || (input.nextCursor !== null && (typeof input.nextCursor !== "string" || !UUID.test(input.nextCursor)))) unavailable();
-  return { ...store(input, slug), products: input.products.map(product), nextCursor: input.nextCursor };
+    || (input.nextCursor !== null && (typeof input.nextCursor !== "string" || !UUID.test(input.nextCursor)))
+    || !Array.isArray(input.categories) || input.categories.length > 50
+    || (input.category !== null && input.category !== (category ?? null))) unavailable();
+  // MVP block 1c: only categories with published products; project the public fields only.
+  const categories = input.categories.map(value => {
+    const item = object(value);
+    if (typeof item.id !== "string" || !UUID.test(item.id) || [...name(item.name)].length > 60) unavailable();
+    return { id: item.id, name: name(item.name) };
+  });
+  return { ...store(input, slug), categories, category: category ?? null, products: input.products.map(product), nextCursor: input.nextCursor };
 }
 
 export async function loadProduct(slug: string, id: string): Promise<PublicProductDetail> {
