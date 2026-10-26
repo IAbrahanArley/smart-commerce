@@ -93,6 +93,37 @@ body:has(.landing-page) > .skip-link { z-index: 100; }
 .landing-page .presentation-footer { background: var(--lp-background); color: var(--lp-muted); padding: 3.5rem 0 2rem; }
 .landing-page .presentation-footer nav a { color: #d1def7; }
 .landing-page [id] { scroll-margin-top: 7.5rem; }
+/* SaaS plans (2026-10-26): cycle selector as pill radios and three cards; the featured plan is lighter. */
+.landing-page .pricing-cycles { display: inline-flex; flex-wrap: wrap; gap: .25rem; margin: 0 0 2.5rem; padding: .3rem; border: 1px solid #8ab4ff38; border-radius: 9999px; background: var(--lp-surface); }
+.landing-page .pricing-cycle { position: relative; display: inline-flex; }
+.landing-page .pricing-cycle input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.landing-page .pricing-cycle span { display: inline-flex; align-items: center; gap: .35rem; min-height: 44px; padding: 0 1.25rem; border-radius: 9999px; color: var(--lp-muted); font-size: .9rem; font-weight: 600; }
+.landing-page .pricing-cycle small { color: #8ab4ff; font-size: .75rem; font-weight: 700; }
+.landing-page .pricing-cycle input:checked + span { background: var(--lp-accent); color: white; }
+.landing-page .pricing-cycle input:checked + span small { color: white; }
+.landing-page .pricing-cycle input:focus-visible + span { outline: 3px solid var(--lp-focus); outline-offset: 2px; }
+.landing-page .pricing-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; margin: 0; padding: 0; list-style: none; align-items: start; }
+.landing-page .pricing-card { position: relative; display: flex; flex-direction: column; gap: .75rem; padding: 2rem; background: var(--lp-surface); border: 1px solid #8ab4ff26; border-radius: 1.25rem; }
+.landing-page .pricing-card[data-featured="true"] { background: var(--lp-light); color: var(--lp-ink); border-color: var(--lp-accent); box-shadow: 0 24px 60px #3264ef33; }
+.landing-page .pricing-badge { position: absolute; top: -.85rem; left: 2rem; margin: 0; padding: .3rem .8rem; border-radius: 9999px; background: var(--lp-accent); color: white; font-size: .75rem; font-weight: 700; }
+.landing-page .pricing-card h3 { margin: 0; font-size: 1.25rem; }
+.landing-page .pricing-summary { margin: 0; min-height: 3.2em; color: var(--lp-muted); font-size: .9rem; line-height: 1.6; }
+.landing-page .pricing-card[data-featured="true"] .pricing-summary, .landing-page .pricing-card[data-featured="true"] .pricing-billing { color: #495d7c; }
+.landing-page .pricing-price { display: flex; align-items: baseline; gap: .35rem; margin: .75rem 0 0; }
+.landing-page .pricing-price strong { font-family: var(--lp-display); font-size: clamp(2rem, 3.5vw, 2.6rem); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.landing-page .pricing-price span { color: var(--lp-muted); }
+.landing-page .pricing-card[data-featured="true"] .pricing-price span { color: #495d7c; }
+.landing-page .pricing-billing { margin: 0; color: var(--lp-muted); font-size: .85rem; min-height: 1.4em; }
+.landing-page .pricing-cta { justify-content: center; margin: .75rem 0 .5rem; }
+.landing-page .pricing-card:not([data-featured="true"]) .pricing-cta { color: var(--lp-text); }
+.landing-page .pricing-features { display: grid; gap: .7rem; margin: .5rem 0 0; padding: 1.25rem 0 0; list-style: none; border-top: 1px solid #8ab4ff26; font-size: .9rem; line-height: 1.5; }
+.landing-page .pricing-card[data-featured="true"] .pricing-features { border-top-color: var(--lp-line); }
+.landing-page .pricing-features li { display: flex; align-items: flex-start; gap: .6rem; }
+.landing-page .pricing-features svg { flex: none; width: 1.1rem; height: 1.1rem; margin-top: .15rem; color: #8ab4ff; }
+.landing-page .pricing-card[data-featured="true"] .pricing-features svg { color: var(--lp-accent); }
+.landing-page .pricing-note { margin-top: 2rem; }
+@media (max-width: 56rem) { .landing-page .pricing-cards { grid-template-columns: minmax(0, 1fr); max-width: 32rem; } .landing-page .pricing-card[data-featured="true"] { margin-top: .85rem; } }
+
 @media (prefers-reduced-motion: no-preference) {
   .landing-page .hero-copy > h1 { animation: lp-rise 800ms var(--lp-ease) both; }
   .landing-page .hero-copy > .landing-intro, .landing-page .hero-bottom { animation: lp-rise 800ms 100ms var(--lp-ease) both; }

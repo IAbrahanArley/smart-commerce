@@ -50,6 +50,8 @@ Status: **adotado** em 2026-10-23 para A1–A12, conforme as recomendações aba
 
 ## Aprovação
 
+**Atualização de 2026-10-26:** o responsável escolheu o **Claude Sonnet 5.5** como modelo de lançamento. O padrão de `ADVISOR_MODEL` passou a ser `claude-sonnet-5-5`, e o Opus 5.5 continua selecionável. A cota agora é por plano: 60 perguntas no Profissional e 200 no Escala ([PRICING_PROPOSAL.md](../../product/PRICING_PROPOSAL.md)).
+
 Em 2026-10-23, o responsável aprovou A1–A12 conforme a coluna "Recomendação". A escolha final de modelo e esforço (A2) e o valor da cota (A8) serão confirmados com os dados medidos na SC-029.
 
 ## Decisões (aprovadas em 2026-10-23)

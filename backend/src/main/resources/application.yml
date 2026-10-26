@@ -128,8 +128,9 @@ advisor:
   global-monthly-cap-usd: ${ADVISOR_GLOBAL_MONTHLY_CAP_USD:20.00}
   # SC-026 (A1, A2, A11): Claude model and key. Without the key the assistant is unavailable even
   # with ADVISOR_ENABLED=true. The key is created by the owner in the Anthropic console and set
-  # only in the environment panel; never version it. base-url is for test fakes only.
-  model: ${ADVISOR_MODEL:claude-opus-5-5}
+  # only in the environment panel; never version it. base-url is for test fakes only. Sonnet 5.5 is
+  # the launch model (owner decision 2026-10-26, PRICING_PROPOSAL.md); Opus 5.5 stays selectable.
+  model: ${ADVISOR_MODEL:claude-sonnet-5-5}
   anthropic:
     api-key: ${ANTHROPIC_API_KEY:}
     base-url: ${ADVISOR_ANTHROPIC_BASE_URL:}

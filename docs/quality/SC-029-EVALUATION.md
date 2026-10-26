@@ -86,7 +86,7 @@ Antes de qualquer chamada ao modelo, o roteiro confere que os serviços devolvem
    Remove-Item Env:ADVISOR_EVAL_DRY
    ```
 
-2. A execução real com o modelo padrão (Opus 5.5, `effort: low`). Digite a chave você mesmo e não a cole em chat:
+2. A execução real com o modelo padrão (Sonnet 5.5 desde 2026-10-26, `effort: low`; use `ADVISOR_MODEL=claude-opus-5-5` para comparar). Digite a chave você mesmo e não a cole em chat:
 
    ```powershell
    # PowerShell 7: $env:ANTHROPIC_API_KEY = Read-Host "Chave da Anthropic" -MaskInput
@@ -116,7 +116,7 @@ Antes de qualquer chamada ao modelo, o roteiro confere que os serviços devolvem
 - Uma execução gasta no máximo US$ 2,50 (`ADVISOR_EVAL_RUN_CAP_USD`) e nunca passa do que resta dos US$ 5,00 (`ADVISOR_EVAL_BUDGET_USD`).
 - A parada usa o teto mensal da própria plataforma (A8), com margem de US$ 0,30 para a última pergunta.
 - Sem saldo suficiente, a execução falha antes de chamar o modelo.
-- **Estimativa:** de US$ 1,00 a 2,50 por execução no Opus, conforme o A8.
+- **Estimativa:** de US$ 0,50 a 1,25 por execução no Sonnet, ou de US$ 1,00 a 2,50 no Opus, conforme o A8.
 
 **Resultado:**
 - O relatório fica em `backend/target/advisor-eval/`, em Markdown e JSON. Ele traz, por pergunta, a nota, a classe de erro, os tokens, o custo e a resposta.

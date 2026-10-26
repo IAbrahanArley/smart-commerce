@@ -1,6 +1,17 @@
 # Proposta de planos de assinatura (SaaS)
 
-Registrada em 2026-10-26 a pedido do responsável. **É uma proposta para decisão, não implementada.** Preços, limites e o modelo de IA dependem da aprovação do responsável. Tributação e contrato precisam ser validados com contador e com o Mercado Pago.
+Registrada em 2026-10-26 a pedido do responsável.
+
+**Decisões do responsável (2026-10-26):**
+- **Planos:** os três planos e preços da seção 3 estão aprovados, com teste grátis de 14 dias.
+- **Ciclos:** semestral com **10%** de desconto e anual com **20%** (seção 3.1).
+- **Cobrança:** **só cartão, pela Stripe.** A Asaas, com Pix Automático, fica para quando o CNPJ completar 6 meses.
+- **IA:** o assistente começa no **Claude Sonnet 5.5**.
+- **Landing:** os cards de planos estão publicados em `/#planos`.
+
+**Ainda não implementado:** a cobrança e os limites (seção 5).
+
+Texto original da proposta: Preços, limites e o modelo de IA dependem da aprovação do responsável. Tributação e contrato precisam ser validados com contador e com o Mercado Pago.
 
 Base: [PRD.md](PRD.md) ("Assinatura SaaS paga pelo lojista… Preços dos planos ainda serão validados"), [ADR-0016](../architecture/adr/0016-consultative-agent.md) (custo da IA) e [RELEASE_PLAN.md](RELEASE_PLAN.md) (blocos 4 e 5).
 
@@ -63,6 +74,22 @@ Cada "loja" é uma empresa com sua vitrine (ADR-0006). O limite vale por conta d
 | Alertas (estoque, pedidos, margem) | ✓ | ✓ | ✓ |
 | **Assistente com IA e "Explicar"** | — | **60 perguntas/mês** por conta | **200 perguntas/mês** por conta, compartilhadas entre as lojas |
 | Suporte | e-mail | e-mail prioritário | prioritário |
+
+### 3.1 Ciclos semestral e anual (aprovados)
+
+O desconto foi escolhido para manter a margem com o pior caso de IA (cota cheia no Sonnet 5.5, R$ 0,22 por pergunta) e com a tarifa da Stripe sobre o total cobrado de uma vez. O pagamento antecipado ainda reduz tarifa por mês e cancelamento.
+
+| Plano | Mensal | Semestral (−10%) | Anual (−20%) | Margem por mês no anual, pior caso |
+| --- | --- | --- | --- | --- |
+| Essencial | R$ 59 | R$ 318 (R$ 53/mês) | R$ 564 (R$ 47/mês) | R$ 40 |
+| Profissional | R$ 129 | R$ 696 (R$ 116/mês) | R$ 1.236 (R$ 103/mês) | R$ 76 |
+| Escala | R$ 299 | R$ 1.614 (R$ 269/mês) | R$ 2.868 (R$ 239/mês) | R$ 161 |
+
+**Valores e regras do pagamento antecipado:**
+- Os totais são arredondados para baixo, em reais inteiros, e ficam em `admin-web/src/lib/plans.ts`, que é a fonte da landing. O módulo de cobrança vai repetir os mesmos valores no backend.
+- O cálculo da margem considera a Stripe a 4,69% + R$ 0,39, imposto de 6% e a infraestrutura variável.
+- **Arrependimento:** quem pagar à vista pode desistir em até 7 dias pelo direito de arrependimento (CDC, art. 49), com reembolso integral.
+- **Cancelamento depois disso:** a regra vai nos Termos de uso. Proposta: o acesso continua até o fim do período pago, sem reembolso proporcional.
 
 **Avulsos e regras:**
 - **Pacote de IA extra:** +50 perguntas por R$ 19, sem renovação automática. Cobre o pior caso (50 × R$ 0,44 = R$ 22) quase no custo: serve para não frustrar quem precisa, não para gerar lucro.

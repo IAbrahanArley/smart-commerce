@@ -292,6 +292,7 @@ try {
   assert.ok(!html.includes('class="site-header"'), "Landing sem cabeçalho operacional");
   // Block 2a: the landing leads to sign-up, says nothing is "in development" and the demos are gone.
   assert.ok(html.includes('href="/cadastro"') && html.includes('href="/entrar"'), "Landing leva ao cadastro e ao login");
+  assert.ok(html.includes('id="planos"') && html.includes("Começar teste grátis") && html.includes("Mais escolhido"), "Landing mostra os planos");
   assert.ok(!/em desenvolvimento|demonstraç/i.test(html), "Landing sem menção a desenvolvimento ou demonstração");
   for (const path of ["/componentes", "/admin/produtos", "/loja/produto"]) {
     const response = await fetch(`${baseUrl}${path}`, { signal: AbortSignal.timeout(5000) });

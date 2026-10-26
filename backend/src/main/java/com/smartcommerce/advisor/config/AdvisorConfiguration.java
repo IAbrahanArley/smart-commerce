@@ -22,7 +22,7 @@ public class AdvisorConfiguration {
 
   @Bean
   ClaudeClient claudeClient(
-      @Value("${advisor.model:claude-opus-5-5}") String model,
+      @Value("${advisor.model:claude-sonnet-5-5}") String model,
       @Value("${advisor.anthropic.api-key:}") String apiKey,
       @Value("${advisor.anthropic.base-url:}") String baseUrl) {
     AdvisorPricing.of(model); // fails fast on a model without a known price
