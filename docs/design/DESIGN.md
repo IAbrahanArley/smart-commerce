@@ -192,7 +192,19 @@ Aprovado pelo responsável em 2026-10-26. O pedido foi uma interface de "nível 
 - **Cards de indicador (`ui/kpi-card.tsx`):** ícone em círculo suave, rótulo, valor e detalhe, no estilo das estatísticas do Dashtail. São usados no resumo da loja, no desempenho e no financeiro.
 - **Card de produto da vitrine:** portado do card de e-commerce do Dashtail em CSS próprio, sem Tailwind na vitrine. Tem foto emoldurada com zoom leve no hover (desligado com movimento reduzido), selo de disponibilidade sobre a foto, nome, preço e botão contornado "Ver produto" de 44px que se preenche no hover. O card inteiro continua sendo um único link. Favoritos, visualização rápida e avaliação do template ficaram de fora porque não existem no produto.
 
-**Próximas fases** (cada uma com revisão própria): tabelas com filtros, formulários e telas operacionais nos componentes novos e, por fim, a revisão completa de acessibilidade.
+**Fase 3 (2026-10-26), tabelas com filtros:**
+- **Tabelas:** todas usam a mesma classe `.data-table`, agora no estilo do Dashtail: cabeçalho em versalete pequeno sobre faixa neutra, mais respiro nas células e destaque da linha no hover. No celular, as linhas continuam empilhadas com o rótulo de cada coluna.
+- **Barra de filtros (`.table-toolbar`):** fica acima da tabela, com `SearchInput` (ícone de busca, `type="search"`) e `Select` (select nativo estilizado, que mantém o teclado, o leitor de tela e o seletor do celular). Quebra de linha em telas estreitas.
+- **Produtos:**
+  - busca por nome ou SKU, incluindo o SKU das combinações, sem diferenciar acentos;
+  - filtros de categoria (com "Sem categoria") e de vitrine;
+  - ordenação por cadastro, nome ou preço, com preço comparado em centavos exatos e nunca em ponto flutuante;
+  - contagem "X de Y produtos" na legenda, anunciada (`aria-live`), e "Limpar filtros".
+
+  Tudo roda sobre o catálogo já carregado (`lib/product-filters.ts`, coberto pelo smoke).
+- **Pedidos:** o select de situação virou abas (links com `aria-current`), que funcionam sem JavaScript e rolam para o lado no celular. Não há busca por texto, porque a API filtra só por situação e pagina de 20 em 20: buscar dentro de uma página daria um resultado enganoso. Para buscar um pedido específico, use a busca global (Ctrl+K), que lista os pedidos recentes.
+
+**Próximas fases** (cada uma com revisão própria): formulários e telas operacionais nos componentes novos e, por fim, a revisão completa de acessibilidade.
 
 ## Plataforma e temas futuros das lojas
 

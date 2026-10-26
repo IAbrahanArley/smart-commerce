@@ -180,9 +180,10 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 
 .data-table-wrap { margin-top: var(--sc-space-6); background: var(--sc-color-surface); border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-surface); }
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table caption { padding: var(--sc-space-4); font-weight: 700; text-align: left; }
-.data-table th, .data-table td { padding: var(--sc-space-3) var(--sc-space-4); text-align: left; vertical-align: middle; border-top: 1px solid var(--sc-color-divider); overflow-wrap: anywhere; }
-.data-table thead th { font-size: .875rem; color: var(--sc-color-text-secondary); background: var(--sc-color-background); }
+.data-table caption { padding: var(--sc-space-4) var(--sc-space-6); font-size: 1rem; font-weight: 600; text-align: left; }
+.data-table th, .data-table td { padding: var(--sc-space-3) var(--sc-space-6); text-align: left; vertical-align: middle; border-top: 1px solid var(--sc-color-divider); overflow-wrap: anywhere; }
+/* Dashtail table header: small uppercase labels on a muted band. */
+.data-table thead th { font-size: .75rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--sc-color-text-secondary); background: var(--sc-color-background); }
 .data-table a { display: inline-flex; align-items: center; min-height: 44px; }
 .data-table .numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cell-hint { font-size: .875rem; font-weight: 400; color: var(--sc-color-text-secondary); }
@@ -377,4 +378,12 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .legal-draft { padding: var(--sc-space-3); background: var(--sc-color-surface); border: 1px solid var(--sc-color-divider); border-left: 4px solid var(--sc-color-text-secondary); border-radius: var(--sc-radius-control); }
 .site-footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sc-space-2) var(--sc-space-6); margin-top: var(--sc-space-2); }
 .site-footer-links a { display: inline-flex; align-items: center; min-height: 44px; }
+/* Table toolbar (design system phase 3): search and filters above a table, wrapping on narrow screens. */
+.table-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sc-space-3); max-width: none; margin-top: var(--sc-space-6); padding: var(--sc-space-4); background: var(--sc-color-surface); border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-surface); box-shadow: var(--sc-shadow-surface); }
+.table-toolbar + .data-table-wrap, .table-toolbar + .empty-panel { margin-top: var(--sc-space-4); }
+/* Status tabs above the orders table; they scroll sideways instead of wrapping on phones. */
+.status-tabs { display: flex; gap: var(--sc-space-1); max-width: none; margin-top: var(--sc-space-6); overflow-x: auto; border-bottom: 1px solid var(--sc-color-divider); }
+.status-tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--sc-space-4); white-space: nowrap; color: var(--sc-color-text-secondary); font-size: .875rem; font-weight: 600; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.status-tabs a:hover { color: var(--sc-color-action); text-decoration: none; }
+.status-tabs a[aria-current="page"] { color: var(--sc-color-action); border-bottom-color: var(--sc-color-action); }
 }
