@@ -94,11 +94,7 @@ Abra o admin para criar a conta. O helper inicia o perfil `dev`; as mensagens s�
 
 Caixa DEV padrão no Windows: `%LOCALAPPDATA%/SmartCommerce/mail`; no Linux: `~/.local/share/SmartCommerce/mail`. Abra o arquivo `.eml` mais recente como texto e copie o link completo, incluindo `#token=...`. O link é sensível: não envie ao chat nem versione mensagens. Tokens duram 30 minutos; o reenvio tem cooldown de 60 segundos.
 
-<<<<<<< HEAD
-Rotas: `/cadastro`, `/confirmar-email`, `/entrar`, `/lojas` (minhas lojas, destino após o login), `/conta`, `/lojas/{id}`, `/lojas/{id}/entrega` e `/lojas/{id}/dados` (nome, logo e contatos que a vitrine mostra; [validação](docs/quality/MVP-1B-STORE-PROFILE.md)). API de mesma origem via Next.js: `/api/auth/csrf`, `/registration`, `/activation`, `/login`, `/me` e `/logout`, todos sob `/api/auth`. Mutações exigem CSRF; senhas e sessões não usam localStorage.
-=======
-Rotas: `/cadastro`, `/confirmar-email`, `/entrar`, `/esqueci-senha`, `/redefinir-senha`, `/lojas` (minhas lojas, destino após o login), `/conta`, `/lojas/{id}` e `/lojas/{id}/entrega`. API de mesma origem via Next.js: `/api/auth/csrf`, `/registration`, `/activation`, `/login`, `/me`, `/logout`, `/password-reset/request` e `/password-reset/confirmation`, todos sob `/api/auth`. A recuperação de senha responde sempre da mesma forma, usa link de uso único por 30 minutos e encerra todas as sessões ao trocar a senha ([validação](docs/quality/MVP-1A-PASSWORD-RESET.md)). Mutações exigem CSRF; senhas e sessões não usam localStorage.
->>>>>>> origin/main
+Rotas: `/cadastro`, `/confirmar-email`, `/entrar`, `/esqueci-senha`, `/redefinir-senha`, `/lojas` (minhas lojas, destino após o login), `/conta`, `/lojas/{id}`, `/lojas/{id}/entrega` e `/lojas/{id}/dados` (nome, logo e contatos que a vitrine mostra; [validação](docs/quality/MVP-1B-STORE-PROFILE.md)). API de mesma origem via Next.js: `/api/auth/csrf`, `/registration`, `/activation`, `/login`, `/me`, `/logout`, `/password-reset/request` e `/password-reset/confirmation`, todos sob `/api/auth`. A recuperação de senha responde sempre da mesma forma, usa link de uso único por 30 minutos e encerra todas as sessões ao trocar a senha ([validação](docs/quality/MVP-1A-PASSWORD-RESET.md)). Mutações exigem CSRF; senhas e sessões não usam localStorage.
 
 Para encerrar, Ctrl+C nos terminais e parada do banco preservando volume:
 
