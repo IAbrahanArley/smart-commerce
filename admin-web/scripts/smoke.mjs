@@ -10,8 +10,25 @@ import { alertLink, alertText, parseAlerts } from "../src/lib/alerts.ts";
 import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outcomeText, parseAnswer, parseStatus, questionError, quotaText, sourceText } from "../src/lib/advisor.ts";
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
+import { instagramHandle, logoFileError, profileErrors, profileFields, profilePayload, whatsappText } from "../src/lib/store-profile.ts";
 
 for (const path of ["/conta", "/lojas", "/lojas/uuid/despesas"]) assert.equal(isProtectedPath(path), true, path);
+// Store data (MVP block 1b): contacts shown the way the owner typed them, checked like the backend.
+assert.equal(whatsappText("5511988887777"), "(11) 98888-7777"); assert.equal(whatsappText("552133334444"), "(21) 3333-4444");
+assert.deepEqual(profileFields({ name: "Loja", contactEmail: null, whatsapp: "5511988887777", instagram: "loja.ana", hasLogo: false, version: 1 }),
+  { name: "Loja", contactEmail: "", whatsapp: "(11) 98888-7777", instagram: "@loja.ana" });
+assert.deepEqual(profileErrors({ name: "Loja da Ana", contactEmail: "contato@ana.example", whatsapp: "(11) 98888-7777", instagram: "https://instagram.com/loja_ana/" }), {});
+assert.deepEqual(profileErrors({ name: "Loja", contactEmail: "", whatsapp: "", instagram: "" }), {}, "Contatos em branco são opcionais.");
+const profileProblems = profileErrors({ name: " ", contactEmail: "sem-arroba", whatsapp: "+1 555 010 0000", instagram: "loja ana" });
+assert.deepEqual(Object.keys(profileProblems).sort(), ["contactEmail", "instagram", "name", "whatsapp"]);
+assert.equal(instagramHandle("@Loja"), "Loja"); assert.equal(instagramHandle("www.instagram.com/loja/"), "loja");
+assert.deepEqual(profilePayload({ name: " Loja ", contactEmail: " ", whatsapp: "11988887777", instagram: "" }, 3),
+  { name: "Loja", contactEmail: null, whatsapp: "11988887777", instagram: null, expectedVersion: 3 });
+assert.equal(logoFileError(null), "Selecione uma imagem.");
+assert.equal(logoFileError({ type: "image/gif", size: 10 }), "Use uma imagem JPEG ou PNG.");
+assert.equal(logoFileError({ type: "image/png", size: 6 * 1024 * 1024 }), "Use uma imagem de até 5 MiB.");
+assert.equal(logoFileError({ type: "image/png", size: 1024 }), null);
+
 for (const path of ["/", "/entrar", "/cadastro", "/loja/produto", "/lojas-publicas"]) assert.equal(isProtectedPath(path), false, path);
 
 // ADR-0014: the /api rewrite only targets HTTPS (or loopback HTTP); the notice needs the exact flag.
@@ -276,6 +293,7 @@ try {
     ["/lojas", "Minhas lojas", "Consultando suas lojas"],
     ["/lojas/00000000-0000-0000-0000-000000000000", "Minha loja", "Consultando sua loja"],
     ["/lojas/00000000-0000-0000-0000-000000000000/entrega", "Entrega", "Consultando a configuração de entrega"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/dados", "Dados da loja", "Consultando os dados da loja"],
     ["/lojas/00000000-0000-0000-0000-000000000000/pagamentos?mercadoPago=negado", "Pagamentos", "A autorização foi recusada no Mercado Pago"],
     ["/lojas/00000000-0000-0000-0000-000000000000/despesas?mes=2026-09", "Despesas", "Setembro de 2026"],
     ["/lojas/00000000-0000-0000-0000-000000000000/financeiro?periodo=LAST_7_DAYS", "Financeiro", 'value="LAST_7_DAYS" selected'],

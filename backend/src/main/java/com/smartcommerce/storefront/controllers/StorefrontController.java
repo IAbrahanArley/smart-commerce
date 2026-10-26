@@ -27,6 +27,19 @@ public final class StorefrontController {
         .body(storefront.list(slug, after == null ? null : PublicLocator.uuid(after)));
   }
 
+  /** The store logo (MVP block 1b), only while the store is published. */
+  @GetMapping("/logo")
+  public ResponseEntity<byte[]> logo(@PathVariable String slug) {
+    var logo = storefront.logo(slug);
+    return ResponseEntity.ok()
+        .contentType(org.springframework.http.MediaType.parseMediaType(logo.mediaType()))
+        .contentLength(logo.bytes().length)
+        .cacheControl(CacheControl.noStore())
+        .header("X-Content-Type-Options", "nosniff")
+        .header("Content-Disposition", "inline; filename=\"store-logo\"")
+        .body(logo.bytes());
+  }
+
   @GetMapping("/products/{productId}")
   public ResponseEntity<PublicProductDetailsView> find(
       @PathVariable String slug, @PathVariable String productId) {

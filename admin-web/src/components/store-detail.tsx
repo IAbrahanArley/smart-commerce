@@ -81,7 +81,8 @@ export default function StoreDetail({ tenantId, period }: { tenantId: string; pe
       <StoreDashboard tenantId={tenantId} period={period} explain={explain} />
       <div className="overview-grid">
       <section className="side-card store-summary" aria-labelledby="store-data-title"><h2 id="store-data-title">Dados da loja</h2><dl className="store-data"><dt>Empresa</dt><dd>{store.companyName}</dd><dt>Nome da loja</dt><dd>{store.store.name}</dd>
-        <dt>Identificador da loja</dt><dd>{store.store.slug}</dd><dt>Seu acesso</dt><dd>Proprietário</dd></dl></section>
+        <dt>Identificador da loja</dt><dd>{store.store.slug}</dd><dt>Seu acesso</dt><dd>Proprietário</dd></dl>
+        <p><Link href={`/lojas/${encodeURIComponent(tenantId)}/dados`}>Editar nome, logo e contatos</Link></p></section>
       <section className="side-card" aria-labelledby="publication-title"><h2 id="publication-title">Publicação da vitrine</h2>
         <p>Somente nome, preço e disponibilidade dos produtos publicados ficam acessíveis. SKU, custo e histórico de estoque continuam restritos ao painel.</p>
         {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}

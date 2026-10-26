@@ -7,6 +7,7 @@ import { formatBRL } from "@/lib/price";
 import { Arrow } from "@/components/arrow";
 import { Availability } from "@/components/availability";
 import { ProductCover } from "@/components/product-gallery";
+import { StoreContacts } from "@/components/store-contacts";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Produtos da loja" };
@@ -25,6 +26,7 @@ export default async function StorePage({ params, searchParams }: Props) {
         <section className="catalog-intro" aria-labelledby="catalog-title">
           <h1 id="catalog-title" translate="no">{store.name}</h1>
           <p>Confira os produtos, os preços e a disponibilidade de cada item.</p>
+          <StoreContacts store={store} />
         </section>
         <section id="produtos" className="catalog-section" aria-labelledby="products-title">
           <div className="section-heading">

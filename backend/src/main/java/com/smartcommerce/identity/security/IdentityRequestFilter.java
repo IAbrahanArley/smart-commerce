@@ -41,7 +41,9 @@ public final class IdentityRequestFilter extends OncePerRequestFilter {
         "POST".equals(request.getMethod())
             && request
                 .getRequestURI()
-                .matches("/api/tenants/[0-9a-fA-F-]{36}/products/[0-9a-fA-F-]{36}/images")
+                // Product photos and, since MVP block 1b, the store logo: the only uploads.
+                .matches(
+                    "/api/tenants/[0-9a-fA-F-]{36}/(products/[0-9a-fA-F-]{36}/images|profile/logo)")
             && request.getContentType() != null
             && request
                 .getContentType()

@@ -14,7 +14,9 @@ export type PublicProduct = {
 export type PublicVariant = { id: string; price: string; currency: "BRL"; available: boolean; options: { name: string; value: string }[] };
 export type PublicImage = { id: string; alt: string; width: number; height: number };
 
-export type PublicStore = { name: string; slug: string };
+// MVP block 1b: public contacts and logo the store chose to show; null contacts are not shown.
+export type StoreProfile = { contactEmail: string | null; whatsapp: string | null; instagram: string | null; logo: boolean };
+export type PublicStore = { name: string; slug: string; profile: StoreProfile };
 export type PublicCatalog = PublicStore & { products: PublicProduct[]; nextCursor: string | null };
 export type PublicProductDetail = { store: PublicStore; product: PublicProduct; images: PublicImage[] };
 
@@ -77,7 +79,23 @@ function name(value: unknown): string {
 function store(value: unknown, expectedSlug: string): PublicStore {
   const input = object(value);
   if (input.slug !== expectedSlug) unavailable();
-  return { name: name(input.name), slug: expectedSlug };
+  return { name: name(input.name), slug: expectedSlug, profile: storeProfile(input.profile) };
+}
+
+/** Same rules as the backend; anything unexpected is dropped instead of shown. */
+export function storeProfile(value: unknown): StoreProfile {
+  const input = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const email = typeof input.contactEmail === "string" && input.contactEmail.length <= 254
+    && /^[^@\s<>"]{1,64}@[^@\s.<>"]+(\.[^@\s.<>"]+)+$/.test(input.contactEmail) ? input.contactEmail : null;
+  const whatsapp = typeof input.whatsapp === "string" && /^55[1-9]\d{9,10}$/.test(input.whatsapp) ? input.whatsapp : null;
+  const instagram = typeof input.instagram === "string" && /^[A-Za-z0-9._]{1,30}$/.test(input.instagram) ? input.instagram : null;
+  return { contactEmail: email, whatsapp, instagram, logo: input.logo === true };
+}
+
+/** "5511988887777" → "(11) 98888-7777". */
+export function whatsappText(digits: string): string {
+  const match = /^55(\d{2})(\d{4,5})(\d{4})$/.exec(digits);
+  return match ? `(${match[1]}) ${match[2]}-${match[3]}` : digits;
 }
 
 function product(value: unknown): PublicProduct {
@@ -134,6 +152,24 @@ export async function loadProduct(slug: string, id: string): Promise<PublicProdu
     return { id: image.id, alt: image.alt, width: image.width, height: image.height };
   });
   return { store: store(input.store, slug), product: item, images };
+}
+
+/** The store logo through this app's own origin, like product photos (MVP block 1b). */
+export async function publicLogo(slug: string): Promise<Response> {
+  if (slug.length < 3 || slug.length > 63 || !SLUG.test(slug)) return new Response(null, { status: 404 });
+  return proxyImage(`${apiOrigin()}/api/public/stores/${encodeURIComponent(slug)}/logo`);
+}
+
+async function proxyImage(url: string): Promise<Response> {
+  try {
+    const response = await fetch(url, {
+      credentials: "omit", cache: "no-store", redirect: "error", headers: { Accept: "image/jpeg, image/png" }, signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return new Response(null, { status: response.status === 404 ? 404 : 503, headers: { "Cache-Control": "no-store" } });
+    const type = response.headers.get("content-type")?.split(";")[0];
+    if (type !== "image/png" && type !== "image/jpeg") throw new Error();
+    return new Response(response.body, { status: 200, headers: { "Content-Type": type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
+  } catch { return new Response(null, { status: 503, headers: { "Cache-Control": "no-store" } }); }
 }
 
 export async function publicImage(slug: string, productId: string, imageId: string): Promise<Response> {

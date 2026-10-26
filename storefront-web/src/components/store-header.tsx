@@ -11,7 +11,10 @@ export async function StoreHeader({ store }: { store: PublicStore }) {
     <header className="store-header">
       <div className="page-width header-content">
         <Link href={storeUrl} className="store-name" translate="no" prefetch={false}>
-          {store.name}
+          {/* The name stays as text next to the logo, so the image is decorative. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {store.profile.logo ? <img className="store-logo" src={`/midia/lojas/${encodeURIComponent(store.slug)}/logo`} alt="" /> : null}
+          <span>{store.name}</span>
         </Link>
         <nav aria-label="Navegação da loja">
           <Link href={`${storeUrl}#produtos`} prefetch={false}>Ver produtos</Link>
