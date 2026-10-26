@@ -45,3 +45,5 @@ Thumbs.db
 
 # Graphify (grafo local, não versionado)
 graphify-out/
+# Advisor evaluation (SC-029): local budget ledger of paid runs
+backend/.advisor-eval/

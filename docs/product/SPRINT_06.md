@@ -121,6 +121,8 @@ O agente só lê: não altera pedidos, valores nem estoque, e não inventa núme
 
 ## SC-029 — Avaliação e custo medido
 
+**Estado (2026-10-26):** orçamento de até US$ 5,00 aprovado. Conjunto de 31 perguntas e roteiro prontos e validados com simulação gratuita ([avaliação](../quality/SC-029-EVALUATION.md)); falta a execução real pelo responsável.
+
 - **Conjunto de perguntas:** cerca de 30 perguntas com resposta conhecida, sobre uma loja sintética com números calculados à mão. Cobre:
   - mês completo e parcial;
   - estoque;
