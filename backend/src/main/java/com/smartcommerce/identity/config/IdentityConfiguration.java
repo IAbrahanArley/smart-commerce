@@ -5,6 +5,7 @@ import com.smartcommerce.identity.mail.BrevoVerificationMail;
 import com.smartcommerce.identity.mail.LocalVerificationMail;
 import com.smartcommerce.identity.mail.VerificationMail;
 import com.smartcommerce.identity.repositories.JdbcIdentityRepository;
+import com.smartcommerce.identity.repositories.JdbcPasswordResetRepository;
 import com.smartcommerce.identity.repositories.JdbcRateLimitRepository;
 import com.smartcommerce.identity.repositories.JdbcVerificationRepository;
 import com.smartcommerce.identity.security.IdentityPasswordEncoder;
@@ -76,6 +77,7 @@ public class IdentityConfiguration {
   IdentityAuthenticationService identityAuthenticationService(
       JdbcIdentityRepository identities,
       JdbcVerificationRepository proofs,
+      JdbcPasswordResetRepository resets,
       JdbcRateLimitRepository rateLimits,
       IdentityPasswordEncoder encoder,
       TransactionTemplate identityTransactions,
@@ -88,6 +90,7 @@ public class IdentityConfiguration {
     return new IdentityAuthenticationService(
         identities,
         proofs,
+        resets,
         rateLimits,
         encoder,
         identityTransactions,

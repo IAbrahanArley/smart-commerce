@@ -50,19 +50,31 @@ public final class LocalVerificationMail implements VerificationMail {
 
   @Override
   public void send(String recipient, String activationLink) {
+    write(
+        "To: "
+            + recipient
+            + "\nSubject: Confirme seu e-mail — Smart Commerce\n\nAbra o link e defina sua senha explicitamente:\n"
+            + activationLink
+            + "\n\nO link expira em 30 minutos. Se não solicitou, ignore esta mensagem.\n");
+  }
+
+  @Override
+  public void sendPasswordReset(String recipient, String resetLink) {
+    write(
+        "To: "
+            + recipient
+            + "\nSubject: Redefina sua senha — Smart Commerce\n\nAbra o link e escolha uma nova senha:\n"
+            + resetLink
+            + "\n\nO link expira em 30 minutos e só pode ser usado uma vez. Se não pediu, ignore esta mensagem.\n");
+  }
+
+  private void write(String message) {
     Path file = directory.resolve(UUID.randomUUID() + ".eml");
     try {
       // Empty file is secured before any sensitive content is written.
       Files.createFile(file);
       restrict(file, false);
-      Files.writeString(
-          file,
-          "To: "
-              + recipient
-              + "\nSubject: Confirme seu e-mail — Smart Commerce\n\nAbra o link e defina sua senha explicitamente:\n"
-              + activationLink
-              + "\n\nO link expira em 30 minutos. Se não solicitou, ignore esta mensagem.\n",
-          StandardCharsets.UTF_8);
+      Files.writeString(file, message, StandardCharsets.UTF_8);
     } catch (IOException exception) {
       try {
         Files.deleteIfExists(file);

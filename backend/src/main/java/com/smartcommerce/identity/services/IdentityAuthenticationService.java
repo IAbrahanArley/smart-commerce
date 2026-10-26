@@ -8,6 +8,7 @@ import com.smartcommerce.identity.domain.PasswordPolicy;
 import com.smartcommerce.identity.exceptions.IdentityException;
 import com.smartcommerce.identity.mail.VerificationMail;
 import com.smartcommerce.identity.repositories.JdbcIdentityRepository;
+import com.smartcommerce.identity.repositories.JdbcPasswordResetRepository;
 import com.smartcommerce.identity.repositories.JdbcRateLimitRepository;
 import com.smartcommerce.identity.repositories.JdbcVerificationRepository;
 import com.smartcommerce.identity.security.IdentityPasswordEncoder;
@@ -23,6 +24,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /** Application boundary: email ownership precedes credential creation. */
 public final class IdentityAuthenticationService {
   private final JdbcVerificationRepository proofs;
+  private final JdbcPasswordResetRepository resets;
   private final JdbcRateLimitRepository rateLimits;
   private final TransactionTemplate transactions;
   private final JdbcIdentityRepository identities;
@@ -37,6 +39,7 @@ public final class IdentityAuthenticationService {
   public IdentityAuthenticationService(
       JdbcIdentityRepository identities,
       JdbcVerificationRepository proofs,
+      JdbcPasswordResetRepository resets,
       JdbcRateLimitRepository rateLimits,
       IdentityPasswordEncoder encoder,
       TransactionTemplate transactions,
@@ -44,6 +47,7 @@ public final class IdentityAuthenticationService {
       VerificationMail mail,
       String origin) {
     this.proofs = proofs;
+    this.resets = resets;
     this.rateLimits = rateLimits;
     this.encoder = encoder;
     this.transactions = transactions;
@@ -131,6 +135,92 @@ public final class IdentityAuthenticationService {
     if (!Boolean.TRUE.equals(activated)) throw invalidProof();
   }
 
+  /**
+   * Password recovery request (MVP block 1a). Always silent: the answer never tells whether the
+   * address has an account. Only an active, verified account with a credential gets a link; a new
+   * request replaces the previous link, at most one per minute, and a delivery failure keeps the
+   * previous one.
+   */
+  public void requestPasswordReset(String rawEmail, String remoteAddress) {
+    EmailAddress email;
+    try {
+      email = EmailAddress.parse(rawEmail);
+    } catch (IllegalArgumentException invalid) {
+      return; // Same silent answer as an unknown address.
+    }
+    if (!limits.acquire(
+        List.of(
+            IdentityRateLimiter.quota("reset-id", email.comparisonKey(), 3, Duration.ofHours(1)),
+            IdentityRateLimiter.quota("reset-ip", remoteAddress, 10, Duration.ofHours(1)),
+            IdentityRateLimiter.quota("reset-global", "all", 1000, Duration.ofMinutes(15)))))
+      return;
+    transactions.executeWithoutResult(
+        status -> {
+          Instant now = Instant.now();
+          var locked = identities.lockByEmail(email);
+          if (locked.isEmpty()) return;
+          var user = locked.orElseThrow();
+          if (user.status() != IdentityStatus.ACTIVE
+              || user.verifiedAt() == null
+              || identities.findCredential(user.id()).isEmpty()) return;
+          var issued = resets.latestIssue(user.id());
+          if (issued.isPresent() && issued.orElseThrow().plusSeconds(60).isAfter(now)) return;
+          byte[] bytes = new byte[32];
+          random.nextBytes(bytes);
+          String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+          try {
+            mail.sendPasswordReset(email.original(), origin + "/redefinir-senha#token=" + token);
+          } catch (IdentityException deliveryFailure) {
+            if (deliveryFailure.reason() != IdentityException.Reason.UNAVAILABLE)
+              throw deliveryFailure;
+            // Silent like an unknown address; the previous link, if any, stays valid.
+            status.setRollbackOnly();
+            return;
+          }
+          resets.deleteForUser(user.id());
+          resets.insert(
+              IdentityRateLimiter.digest(token), user.id(), now, now.plus(Duration.ofMinutes(30)));
+        });
+  }
+
+  /**
+   * Sets a new password from a recovery link (MVP block 1a). The proof is consumed once, under the
+   * user lock; every other link of the user is dropped and the session version changes, so all
+   * existing sessions end.
+   */
+  public void resetPassword(String token, String password, String remoteAddress) {
+    if (!limits.acquire(
+        List.of(
+            IdentityRateLimiter.quota(
+                "reset-confirm-ip", remoteAddress, 30, Duration.ofMinutes(15)),
+            IdentityRateLimiter.quota(
+                "reset-confirm-global", "all", 1000, Duration.ofMinutes(15))))) throw throttled();
+    if (token == null || !token.matches("[A-Za-z0-9_-]{43}")) throw invalidResetProof();
+    String digest = IdentityRateLimiter.digest(token);
+    UUID userId =
+        resets
+            .findEligibleUser(digest, Instant.now())
+            .orElseThrow(IdentityAuthenticationService::invalidResetProof);
+    String hash = hash(password);
+    Boolean replaced =
+        transactions.execute(
+            status -> {
+              Instant current = Instant.now();
+              // Same lock order as the request: user first, then proof.
+              var user = identities.findUser(userId);
+              if (user.isEmpty()) return false;
+              if (identities.lockByEmail(user.orElseThrow().email()).isEmpty()) return false;
+              if (!resets.consume(digest, userId, current)) return false;
+              if (!identities.replacePassword(userId, new PasswordHash(hash), current)) {
+                status.setRollbackOnly();
+                return false;
+              }
+              resets.deleteForUser(userId);
+              return true;
+            });
+    if (!Boolean.TRUE.equals(replaced)) throw invalidResetProof();
+  }
+
   public IdentityUser authenticate(String rawEmail, String password, String remoteAddress) {
     EmailAddress email = null;
     try {
@@ -206,6 +296,7 @@ public final class IdentityAuthenticationService {
         status -> {
           Instant now = Instant.now();
           proofs.deleteExpired(now.minus(Duration.ofHours(23)));
+          resets.deleteExpired(now.minus(Duration.ofHours(23)));
           identities.deleteExpiredPending(now.minus(Duration.ofDays(7)));
           rateLimits.deleteExpired(now);
         });
@@ -216,6 +307,12 @@ public final class IdentityAuthenticationService {
     return new IdentityException(
         IdentityException.Reason.INVALID_PROOF,
         "Link inválido ou expirado. Solicite uma nova confirmação.");
+  }
+
+  private static IdentityException invalidResetProof() {
+    return new IdentityException(
+        IdentityException.Reason.INVALID_PROOF,
+        "Link inválido ou expirado. Peça um novo link de redefinição de senha.");
   }
 
   private static IdentityException throttled() {

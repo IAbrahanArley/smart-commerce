@@ -112,7 +112,10 @@ public class BootstrapSecurityConfiguration {
                         "/api/auth/registration",
                         "/api/auth/activation",
                         "/api/auth/login",
-                        "/api/auth/logout")
+                        "/api/auth/logout",
+                        // MVP block 1a: password recovery, with CSRF like the other auth forms.
+                        "/api/auth/password-reset/request",
+                        "/api/auth/password-reset/confirmation")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/auth/me")
                     .authenticated()
