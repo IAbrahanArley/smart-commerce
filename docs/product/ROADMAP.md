@@ -6,7 +6,8 @@
 4a. Estado da Sprint 4 (2026-10-21): SC-012 a SC-017 implementadas e revisadas em sandbox com servidores falsos; a validação ponta a ponta com uma conta de teste real do Mercado Pago está pendente e fecha a sprint.
 5. Sprint 5: financeiro, despesas, CMV, margens e dashboard. Plano proposto em [SPRINT_05.md](SPRINT_05.md), com as decisões F1–F10 do [ADR-0015](../architecture/adr/0015-finance-dashboard.md) aprovadas em 2026-10-21.
 6. Sprint 6: agente consultivo read-only, alertas e explicabilidade. Plano proposto em [SPRINT_06.md](SPRINT_06.md), com as decisões A1–A12 do [ADR-0016](../architecture/adr/0016-consultative-agent.md) aprovadas em 2026-10-23.
-7. Beta: validação com lojistas, segurança, suporte e custos.
+7. Entrega do MVP: plano em [RELEASE_PLAN.md](RELEASE_PLAN.md) (registrado em 2026-10-26), com as lacunas do PRD, a preparação de produção, as validações reais pendentes e a infraestrutura.
+8. Beta: validação com lojistas, segurança, suporte e custos.
 
 Roadmap adaptativo: priorização e datas revistas após cada sprint.
 
