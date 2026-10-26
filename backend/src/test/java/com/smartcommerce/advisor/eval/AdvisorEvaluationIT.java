@@ -665,7 +665,7 @@ class AdvisorEvaluationIT {
 
   private static String model() {
     String model = System.getenv("ADVISOR_MODEL");
-    return model == null || model.isBlank() ? "claude-opus-5-5" : model;
+    return model == null || model.isBlank() ? "claude-sonnet-5-5" : model;
   }
 
   private Path report(List<Result> results) throws IOException {

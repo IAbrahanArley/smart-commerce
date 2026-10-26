@@ -168,7 +168,7 @@ class AdvisorAssistantIT {
     assertThat(REQUESTS).hasSize(2);
     assertThat(KEYS).containsOnly(KEY);
     JsonNode first = REQUESTS.getFirst();
-    assertThat(first.get("model").asString()).isEqualTo("claude-opus-5-5");
+    assertThat(first.get("model").asString()).isEqualTo("claude-sonnet-5-5");
     assertThat(first.get("max_tokens").asInt()).isEqualTo(4000);
     assertThat(first.get("output_config").get("effort").asString()).isEqualTo("low");
     // A5: the final answer is structured (text plus sources), with a closed schema.
@@ -206,14 +206,15 @@ class AdvisorAssistantIT {
     Map<String, Object> usage = jdbc.queryForMap("SELECT * FROM advisor_usage");
     assertThat(usage.get("tenant_id")).isEqualTo(tenantA);
     assertThat(usage.get("outcome")).isEqualTo("ANSWERED");
-    assertThat(usage.get("model")).isEqualTo("claude-opus-5-5");
+    assertThat(usage.get("model")).isEqualTo("claude-sonnet-5-5");
     assertThat(usage.get("tool_calls")).isEqualTo(1);
     assertThat(usage.get("tools_used")).isEqualTo("relatorio_periodo");
-    // 2 × (100 input, 4000 cache read, 50 output) at US$ 4 / 0.20 / 20 per million.
+    // 2 × (100 input, 4000 cache read, 50 output) at Sonnet 5.5 prices, US$ 2 / 0.20 / 10 per
+    // million.
     assertThat(usage.get("input_tokens")).isEqualTo(200);
     assertThat(usage.get("cache_read_tokens")).isEqualTo(8000);
     assertThat(usage.get("output_tokens")).isEqualTo(100);
-    assertThat((BigDecimal) usage.get("estimated_cost_usd")).isEqualByComparingTo("0.0044");
+    assertThat((BigDecimal) usage.get("estimated_cost_usd")).isEqualByComparingTo("0.0030");
 
     var status = JSON.readTree(a.get("/api/tenants/" + tenantA + "/advisor").body());
     assertThat(status.get("enabled").asBoolean()).isTrue();
@@ -424,7 +425,7 @@ class AdvisorAssistantIT {
                 "role",
                 "assistant",
                 "model",
-                "claude-opus-5-5",
+                "claude-sonnet-5-5",
                 "content",
                 content,
                 "stop_reason",

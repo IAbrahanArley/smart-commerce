@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import DemoProducts from "@/components/demo-products";
 import PlatformPreview from "@/components/platform-preview";
+import PricingPlans from "@/components/pricing-plans";
 
 export const metadata: Metadata = { title: "Smart Commerce | Sua loja e sua operação", description: "Smart Commerce: produtos, estoque, vitrine, pagamentos pelo Mercado Pago e financeiro para pequenos varejistas." };
 
@@ -38,6 +39,10 @@ export default function LandingPage() {
     </section>
     <section id="plataforma" tabIndex={-1} className="landing-field" aria-labelledby="platform-title"><div className="landing-wrap"><div className="section-heading" data-reveal><p>Conheça a plataforma.</p><h2 id="platform-title">Duas interfaces.<br />A mesma loja.</h2></div><PlatformPreview /></div></section>
     <section className="landing-wrap landing-section roadmap" aria-labelledby="roadmap-title"><p>Para a rotina da loja</p><h2 id="roadmap-title">Do pedido<br />ao financeiro.</h2><p>Depois da venda, o painel acompanha a operação:</p><ul><li>Pedidos e reembolsos</li><li>Receita, custos e margem</li><li>Despesas da loja</li><li>Alertas de estoque e pedidos</li></ul></section>
-    <section className="landing-closing" aria-labelledby="closing-title"><div className="landing-wrap" data-reveal><h2 id="closing-title">Comece<br />sua loja.</h2><Link className="landing-button" href="/cadastro">Criar conta <span aria-hidden="true">↗</span></Link><p>Você só precisa de um e-mail para começar.</p></div></section>
+    <section id="planos" tabIndex={-1} className="landing-wrap landing-section pricing-section" aria-labelledby="pricing-title">
+      <div className="section-heading" data-reveal><p>Planos para cada fase da loja.</p><h2 id="pricing-title">Comece grátis.<br />Cresça no seu ritmo.</h2></div>
+      <PricingPlans />
+    </section>
+    <section className="landing-closing" aria-labelledby="closing-title"><div className="landing-wrap" data-reveal><h2 id="closing-title">Comece<br />sua loja.</h2><Link className="landing-button" href="/cadastro">Criar conta <span aria-hidden="true">↗</span></Link><p>14 dias grátis. Você só precisa de um e-mail para começar.</p></div></section>
   </>;
 }

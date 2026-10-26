@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { accountItems, parseCollapsed, searchScore, storeItems } from "../src/lib/navigation.ts";
 import { EMPTY_FILTERS, filterProducts, filtersActive, filtersFromQuery, filtersQuery, NO_CATEGORY, resultText } from "../src/lib/product-filters.ts";
+import { billingText, CYCLES, monthlyPrice, PLANS, priceText } from "../src/lib/plans.ts";
 
 // Design system Dashtail (phases 1, 3 and 5): pure helpers of the navigation, the global search and the
 // product list filters. Imported by smoke.mjs.
@@ -43,3 +44,17 @@ assert.deepEqual(filtersFromQuery({ busca: "boné", categoria: "__none__", vitri
 assert.deepEqual(filtersFromQuery({ categoria: "<script>", vitrine: "todos", ordem: "DROP" }), EMPTY_FILTERS);
 assert.equal(filtersFromQuery({ busca: "x".repeat(500) }).query.length, 200);
 assert.equal(resultText(3, 3), "3 produtos"); assert.equal(resultText(1, 1), "1 produto"); assert.equal(resultText(1, 3), "1 de 3 produtos");
+
+// SaaS plans (2026-10-26): every cycle total divides into whole reais per month and never exceeds the
+// approved discount; the landing shows the per-month price and what is charged per cycle.
+for (const plan of PLANS) for (const cycle of CYCLES) {
+  const total = plan.prices[cycle.id];
+  assert.ok(Number.isInteger(total) && Number.isInteger(monthlyPrice(plan, cycle.id)), `${plan.id} ${cycle.id}: reais inteiros`);
+  assert.ok(total <= Math.floor(plan.prices.monthly * cycle.months * (100 - cycle.discount) / 100), `${plan.id} ${cycle.id}: desconto aprovado`);
+  assert.ok(total >= plan.prices.monthly * cycle.months * (100 - cycle.discount - 1) / 100, `${plan.id} ${cycle.id}: sem desconto além do aprovado`);
+}
+assert.deepEqual(PLANS.map(plan => plan.prices.monthly), [59, 129, 299]);
+assert.deepEqual(PLANS.map(plan => plan.stores), [1, 2, 5]);
+assert.equal(billingText(PLANS[1], "monthly"), "cobrado todo mês");
+assert.equal(billingText(PLANS[1], "annual").replace(/\s/g, " "), "R$ 1.236 a cada 12 meses");
+assert.equal(priceText(monthlyPrice(PLANS[0], "annual")).replace(/\s/g, " "), "R$ 47");
