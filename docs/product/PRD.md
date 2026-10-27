@@ -32,6 +32,9 @@ Assinatura SaaS paga pelo lojista; pagamentos das compras são processados para 
 ## Evolução aprovada após o MVP (Sprint 7)
 Aprovada em 2026-10-26 ([ADR-0017](../architecture/adr/0017-cash-payables-receivables.md)): funcionário da loja (operador de caixa); contas financeiras com sessão de caixa, sangria e suprimento; contas a pagar; contas a receber e crediário; venda presencial registrada à mão ou por planilha, sem PDV, baixando o mesmo estoque da vitrine; livro de vendas online + loja física; fluxo de caixa projetado.
 
+## Vitrine padrão V1 (Sprint 8)
+Aprovada em 2026-10-27 com prioridade sobre a Sprint 7 ([ADR-0018](../architecture/adr/0018-storefront-v1.md), decisões técnicas e visuais aprovadas na mesma data): categorias e marcas, preço "de/por", busca com filtros, home configurável, páginas institucionais, acompanhar pedido e SEO, gratuitos para o lojista. A conta do cliente também será gratuita, em etapa posterior. Uma loja de extensões pagas (temas e módulos, cobrados do lojista) está em proposta e não altera "marketplace unificado" abaixo, que continua fora.
+
 ## Fora do MVP
 Emissão fiscal, contabilidade oficial, cálculo tributário automático, split de pagamento, integração de frete nacional, múltiplos adquirentes, marketplace unificado, ERP completo, campanhas automáticas, recomendação autônoma de preços e domínio personalizado automático.
 
