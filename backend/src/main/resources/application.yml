@@ -119,6 +119,12 @@ payments:
     # SC-015: queries the provider for orders still waiting; the main path without a webhook (P6).
     enabled: ${PAYMENTS_RECONCILIATION_ENABLED:true}
     interval: PT1M
+billing:
+  # SC-031 (ADR-0017): plan limits, trial and account standing. Off until the Stripe integration
+  # (SC-032) lets owners pay; switching it on before that would lock every store at the trial's end.
+  enabled: ${BILLING_ENABLED:false}
+  trial-days: ${BILLING_TRIAL_DAYS:14}
+  grace-days: ${BILLING_GRACE_DAYS:7}
 advisor:
   # SC-025 (ADR-0016 A8, A11): the assistant is off by default. The quota counts questions per
   # store per calendar month (São Paulo); the cap stops every store once the platform's estimated

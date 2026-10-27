@@ -4,6 +4,7 @@ import com.smartcommerce.advisor.domain.AdvisorException;
 import com.smartcommerce.advisor.domain.AdvisorUsage;
 import com.smartcommerce.advisor.dto.response.AdvisorStatusView;
 import com.smartcommerce.advisor.repositories.AdvisorUsageRepository;
+import com.smartcommerce.billing.services.BillingService;
 import com.smartcommerce.finance.domain.ReportPeriod;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -30,10 +31,12 @@ public class AdvisorQuotaService {
   private final boolean enabled;
   private final int monthlyQuota;
   private final BigDecimal monthlyCapUsd;
+  private final BillingService billing;
 
   public AdvisorQuotaService(
       AdvisorUsageRepository usage,
       Clock clock,
+      BillingService billing,
       @Value("${advisor.enabled:false}") boolean enabled,
       @Value("${advisor.monthly-question-quota:100}") int monthlyQuota,
       @Value("${advisor.global-monthly-cap-usd:20.00}") BigDecimal monthlyCapUsd) {
@@ -45,6 +48,7 @@ public class AdvisorQuotaService {
     this.enabled = enabled;
     this.monthlyQuota = monthlyQuota;
     this.monthlyCapUsd = monthlyCapUsd;
+    this.billing = billing;
   }
 
   public boolean enabled() {
@@ -54,8 +58,13 @@ public class AdvisorQuotaService {
   @Transactional(readOnly = true)
   public AdvisorStatusView status(UUID actor, UUID tenant) {
     requireOwner(actor, tenant);
-    long used = usage.countedSince(tenant, monthStart());
-    return new AdvisorStatusView(enabled, monthlyQuota, used, Math.max(0, monthlyQuota - used));
+    // SC-031: with billing on, the quota is the owner's plan, counted over all of his stores.
+    var plan = billing.questionQuota(tenant);
+    int quota = plan.map(BillingService.OwnerQuota::monthlyQuestions).orElse(monthlyQuota);
+    long used =
+        plan.map(owner -> usage.countedSinceForOwner(owner.owner(), monthStart()))
+            .orElseGet(() -> usage.countedSince(tenant, monthStart()));
+    return new AdvisorStatusView(enabled, quota, used, Math.max(0, quota - used));
   }
 
   /** Reserves one question of the store's quota; returns the usage row to close later. */
@@ -67,9 +76,16 @@ public class AdvisorQuotaService {
     usage.lockGlobal();
     if (usage.costSince(since).compareTo(monthlyCapUsd) >= 0)
       throw new AdvisorException(AdvisorException.Reason.GLOBAL_CAP_REACHED);
-    usage.lockStore(tenant);
-    if (usage.countedSince(tenant, since) >= monthlyQuota)
-      throw new AdvisorException(AdvisorException.Reason.QUOTA_EXCEEDED);
+    var plan = billing.questionQuota(tenant);
+    if (plan.isPresent()) {
+      usage.lockOwner(plan.get().owner());
+      if (usage.countedSinceForOwner(plan.get().owner(), since) >= plan.get().monthlyQuestions())
+        throw new AdvisorException(AdvisorException.Reason.QUOTA_EXCEEDED);
+    } else {
+      usage.lockStore(tenant);
+      if (usage.countedSince(tenant, since) >= monthlyQuota)
+        throw new AdvisorException(AdvisorException.Reason.QUOTA_EXCEEDED);
+    }
     UUID id = UUID.randomUUID();
     usage.insertPending(id, tenant, actor, now());
     return id;

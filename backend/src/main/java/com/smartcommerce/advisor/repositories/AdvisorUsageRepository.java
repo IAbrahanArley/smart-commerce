@@ -53,6 +53,26 @@ public class AdvisorUsageRepository {
         "advisor-usage:" + tenant);
   }
 
+  /** SC-031: one owner's questions over every store he owns (the plan's quota is per account). */
+  public void lockOwner(UUID owner) {
+    jdbc.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended(?,0))",
+        (RowCallbackHandler) row -> {},
+        "advisor-usage-owner:" + owner);
+  }
+
+  public long countedSinceForOwner(UUID owner, Instant since) {
+    Long count =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM advisor_usage u JOIN tenant_membership m ON m.tenant_id=u.tenant_id"
+                + " AND m.role='OWNER' WHERE m.user_id=? AND u.created_at>=? AND u.outcome IN "
+                + COUNTED,
+            Long.class,
+            owner,
+            utc(since));
+    return count == null ? 0 : count;
+  }
+
   public long countedSince(UUID tenant, Instant since) {
     Long count =
         jdbc.queryForObject(
