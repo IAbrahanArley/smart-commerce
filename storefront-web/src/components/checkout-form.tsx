@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useRef } from "react";
 import { placeOrder } from "@/lib/checkout-actions";
 import type { CheckoutField } from "@/lib/checkout-input";
@@ -93,7 +94,7 @@ export function CheckoutForm({ slug, storeName, requestId, options }: Props) {
       ) : null}
 
       <p id="checkout-privacy" className="checkout-privacy">
-        Seus dados (nome, e-mail, telefone e, se escolher entrega, o endereço) são usados apenas pela <span translate="no">{storeName}</span> para processar e entregar este pedido e para falar com você sobre ele. Eles não são compartilhados com outras lojas. Se o pedido não for pago, seus dados pessoais são anonimizados em até 90 dias. Pagamento ainda não está disponível nesta etapa.
+        Seus dados (nome, e-mail, telefone e, se escolher entrega, o endereço) são usados apenas pela <span translate="no">{storeName}</span> para processar e entregar este pedido e para falar com você sobre ele. Eles não são compartilhados com outras lojas. Se o pedido não for pago, seus dados pessoais são anonimizados em até 90 dias. O pagamento é feito no Mercado Pago, que recebe os dados de pagamento diretamente. <Link href="/privacidade" prefetch={false}>Política de privacidade</Link>.
       </p>
       <button type="submit" disabled={pending} aria-describedby="checkout-privacy">{pending ? "Confirmando pedido…" : "Confirmar pedido"}</button>
     </form>

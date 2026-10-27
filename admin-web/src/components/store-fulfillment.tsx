@@ -7,6 +7,7 @@ import { formatBRL } from "@/lib/catalog";
 import PageHeader from "@/components/page-header";
 import { useConfirm } from "@/components/confirm-dialog";
 import { type Fulfillment, type FulfillmentErrors, type FulfillmentFields, FULFILLMENT_TEXT_LIMIT, fulfillmentFields, fulfillmentPayload } from "@/lib/fulfillment";
+import { Loading } from "@/components/ui/loading";
 
 type TextField = keyof FulfillmentErrors;
 
@@ -95,7 +96,7 @@ export default function StoreFulfillment({ tenantId }: { tenantId: string }) {
 
   return <section className="page page-panel" aria-labelledby="fulfillment-title" aria-busy={state === "loading" || busy}>{dialog}
     <PageHeader id="fulfillment-title" title="Entrega" description="Escolha como o comprador recebe o pedido. Opções ativas, valor e textos ficam visíveis na vitrine publicada; opções inativas não aparecem." />
-    {state === "loading" ? <p role="status">Consultando a configuração de entrega…</p> : null}
+    {state === "loading" ? <Loading context="configuração de entrega" /> : null}
     {state === "signed-out" ? <><p role="status">Entre novamente para consultar a entrega. Sua sessão pode ter expirado.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <p role="status">Loja indisponível. Volte para suas lojas e escolha uma loja à qual você tem acesso.</p> : null}
     {state === "error" ? <><p role="alert" className="feedback feedback-error">Não foi possível consultar a configuração de entrega.</p>

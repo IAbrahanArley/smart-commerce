@@ -314,7 +314,8 @@ public class CatalogService {
             .toList(),
         photos.coverId(),
         photos.coverAlt(),
-        photos.count());
+        photos.count(),
+        p.categoryId());
   }
 
   private static String money(BigDecimal value) {

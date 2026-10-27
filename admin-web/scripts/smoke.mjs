@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./smoke-ui.mjs";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { coverUrl, decimalInput, formatBRL, photoCountText } from "../src/lib/catalog.ts";
@@ -9,10 +10,45 @@ import { backendOrigin, hostedTestEnvironment } from "../src/lib/deployment.ts";
 import { alertLink, alertText, parseAlerts } from "../src/lib/alerts.ts";
 import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outcomeText, parseAnswer, parseStatus, questionError, quotaText, sourceText } from "../src/lib/advisor.ts";
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
+import { legalDraft, operatorText, updatedText } from "../src/lib/legal.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
+import { categoryError, categoryName, categoryNameError, parseCategories, productCountText } from "../src/lib/categories.ts";
+import { instagramHandle, logoFileError, profileErrors, profileFields, profilePayload, whatsappText } from "../src/lib/store-profile.ts";
 
 for (const path of ["/conta", "/lojas", "/lojas/uuid/despesas"]) assert.equal(isProtectedPath(path), true, path);
-for (const path of ["/", "/entrar", "/cadastro", "/loja/produto", "/lojas-publicas"]) assert.equal(isProtectedPath(path), false, path);
+// Store data (MVP block 1b): contacts shown the way the owner typed them, checked like the backend.
+assert.equal(whatsappText("5511988887777"), "(11) 98888-7777"); assert.equal(whatsappText("552133334444"), "(21) 3333-4444");
+assert.deepEqual(profileFields({ name: "Loja", contactEmail: null, whatsapp: "5511988887777", instagram: "loja.ana", hasLogo: false, version: 1 }),
+  { name: "Loja", contactEmail: "", whatsapp: "(11) 98888-7777", instagram: "@loja.ana" });
+assert.deepEqual(profileErrors({ name: "Loja da Ana", contactEmail: "contato@ana.example", whatsapp: "(11) 98888-7777", instagram: "https://instagram.com/loja_ana/" }), {});
+assert.deepEqual(profileErrors({ name: "Loja", contactEmail: "", whatsapp: "", instagram: "" }), {}, "Contatos em branco são opcionais.");
+const profileProblems = profileErrors({ name: " ", contactEmail: "sem-arroba", whatsapp: "+1 555 010 0000", instagram: "loja ana" });
+assert.deepEqual(Object.keys(profileProblems).sort(), ["contactEmail", "instagram", "name", "whatsapp"]);
+assert.equal(instagramHandle("@Loja"), "Loja"); assert.equal(instagramHandle("www.instagram.com/loja/"), "loja");
+assert.deepEqual(profilePayload({ name: " Loja ", contactEmail: " ", whatsapp: "11988887777", instagram: "" }, 3),
+  { name: "Loja", contactEmail: null, whatsapp: "11988887777", instagram: null, expectedVersion: 3 });
+assert.equal(logoFileError(null), "Selecione uma imagem.");
+assert.equal(logoFileError({ type: "image/gif", size: 10 }), "Use uma imagem JPEG ou PNG.");
+assert.equal(logoFileError({ type: "image/png", size: 6 * 1024 * 1024 }), "Use uma imagem de até 5 MiB.");
+assert.equal(logoFileError({ type: "image/png", size: 1024 }), null);
+// MVP block 1c: category names follow the backend rule; the list parser rejects foreign shapes.
+assert.equal(categoryNameError("  Camisetas   de  verão "), null); assert.equal(categoryName("  Camisetas   de  verão "), "Camisetas de verão");
+assert.equal(categoryNameError("   "), "Informe o nome da categoria.");
+assert.equal(categoryNameError("Linha\nquebrada"), "Use uma única linha.");
+assert.equal(categoryNameError("a".repeat(61)), "Use até 60 caracteres.");
+assert.deepEqual(parseCategories([{ id: "c-1", name: "Camisetas", products: 2, extra: true }]), [{ id: "c-1", name: "Camisetas", products: 2 }]);
+assert.equal(parseCategories([{ id: "c-1", name: "Camisetas" }]), null);
+assert.equal(parseCategories({}), null);
+assert.equal(productCountText(0), "Nenhum produto"); assert.equal(productCountText(1), "1 produto"); assert.equal(productCountText(3), "3 produtos");
+assert.match(categoryError(409, "NAME_CONFLICT"), /Já existe/); assert.match(categoryError(409, "LIMIT"), /50 categorias/);
+
+// MVP block 1d: the legal pages stay a draft until the operator is identified.
+assert.equal(legalDraft({ operatorName: null, cnpj: null, contactEmail: "a@b.example", updatedAt: "2026-10-26" }), true);
+assert.equal(legalDraft({ operatorName: "Empresa Ltda", cnpj: "00.000.000/0001-00", contactEmail: "a@b.example", updatedAt: "2026-10-26" }), false);
+assert.equal(operatorText({ operatorName: "Empresa Ltda", cnpj: "00.000.000/0001-00", contactEmail: "a@b.example", updatedAt: "2026-10-26" }), "Empresa Ltda, inscrita no CNPJ sob o nº 00.000.000/0001-00");
+assert.match(operatorText({ operatorName: "Empresa Ltda", cnpj: null, contactEmail: "a@b.example", updatedAt: "2026-10-26" }), /a preencher/);
+assert.equal(updatedText({ operatorName: null, cnpj: null, contactEmail: "a@b.example", updatedAt: "2026-10-26" }), "Atualizado em 26/10/2026.");
+for (const path of ["/", "/entrar", "/cadastro", "/termos", "/privacidade", "/lojas-publicas"]) assert.equal(isProtectedPath(path), false, path);
 
 // ADR-0014: the /api rewrite only targets HTTPS (or loopback HTTP); the notice needs the exact flag.
 assert.equal(backendOrigin(undefined), "http://127.0.0.1:8080");
@@ -22,16 +58,13 @@ for (const invalid of ["http://api.example.test", "https://user:pw@api.example.t
 assert.equal(hostedTestEnvironment("hosted-test"), true);
 for (const value of [undefined, "", "production", "HOSTED-TEST"]) assert.equal(hostedTestEnvironment(value), false);
 import { cancelReason, formatDateTime, formatPhone, formatPostalCode, orderCursor, orderStatus, ordersApiPath, ordersPagePath, paymentDivergence } from "../src/lib/orders.ts";
-import { missingText, percentText, reportPeriod } from "../src/lib/finance.ts";
-import { bars, optionsText, shortDay } from "../src/lib/dashboard.ts";
+import { marginBreakdown, missingText, percentText, reportPeriod } from "../src/lib/finance.ts";
+import { optionsText, salesPoints, shortDay } from "../src/lib/dashboard.ts";
 
-// Dashboard (SC-022): bars scale to the busiest day, an empty period draws flat, labels in pt-BR.
-const chart = bars([{ day: "2026-10-01", revenue: "50.00" }, { day: "2026-10-02", revenue: "100.00" }, { day: "2026-10-03", revenue: "0.00" }], 300, 100);
-assert.deepEqual(chart.map(bar => bar.height), [50, 100, 0]);
-assert.deepEqual(chart.map(bar => bar.y), [50, 0, 100]);
-assert.ok(chart.every(bar => bar.x >= 0 && bar.x + bar.width <= 300));
-assert.ok(bars([{ day: "2026-10-01", revenue: "0.00" }], 300, 100).every(bar => bar.height === 0), "Período vazio não divide por zero.");
-assert.deepEqual(bars([], 300, 100), []);
+// Dashboard (SC-022, design system phase 2): chart points keep the backend string for labels.
+const points = salesPoints([{ day: "2026-10-01", orders: 2, revenue: "50.10" }, { day: "2026-10-02", orders: 0, revenue: "invalido" }]);
+assert.deepEqual(points.map(point => [point.label, point.revenue, point.orders, point.revenueText]), [["01/10", 50.1, 2, "50.10"], ["02/10", 0, 0, "invalido"]]);
+assert.deepEqual(salesPoints([]), []);
 assert.equal(shortDay("2026-10-05"), "05/10");
 assert.equal(optionsText([{ name: "Cor", value: "Azul" }, { name: "Tamanho", value: "M" }]), "Cor: Azul · Tamanho: M");
 import { expenseDateErrors, expenseMonth, formatDay, lineText, monthLabel, monthOf, parseAmount, shiftMonth } from "../src/lib/expenses.ts";
@@ -49,6 +82,8 @@ assert.ok(expenseDateErrors("2025-03-01", "", new Date("2024-02-29T15:00:00Z")).
 
 // Finance report (SC-021): period from the URL, missing data and percentages in Portuguese.
 assert.equal(reportPeriod("LAST_MONTH"), "LAST_MONTH");
+const breakdown = marginBreakdown({ grossRevenue: "100.00", refunds: "-10.00", fees: "5.00", cogs: "40.00", variableExpenses: "0.00", contributionMargin: "45.00" });
+assert.deepEqual(breakdown.map(row => [row.label, row.amount, row.amountText, row.kind]), [["Receita bruta", 100, "100.00", "revenue"], ["Reembolsos", 10, "-10.00", "deduction"], ["Taxas", 5, "5.00", "deduction"], ["Custo dos produtos", 40, "40.00", "deduction"], ["Despesas variáveis", 0, "0.00", "deduction"], ["Margem de contribuição", 45, "45.00", "result"]]);
 for (const invalid of [undefined, "", "last_month", "FOREVER"]) assert.equal(reportPeriod(invalid), "THIS_MONTH");
 assert.equal(missingText({ code: "FEES_UNAVAILABLE", count: 1 }), "1 venda sem a taxa do Mercado Pago informada");
 assert.equal(missingText({ code: "COST_MISSING", count: 2 }), "2 pedidos com produto sem custo cadastrado");
@@ -255,32 +290,38 @@ try {
   assert.ok(html.includes('class="presentation landing-page"'), "Direção visual restrita à home");
   assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1);
   assert.ok(!html.includes('class="site-header"'), "Landing sem cabeçalho operacional");
-  for (const [path, title] of [["/componentes", "Fundamentos e componentes"], ["/admin/produtos", "Demonstração do admin"], ["/loja/produto", "Demonstração da loja"]]) {
+  // Block 2a: the landing leads to sign-up, says nothing is "in development" and the demos are gone.
+  assert.ok(html.includes('href="/cadastro"') && html.includes('href="/entrar"'), "Landing leva ao cadastro e ao login");
+  assert.ok(html.includes('id="planos"') && html.includes("Começar teste grátis") && html.includes("Mais escolhido"), "Landing mostra os planos");
+  assert.ok(!/em desenvolvimento|demonstraç/i.test(html), "Landing sem menção a desenvolvimento ou demonstração");
+  for (const path of ["/componentes", "/admin/produtos", "/loja/produto"]) {
     const response = await fetch(`${baseUrl}${path}`, { signal: AbortSignal.timeout(5000) });
-    assert.equal(response.status, 200, path);
-    const page = await response.text();
-    assert.ok(page.includes(title), `${path}: título`);
-    assert.ok(!page.includes('class="presentation landing-page"'), `${path}: sem tema da landing`);
-    assert.equal((page.match(/<main[\s>]/g) ?? []).length, 1, `${path}: main único`);
-    assert.equal((page.match(/<h1[\s>]/g) ?? []).length, 1, `${path}: h1 único`);
-    assert.equal(response.headers.get("referrer-policy"), "no-referrer", path);
+    assert.equal(response.status, 404, `${path}: demonstração removida`);
   }
   for (const [path, title, field] of [
     ["/cadastro", "Criar conta", 'name="email"'],
+    ["/cadastro", "Criar conta", 'href="/termos"'],
+    ["/termos", "Termos de uso", "Rascunho em validação"],
+    ["/privacidade", "Política de privacidade", "Lei nº 13.709/2018"],
     ["/entrar", "Entrar", 'autoComplete="current-password"'],
     ["/confirmar-email", "Confirmar e-mail e definir senha", 'autoComplete="new-password"'],
+    ["/esqueci-senha", "Esqueci minha senha", 'name="email"'],
+    ["/redefinir-senha", "Redefinir senha", 'autoComplete="new-password"'],
+    ["/entrar", "Entrar", 'href="/esqueci-senha"'],
     ["/conta", "Minha conta", 'aria-label="Navegação da conta"'],
-    ["/lojas", "Minhas lojas", "Consultando suas lojas"],
-    ["/lojas/00000000-0000-0000-0000-000000000000", "Minha loja", "Consultando sua loja"],
-    ["/lojas/00000000-0000-0000-0000-000000000000/entrega", "Entrega", "Consultando a configuração de entrega"],
+    ["/lojas", "Minhas lojas", "Carregando suas lojas…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000", "Minha loja", "Carregando sua loja…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/entrega", "Entrega", "Carregando configuração de entrega…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/dados", "Dados da loja", "Carregando dados da loja…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/pagamentos?mercadoPago=negado", "Pagamentos", "A autorização foi recusada no Mercado Pago"],
     ["/lojas/00000000-0000-0000-0000-000000000000/despesas?mes=2026-09", "Despesas", "Setembro de 2026"],
     ["/lojas/00000000-0000-0000-0000-000000000000/financeiro?periodo=LAST_7_DAYS", "Financeiro", 'value="LAST_7_DAYS" selected'],
-    ["/lojas/00000000-0000-0000-0000-000000000000/assistente", "Assistente", "Consultando o assistente"],
-    ["/lojas/00000000-0000-0000-0000-000000000000/assistente?explicar=REVENUE&periodo=LAST_7_DAYS", "Assistente", "Consultando o assistente"],
-    ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'name="situacao"'],
-    ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Consultando pedido", 'aria-label="Trilha de navegação"'],
-    ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Consultando catálogo"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/assistente", "Assistente", "Carregando assistente…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/assistente?explicar=REVENUE&periodo=LAST_7_DAYS", "Assistente", "Carregando assistente…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/pedidos?situacao=EXPIRED", "Pedidos", 'aria-label="Filtrar pedidos por situação"'],
+    ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Carregando pedido…", 'aria-label="Trilha de navegação"'],
+    ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Carregando catálogo…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/categorias", "Categorias", "Carregando categorias…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/novo", "Novo produto", 'aria-label="Navegação da loja"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001", "Editar produto", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001/estoque", "Estoque do produto", 'aria-label="Trilha de navegação"'],
@@ -307,7 +348,7 @@ try {
     assert.ok([200, 404].includes(invalid.status), path);
     const html = await invalid.text();
     assert.match(html, /Página não encontrada/, path);
-    assert.ok(!html.includes('name="situacao"') && !html.includes("Consultando pedido"), path);
+    assert.ok(!html.includes('aria-label="Filtrar pedidos por situação"') && !html.includes("Carregando pedido…"), path);
   }
   const missing = await fetch(`${baseUrl}/pagina-inexistente-sc001`, { signal: AbortSignal.timeout(5000) });
   assert.equal(missing.status, 404);

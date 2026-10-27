@@ -32,6 +32,9 @@ import tools.jackson.databind.json.JsonMapper;
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class StorefrontIsolationIT {
+  private static final String PROFILE =
+      "{\"contactEmail\":null,\"whatsapp\":null,\"instagram\":null,\"logo\":false}";
+
   @Container @ServiceConnection
   static final PostgreSQLContainer POSTGRES =
       new PostgreSQLContainer(
@@ -93,6 +96,14 @@ class StorefrontIsolationIT {
                         "Synthetic store",
                         "slug",
                         "catalog-a",
+                        // MVP block 1b: public contacts and logo, empty until the store sets them.
+                        "profile",
+                        JSON.readTree(PROFILE),
+                        // MVP block 1c: no categories yet, no filter applied.
+                        "categories",
+                        List.of(),
+                        "category",
+                        JSON.nullNode(),
                         "products",
                         List.of(
                             Map.of(
@@ -116,7 +127,11 @@ class StorefrontIsolationIT {
                         JSON.nullNode()))));
     JsonNode detail = JSON.readTree(visitor.get(publicPath + "/products/" + product).body());
     assertThat(detail.get("store"))
-        .isEqualTo(JSON.readTree("{\"name\":\"Synthetic store\",\"slug\":\"catalog-a\"}"));
+        .isEqualTo(
+            JSON.readTree(
+                "{\"name\":\"Synthetic store\",\"slug\":\"catalog-a\",\"profile\":"
+                    + PROFILE
+                    + "}"));
     assertThat(detail.get("product").size()).isEqualTo(8);
     for (String field :
         List.of("id", "name", "price", "currency", "available", "descriptionHtml", "kind"))

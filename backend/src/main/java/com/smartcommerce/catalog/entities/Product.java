@@ -54,6 +54,14 @@ public class Product {
   @Column(name = "kind")
   private String kind = "SIMPLE";
 
+  // MVP block 1c: written only by CategoryRepository, so a product save never overwrites it.
+  @Column(name = "category_id", insertable = false, updatable = false)
+  private UUID categoryId;
+
+  public UUID categoryId() {
+    return categoryId;
+  }
+
   public String descriptionHtml() {
     return descriptionHtml;
   }

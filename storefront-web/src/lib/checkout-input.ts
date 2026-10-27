@@ -20,10 +20,12 @@ const CONTROL = /[\p{Cc}\p{Zl}\p{Zp}]/u;
 const EMAIL = /^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/;
 
 // D6: the checkout exists only when explicitly enabled; anything else keeps it hidden.
-// D6 (ADR-0012) with the ADR-0014 H2 exception: outside development builds, checkout without
-// payments exists only in the hosted test environment, and always needs the explicit flag.
+// D6 (ADR-0012) with the ADR-0014 H2 exception, revised for production in MVP block 2b: outside
+// development builds, checkout exists only in the hosted test environment or in a deployment
+// explicitly marked "production", whose backend refuses to start checkout without real payments.
+// It always needs the explicit flag.
 export function checkoutEnabled(value: string | undefined, deployment: string | undefined, production: boolean): boolean {
-  return value === "true" && (!production || hostedTestEnvironment(deployment));
+  return value === "true" && (!production || hostedTestEnvironment(deployment) || deployment === "production");
 }
 
 export function hostedTestEnvironment(value: string | undefined): boolean {

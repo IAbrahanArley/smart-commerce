@@ -21,10 +21,29 @@ public final class StorefrontController {
 
   @GetMapping
   public ResponseEntity<PublicStorefrontView> list(
-      @PathVariable String slug, @RequestParam(required = false) String after) {
+      @PathVariable String slug,
+      @RequestParam(required = false) String after,
+      @RequestParam(required = false) String categoria) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(storefront.list(slug, after == null ? null : PublicLocator.uuid(after)));
+        .body(
+            storefront.list(
+                slug,
+                after == null ? null : PublicLocator.uuid(after),
+                categoria == null ? null : PublicLocator.uuid(categoria)));
+  }
+
+  /** The store logo (MVP block 1b), only while the store is published. */
+  @GetMapping("/logo")
+  public ResponseEntity<byte[]> logo(@PathVariable String slug) {
+    var logo = storefront.logo(slug);
+    return ResponseEntity.ok()
+        .contentType(org.springframework.http.MediaType.parseMediaType(logo.mediaType()))
+        .contentLength(logo.bytes().length)
+        .cacheControl(CacheControl.noStore())
+        .header("X-Content-Type-Options", "nosniff")
+        .header("Content-Disposition", "inline; filename=\"store-logo\"")
+        .body(logo.bytes());
   }
 
   @GetMapping("/products/{productId}")

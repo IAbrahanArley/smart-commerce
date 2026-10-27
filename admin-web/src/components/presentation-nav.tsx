@@ -21,8 +21,8 @@ function Navigation() {
       <nav id="presentation-navigation" aria-label="Apresentação da plataforma" data-open={open} onClick={event => {
         if ((event.target as HTMLElement).closest("a")) setOpen(false);
       }}>
-        <Link href="/#recursos">Recursos</Link><Link href="/#como-funciona">Como funciona</Link><Link href="/#plataforma">Conheça a plataforma</Link>
-        <Link href="/admin/produtos">Ver admin</Link><Link className="landing-button" href="/admin/produtos">Explorar demonstração <span aria-hidden="true">↗</span></Link>
+        <Link href="/#recursos">Recursos</Link><Link href="/#como-funciona">Como funciona</Link><Link href="/#plataforma">Conheça a plataforma</Link><Link href="/#planos">Planos</Link>
+        <Link href="/entrar">Entrar</Link><Link className="landing-button" href="/cadastro">Criar conta <span aria-hidden="true">↗</span></Link>
       </nav>
     </div>
   </header>;

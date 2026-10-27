@@ -3,6 +3,8 @@ package com.smartcommerce.identity.controllers;
 import com.smartcommerce.identity.domain.IdentityUser;
 import com.smartcommerce.identity.dto.request.ActivationRequest;
 import com.smartcommerce.identity.dto.request.LoginRequest;
+import com.smartcommerce.identity.dto.request.PasswordResetConfirmation;
+import com.smartcommerce.identity.dto.request.PasswordResetRequest;
 import com.smartcommerce.identity.dto.request.RegistrationRequest;
 import com.smartcommerce.identity.exceptions.IdentityException;
 import com.smartcommerce.identity.security.IdentitySessionFilter;
@@ -68,6 +70,27 @@ public final class IdentityController {
   public ResponseEntity<Void> activation(
       @RequestBody ActivationRequest body, HttpServletRequest request) {
     identities.activate(body.token(), body.password(), request.getRemoteAddr());
+    return ResponseEntity.noContent().build();
+  }
+
+  @SecurityRequirement(name = "csrf")
+  @PostMapping("/password-reset/request")
+  public ResponseEntity<Map<String, String>> passwordResetRequest(
+      @RequestBody PasswordResetRequest body, HttpServletRequest request) {
+    identities.requestPasswordReset(body.email(), request.getRemoteAddr());
+    return ResponseEntity.accepted()
+        .body(
+            Map.of(
+                "message",
+                "Se houver uma conta ativa com este e-mail, enviaremos um link para redefinir a"
+                    + " senha."));
+  }
+
+  @SecurityRequirement(name = "csrf")
+  @PostMapping("/password-reset/confirmation")
+  public ResponseEntity<Void> passwordResetConfirmation(
+      @RequestBody PasswordResetConfirmation body, HttpServletRequest request) {
+    identities.resetPassword(body.token(), body.password(), request.getRemoteAddr());
     return ResponseEntity.noContent().build();
   }
 

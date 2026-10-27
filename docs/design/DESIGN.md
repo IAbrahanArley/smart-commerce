@@ -130,11 +130,14 @@ Aprovado em 2026-10-17 a partir da [proposta de referências de mercado](PROPOST
 - **Criação em rota própria:** "Novo produto" é uma página (`/produtos/novo`) acionada pelo cabeçalho da lista; após cadastrar, o lojista segue para a edição do produto.
 - **Assistente (SC-027, 2026-10-25):** uma coluna de até 48rem. A pergunta do lojista fica num balão à direita, com o fundo de seleção. A resposta fica num cartão de superfície com borda esquerda de ação; quando o assistente não responde, a borda é neutra. As fontes aparecem em lista menor abaixo de um divisor. O aviso de IA usa o componente `notice`. Tudo com os tokens existentes, sem cor nova.
 - **"Explicar" (SC-028, 2026-10-26):** link de texto discreto (0,875rem, negrito, alvo de 44px) abaixo do número do cartão, ao lado do link de cada alerta e abaixo do título das listas do painel. O nome acessível completa o que será explicado. Só aparece com o assistente ligado.
+- **Dados da loja (bloco 1b do MVP, 2026-10-26):** formulário de uma coluna de até 45rem, com dois cartões: "Nome e contatos" e "Logo". A prévia do logo nunca é esticada: altura máxima de 8rem, sobre o fundo neutro com divisor. Na vitrine, o logo tem até 2,5rem de altura ao lado do nome, que continua em texto, e os contatos ficam em links de texto com alvo de 44px. Tudo usa os tokens existentes, sem cor nova.
+- **Categorias (bloco 1c do MVP, 2026-10-26):** no admin, lista de uma coluna de até 45rem com renomear em linha e remoção com confirmação; no editor do produto, um cartão lateral "Categoria" com um select que salva ao escolher, sem mexer na versão do formulário principal. Na vitrine, links em pílula acima dos produtos ("Todos" e as categorias com produtos publicados), com alvo de 44px, quebra de linha em telas estreitas e a atual marcada por `aria-current="page"`, negrito e sublinhado, não só por cor. Sem cor nova.
+- **Páginas legais (bloco 1d do MVP, 2026-10-26):** coluna de leitura de até 45rem, com títulos de seção e listas. O aviso "Rascunho em validação" usa superfície neutra com borda lateral, sem cor nova. O aviso legal do cadastro fica acima do botão e é ligado a ele por `aria-describedby`. Os links legais dos rodapés têm alvo de 44px.
 - **Edição em duas colunas:** a partir de 64rem, coluna principal (identificação, descrição, fotos e variações) e lateral com publicação e estoque. Em telas menores, uma coluna na ordem do DOM.
 
 ## Repaginação 2026-10 (referência Dashtail)
 
-Aprovada pelo responsável em 2026-10-20. O template comercial Dashtail v1.3.0 (ThemeForest; Next 14, Tailwind 3 e shadcn/Radix) foi usado **somente como referência visual e estrutural**. Nenhum código, ícone, ilustração, texto ou dependência foi copiado, porque a adoção de Tailwind/Radix contrariaria a política de dependências. **Licença (2026-10-20):** o responsável informou ter uma licença que permite usar o template em qualquer projeto, então copiar código ou recursos dele é permitido. Mesmo assim, uma cópia não pode trazer dependência nova sem aprovação e deve ser adaptada aos tokens e componentes locais. Paleta violeta, fonte Inter, tema escuro, customizador, RTL, busca, notificações, gráficos e toasts do template não foram adotados.
+Aprovada pelo responsável em 2026-10-20. O template comercial Dashtail v1.3.0 (ThemeForest; Next 14, Tailwind 3 e shadcn/Radix) foi usado **somente como referência visual e estrutural** (decisão substituída em 2026-10-26: ver "Design system Dashtail"). Nenhum código, ícone, ilustração, texto ou dependência foi copiado, porque a adoção de Tailwind/Radix contrariaria a política de dependências. **Licença (2026-10-20):** o responsável informou ter uma licença que permite usar o template em qualquer projeto, então copiar código ou recursos dele é permitido. Mesmo assim, uma cópia não pode trazer dependência nova sem aprovação e deve ser adaptada aos tokens e componentes locais. Paleta violeta, fonte Inter, tema escuro, customizador, RTL, busca, notificações, gráficos e toasts do template não foram adotados.
 
 Padrões adotados com CSS e componentes locais:
 
@@ -144,6 +147,80 @@ Padrões adotados com CSS e componentes locais:
 Validação em 2026-10-20: lint, typecheck, build e test:smoke das duas aplicações. No navegador do app (Chromium), em 1024 CSS px e 375 CSS px, com backend sintético local: moldura, menu móvel, cards de resumo, tabelas, diálogo e fluxo da vitrine até o pedido. O diálogo foi conferido pelo DOM: abre centrado, foca "Cancelar", fecha com Escape e devolve o foco. Revisão com as Web Interface Guidelines atuais, consultadas na mesma data. Com 1024 CSS px, a tabela de produtos rola dentro do card, sem rolagem da página. Axe, leitor de tela e zoom manual não foram executados; não há alegação de conformidade WCAG completa.
 
 Tokens novos: `--sc-shadow-surface`, `--sc-shadow-overlay`, `--store-shadow-surface`, `--store-shadow-raised` e `--store-header-height`. Nenhuma cor, fonte ou raio-base mudou; o aviso "Ambiente de teste" e a separação admin/vitrine foram preservados.
+
+## Design system Dashtail (2026-10-26)
+
+Aprovado pelo responsável em 2026-10-26. O pedido foi uma interface de "nível empresa grande" com os componentes do Dashtail: páginas de login, botões, sidebar retrátil e busca. Esta decisão substitui a restrição "somente referência" da repaginação de 2026-10-20. A licença do responsável permite copiar o código do template.
+
+**Decisões:**
+- **Stack, só no admin:** Tailwind CSS 4 e componentes no padrão shadcn/ui copiados do Dashtail e adaptados ao Next 16 e ao React 19.
+- **Dependências aprovadas:**
+  - `tailwindcss`, `@tailwindcss/postcss` e `postcss` (desenvolvimento);
+  - `clsx`, `tailwind-merge` e `class-variance-authority`;
+  - `@radix-ui/react-slot`, `react-dialog`, `react-dropdown-menu` e `react-tooltip`;
+  - `cmdk` (busca) e `lucide-react` (ícones).
+
+  `recharts` está aprovado para a fase dos gráficos e ainda não foi instalado. A vitrine não muda.
+- **Convivência:** o Tailwind entra sem o preflight. O CSS anterior fica na camada `legacy`, abaixo das utilities, então as telas ainda não migradas mantêm a aparência e os componentes novos vencem por camada, não por especificidade.
+- **Tokens:** as cores do Tailwind (`primary`, `muted`, `accent`, `border`, `ring`, `destructive`, `success`…) apontam para os tokens `--sc-*` existentes. A paleta e o contraste não mudaram.
+- **Tipografia:** Inter, a fonte do Dashtail, servida pelo `next/font`, sem requisição do navegador ao Google. Arial fica como fallback.
+- **Tema:** só claro nesta etapa. O escuro fica como melhoria.
+
+**O que foi aplicado:**
+- **Componentes (`src/components/ui`):** `Button`, `Input`, `Label`, `PasswordInput`, `Card`, `Badge`, `Kbd`, `DropdownMenu`, `Tooltip` e `Dialog` (também como gaveta lateral). Diferenças em relação ao template:
+  - foco visível (o Dashtail usa `focus-visible:ring-0`);
+  - alvo de 44px nos controles principais;
+  - contraste AA na paleta do admin;
+  - nomes acessíveis em todos os botões só com ícone.
+- **Moldura (`app-frame.tsx`):** sidebar de 16rem que recolhe para 4.5rem só com ícones. No modo recolhido, o nome de cada link continua acessível e aparece em tooltip. A preferência fica no `localStorage`. Abaixo de 64rem, a sidebar vira gaveta (diálogo com foco preso e Escape). O cabeçalho fixo tem o botão de recolher, a busca e o menu da conta (dropdown com e-mail, lojas, conta e sair). "Categorias" entrou no menu da loja.
+- **Busca global (`global-search.tsx`):** Ctrl+K (ou ⌘K) abre a busca em qualquer tela do painel. Ela lista:
+  - ações e páginas da navegação;
+  - dentro de uma loja, os produtos e os pedidos recentes, carregados só quando a busca abre.
+
+  O filtro é estrito: todas as palavras precisam aparecer, sem diferenciar acentos ou maiúsculas. A regra está em `lib/navigation.ts`, coberta pelo smoke.
+- **Autenticação (`(auth)/layout.tsx`):** tela dividida a partir de 64rem, com painel da marca à esquerda e formulário à direita. Os campos são maiores, a senha tem botão de mostrar e ocultar (`aria-pressed`), e o link "Esqueci minha senha" fica junto do campo. As URLs não mudaram.
+- **Links:** sem sublinhado por padrão. O sublinhado aparece no hover e continua em links dentro de texto corrido (`p a`, ajuda de campo e páginas legais), para não depender só da cor (WCAG 1.4.1). Botões e links com aparência de botão nunca sublinham.
+- **Botões do CSS anterior:** raio de controle de 6px e peso 600, para combinar com os componentes novos.
+
+**Fase 2 (2026-10-26):**
+- **Carregamento padronizado:** `Loading` no admin (`ui/loading.tsx`) e na vitrine (`components/loading.tsx`). O texto visível é só "Carregando…", com pulso suave que para quando o sistema pede menos movimento. O que está carregando ("Carregando pedidos da loja…") vai só para leitores de tela, dentro de `role="status"`. Ele substitui os estados "Consultando…" de todas as telas; botões em andamento continuam com o próprio texto.
+- **Gráficos (`recharts`, aprovado):**
+  - na visão geral, receita por dia em barras e pedidos pagos em linha, com eixo próprio;
+  - no financeiro, barras horizontais da receita bruta até a margem de contribuição.
+
+  Os tooltips mostram os valores do backend como texto, sem cálculo no front. O SVG fica oculto para tecnologia assistiva porque a legenda e a tabela ao lado trazem os mesmos números. Para a segunda série e as deduções há dois tokens novos, `--color-chart-2` (#0f766e) e `--color-chart-deduction` (#657888), ambos com 3:1 ou mais sobre o card.
+- **Cards de indicador (`ui/kpi-card.tsx`):** ícone em círculo suave, rótulo, valor e detalhe, no estilo das estatísticas do Dashtail. São usados no resumo da loja, no desempenho e no financeiro.
+- **Card de produto da vitrine:** portado do card de e-commerce do Dashtail em CSS próprio, sem Tailwind na vitrine. Tem foto emoldurada com zoom leve no hover (desligado com movimento reduzido), selo de disponibilidade sobre a foto, nome, preço e botão contornado "Ver produto" de 44px que se preenche no hover. O card inteiro continua sendo um único link. Favoritos, visualização rápida e avaliação do template ficaram de fora porque não existem no produto.
+
+**Fase 3 (2026-10-26), tabelas com filtros:**
+- **Tabelas:** todas usam a mesma classe `.data-table`, agora no estilo do Dashtail: cabeçalho em versalete pequeno sobre faixa neutra, mais respiro nas células e destaque da linha no hover. No celular, as linhas continuam empilhadas com o rótulo de cada coluna.
+- **Barra de filtros (`.table-toolbar`):** fica acima da tabela, com `SearchInput` (ícone de busca, `type="search"`) e `Select` (select nativo estilizado, que mantém o teclado, o leitor de tela e o seletor do celular). Quebra de linha em telas estreitas.
+- **Produtos:**
+  - busca por nome ou SKU, incluindo o SKU das combinações, sem diferenciar acentos;
+  - filtros de categoria (com "Sem categoria") e de vitrine;
+  - ordenação por cadastro, nome ou preço, com preço comparado em centavos exatos e nunca em ponto flutuante;
+  - contagem "X de Y produtos" na legenda, anunciada (`aria-live`), e "Limpar filtros".
+
+  Tudo roda sobre o catálogo já carregado (`lib/product-filters.ts`, coberto pelo smoke).
+- **Pedidos:** o select de situação virou abas (links com `aria-current`), que funcionam sem JavaScript e rolam para o lado no celular. Não há busca por texto, porque a API filtra só por situação e pagina de 20 em 20: buscar dentro de uma página daria um resultado enganoso. Para buscar um pedido específico, use a busca global (Ctrl+K), que lista os pedidos recentes.
+
+**Fase 4 (2026-10-26), formulários e telas operacionais:** as telas usam classes compartilhadas, então a mudança foi central, num bloco no fim da camada `legacy` que vence as regras originais com a mesma especificidade. Assim todas as telas mudam de uma vez, sem reescrever cada componente.
+- **Campos (`input`, `select` e `textarea`):** 44px de altura, borda de controle com 3:1 que escurece no hover, e foco com borda de ação mais contorno de 2px. O select ganhou o chevron do Dashtail sem perder o controle nativo. Caixas de seleção e opções usam a cor de ação. Campos desabilitados aparecem em cinza, com cursor de bloqueio.
+- **Botões e links-botão:** layout flexível com espaço para ícone, peso 600, transição suave. O botão secundário ganha borda de ação no hover. O contorno global de foco ficou mais fino (2px, afastado 2px) e continua laranja, visível sobre qualquer fundo.
+- **Cards** (cartões laterais, tabelas, painéis vazios, estados, barra de filtros, editor de produto, lojas e categorias): borda clara `--sc-color-card-border` (#dfe5ec), raio de 8px e sombra suave `--sc-shadow-card`. A borda do card é decorativa, porque os controles de dentro mantêm a própria borda com 3:1. Painéis vazios ficam centralizados.
+- **Alertas (`.feedback` e `.notice`):** fundo suave com borda esquerda de 4px na cor da mensagem, como no Dashtail. O texto continua dizendo o que aconteceu.
+- **Selos:** em pílula, menores, com peso 600.
+- **Cabeçalho de página:** título de 24px em negrito e trilha em texto menor.
+- **Ícones:** os estados vazios e de erro (`PageState`) passaram a usar lucide, como o resto do painel. O conjunto antigo (`components/icons.tsx`) foi removido.
+
+**Fase 5 (2026-10-26), revisão de acessibilidade:** feita com as Web Interface Guidelines e a WCAG 2.2 AA. Achados, correções, contraste calculado e limitações estão em [UI-A11Y-REVIEW.md](../quality/UI-A11Y-REVIEW.md). Mudanças de padrão:
+- `scroll-padding-top` de 5rem, para o cabeçalho fixo não esconder o foco;
+- sidebar sem animação de largura;
+- `overscroll-contain` em gaveta e listas roláveis;
+- filtros dos produtos refletidos na URL;
+- a busca global lista produtos e pedidos só enquanto se digita, até 20 de cada;
+- `touch-action: manipulation` e destaque de toque intencional no admin;
+- links isolados com alvo de pelo menos 24px.
 
 ## Plataforma e temas futuros das lojas
 
@@ -185,7 +262,7 @@ O wrapper recebe `.landing-page` somente quando `usePathname()` é `/`, incluind
 
 Referência primária: inspeção REA de 2026-10-18 do DOM, CSS e JavaScript públicos da Pacto. A referência orienta técnicas de composição e animação; marca, imagens, textos comerciais, números e depoimentos não são copiados. Skills editoriais são adaptadas a essa direção explicitamente solicitada. `awesome-design-md`: índice sem Pacto; análise Linear consultada apenas como apoio de hierarquia entre marketing escuro e prévia de produto, sem adotar sua identidade. A direção da Pacto já escolhida prevalece sobre sorteio de uma direção alternativa.
 
-O briefing fornecido pelo responsável autoriza a apresentação em `/`, demonstrações isoladas em `/admin/produtos` e `/loja/produto` e galeria em `/componentes`. Essas rotas não existiam no checkout: foram criadas sem substituir telas operacionais. A galeria é uma nova amostra de componentes locais; a antiga home era somente uma entrada administrativa.
+**Bloco 2a do MVP (2026-10-26):** as demonstrações `/admin/produtos` e `/loja/produto` e a galeria `/componentes` foram removidas por decisão do responsável; a landing mantém o design e as prévias com dados fictícios, com chamadas para cadastro e login. Histórico: o briefing fornecido pelo responsável autorizou a apresentação em `/`, demonstrações isoladas em `/admin/produtos` e `/loja/produto` e galeria em `/componentes`. Essas rotas não existiam no checkout: foram criadas sem substituir telas operacionais. A galeria é uma nova amostra de componentes locais; a antiga home era somente uma entrada administrativa.
 
 O tratamento anterior da apresentação usava fundo de apoio `#E9F1FA` e ação `#00ABE4` com texto `#172B3A`, conforme o briefing. Esse tratamento continua nas demos e galeria; a home adota somente a exceção acima. Os tokens globais do admin/autenticação permanecem. Arial, raios 4/8px, foco e cores semânticas existentes são reutilizados fora da landing. Não há nova biblioteca, integração, imagem de terceiros ou identidade gráfica.
 

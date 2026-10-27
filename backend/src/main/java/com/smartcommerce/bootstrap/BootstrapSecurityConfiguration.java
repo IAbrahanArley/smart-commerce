@@ -37,6 +37,7 @@ public class BootstrapSecurityConfiguration {
                         HttpMethod.GET,
                         "/api/public/stores/*",
                         "/api/public/stores/*/fulfillment",
+                        "/api/public/stores/*/logo",
                         "/api/public/stores/*/products/*",
                         "/api/public/stores/*/products/*/images",
                         "/api/public/stores/*/products/*/images/*/content",
@@ -112,7 +113,10 @@ public class BootstrapSecurityConfiguration {
                         "/api/auth/registration",
                         "/api/auth/activation",
                         "/api/auth/login",
-                        "/api/auth/logout")
+                        "/api/auth/logout",
+                        // MVP block 1a: password recovery, with CSRF like the other auth forms.
+                        "/api/auth/password-reset/request",
+                        "/api/auth/password-reset/confirmation")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/auth/me")
                     .authenticated()
@@ -145,6 +149,28 @@ public class BootstrapSecurityConfiguration {
                     .requestMatchers(HttpMethod.POST, "/api/tenants")
                     .authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/tenants/*/fulfillment")
+                    .authenticated()
+                    // MVP block 1c: product categories (OWNER checked in the service).
+                    .requestMatchers(HttpMethod.GET, "/api/tenants/*/categories")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/tenants/*/categories")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.PUT,
+                        "/api/tenants/*/categories/*",
+                        "/api/tenants/*/products/*/category")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/tenants/*/categories/*")
+                    .authenticated()
+                    // MVP block 1b: store name, contacts and logo (OWNER checked in the query).
+                    .requestMatchers(
+                        HttpMethod.GET, "/api/tenants/*/profile", "/api/tenants/*/profile/logo")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.PUT, "/api/tenants/*/profile")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/tenants/*/profile/logo")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/tenants/*/profile/logo")
                     .authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/tenants/*/fulfillment")
                     .authenticated()

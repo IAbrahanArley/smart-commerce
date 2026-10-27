@@ -14,8 +14,11 @@ export type PublicProduct = {
 export type PublicVariant = { id: string; price: string; currency: "BRL"; available: boolean; options: { name: string; value: string }[] };
 export type PublicImage = { id: string; alt: string; width: number; height: number };
 
-export type PublicStore = { name: string; slug: string };
-export type PublicCatalog = PublicStore & { products: PublicProduct[]; nextCursor: string | null };
+// MVP block 1b: public contacts and logo the store chose to show; null contacts are not shown.
+export type StoreProfile = { contactEmail: string | null; whatsapp: string | null; instagram: string | null; logo: boolean };
+export type PublicStore = { name: string; slug: string; profile: StoreProfile };
+export type PublicCategory = { id: string; name: string };
+export type PublicCatalog = PublicStore & { categories: PublicCategory[]; category: string | null; products: PublicProduct[]; nextCursor: string | null };
 export type PublicProductDetail = { store: PublicStore; product: PublicProduct; images: PublicImage[] };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -77,7 +80,23 @@ function name(value: unknown): string {
 function store(value: unknown, expectedSlug: string): PublicStore {
   const input = object(value);
   if (input.slug !== expectedSlug) unavailable();
-  return { name: name(input.name), slug: expectedSlug };
+  return { name: name(input.name), slug: expectedSlug, profile: storeProfile(input.profile) };
+}
+
+/** Same rules as the backend; anything unexpected is dropped instead of shown. */
+export function storeProfile(value: unknown): StoreProfile {
+  const input = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const email = typeof input.contactEmail === "string" && input.contactEmail.length <= 254
+    && /^[^@\s<>"]{1,64}@[^@\s.<>"]+(\.[^@\s.<>"]+)+$/.test(input.contactEmail) ? input.contactEmail : null;
+  const whatsapp = typeof input.whatsapp === "string" && /^55[1-9]\d{9,10}$/.test(input.whatsapp) ? input.whatsapp : null;
+  const instagram = typeof input.instagram === "string" && /^[A-Za-z0-9._]{1,30}$/.test(input.instagram) ? input.instagram : null;
+  return { contactEmail: email, whatsapp, instagram, logo: input.logo === true };
+}
+
+/** "5511988887777" → "(11) 98888-7777". */
+export function whatsappText(digits: string): string {
+  const match = /^55(\d{2})(\d{4,5})(\d{4})$/.exec(digits);
+  return match ? `(${match[1]}) ${match[2]}-${match[3]}` : digits;
 }
 
 function product(value: unknown): PublicProduct {
@@ -107,13 +126,24 @@ function product(value: unknown): PublicProduct {
   return { id: input.id, name: name(input.name), price: input.price, currency: "BRL", available: input.available, descriptionHtml: input.descriptionHtml, kind: input.kind as "SIMPLE" | "VARIABLE", variants };
 }
 
-export async function loadCatalog(slug: string, after?: string): Promise<PublicCatalog> {
+export async function loadCatalog(slug: string, after?: string, category?: string): Promise<PublicCatalog> {
   const path = slugPath(slug);
-  if (after !== undefined && !UUID.test(after)) notFound();
-  const input = object(await publicGet(path + (after ? `?after=${encodeURIComponent(after)}` : "")));
+  if ((after !== undefined && !UUID.test(after)) || (category !== undefined && !UUID.test(category))) notFound();
+  const query = new URLSearchParams();
+  if (after) query.set("after", after);
+  if (category) query.set("categoria", category);
+  const input = object(await publicGet(path + (query.size ? `?${query}` : "")));
   if (!Array.isArray(input.products) || input.products.length > 20
-    || (input.nextCursor !== null && (typeof input.nextCursor !== "string" || !UUID.test(input.nextCursor)))) unavailable();
-  return { ...store(input, slug), products: input.products.map(product), nextCursor: input.nextCursor };
+    || (input.nextCursor !== null && (typeof input.nextCursor !== "string" || !UUID.test(input.nextCursor)))
+    || !Array.isArray(input.categories) || input.categories.length > 50
+    || (input.category !== null && input.category !== (category ?? null))) unavailable();
+  // MVP block 1c: only categories with published products; project the public fields only.
+  const categories = input.categories.map(value => {
+    const item = object(value);
+    if (typeof item.id !== "string" || !UUID.test(item.id) || [...name(item.name)].length > 60) unavailable();
+    return { id: item.id, name: name(item.name) };
+  });
+  return { ...store(input, slug), categories, category: category ?? null, products: input.products.map(product), nextCursor: input.nextCursor };
 }
 
 export async function loadProduct(slug: string, id: string): Promise<PublicProductDetail> {
@@ -134,6 +164,24 @@ export async function loadProduct(slug: string, id: string): Promise<PublicProdu
     return { id: image.id, alt: image.alt, width: image.width, height: image.height };
   });
   return { store: store(input.store, slug), product: item, images };
+}
+
+/** The store logo through this app's own origin, like product photos (MVP block 1b). */
+export async function publicLogo(slug: string): Promise<Response> {
+  if (slug.length < 3 || slug.length > 63 || !SLUG.test(slug)) return new Response(null, { status: 404 });
+  return proxyImage(`${apiOrigin()}/api/public/stores/${encodeURIComponent(slug)}/logo`);
+}
+
+async function proxyImage(url: string): Promise<Response> {
+  try {
+    const response = await fetch(url, {
+      credentials: "omit", cache: "no-store", redirect: "error", headers: { Accept: "image/jpeg, image/png" }, signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return new Response(null, { status: response.status === 404 ? 404 : 503, headers: { "Cache-Control": "no-store" } });
+    const type = response.headers.get("content-type")?.split(";")[0];
+    if (type !== "image/png" && type !== "image/jpeg") throw new Error();
+    return new Response(response.body, { status: 200, headers: { "Content-Type": type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
+  } catch { return new Response(null, { status: 503, headers: { "Cache-Control": "no-store" } }); }
 }
 
 export async function publicImage(slug: string, productId: string, imageId: string): Promise<Response> {

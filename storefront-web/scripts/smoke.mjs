@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { forwardingSecret } from "./smoke-units.mjs";
 import { checkoutSmoke } from "./smoke-checkout.mjs";
-import { id, missingId, nextId, orderToken, png, startNext, startUpstream, upstreamRequests } from "./smoke-upstream.mjs";
+import { categoryId, id, missingId, nextId, orderToken, png, startNext, startUpstream, upstreamRequests } from "./smoke-upstream.mjs";
 
 const port = Number(process.env.SMOKE_PORT ?? 3002);
 assert.ok(Number.isInteger(port) && port > 0 && port < 65536, "SMOKE_PORT deve ser válida.");
@@ -46,6 +46,13 @@ try {
   assert.match(catalogPage.html, /class="test-environment-banner" role="note"><strong>Ambiente de teste\.<\/strong>/, "Aviso de ambiente de teste em toda página.");
   assert.match(catalogPage.html, /Pedidos feitos aqui são de teste/);
   assert.match(home.html, /Vitrines de lojas/);
+  // MVP block 1d: shopper privacy notice, linked from every footer.
+  assert.ok(home.html.includes('href="/privacidade"'), "Link de privacidade no rodapé.");
+  const privacy = await page("/privacidade");
+  assert.equal(privacy.response.status, 200);
+  assert.match(privacy.html, /Privacidade nas vitrines/);
+  assert.match(privacy.html, /controladora dos seus dados/);
+  assert.match(privacy.html, /Rascunho em validação/);
   assert.match(home.html, /href="#conteudo"/);
   const catalog = await page("/lojas/loja-teste");
   assert.equal(catalog.response.status, 200);
@@ -55,6 +62,14 @@ try {
   assert.match(catalog.html, /Disponível/);
   assert.ok(catalog.html.includes(`/lojas/loja-teste/produtos/${id}`));
   assert.ok(catalog.html.includes(`?after=${id}`));
+  // MVP block 1b: logo beside the name and the store's own contacts.
+  assert.match(catalog.html, /Fale com a loja/);
+  assert.ok(catalog.html.includes('href="https://wa.me/5511988887777"') && catalog.html.includes("(11) 98888-7777"), "WhatsApp formatado.");
+  assert.ok(catalog.html.includes('href="mailto:contato@loja.example"'));
+  assert.ok(catalog.html.includes('href="https://www.instagram.com/loja.teste/"'));
+  assert.ok(catalog.html.includes('src="/midia/lojas/loja-teste/logo"'));
+  const logo = await fetch(`${base}/midia/lojas/loja-teste/logo`);
+  assert.equal(logo.status, 200); assert.equal(logo.headers.get("content-type"), "image/png");
   const detail = await page(`/lojas/loja-teste/produtos/${id}`);
   assert.equal(detail.response.status, 200);
   assert.match(detail.html, /id="product-title">Produto público de teste/);
@@ -78,6 +93,15 @@ try {
   assert.equal(invalidPhoto.status, 503); assert.ok(!(await invalidPhoto.text()).includes("PRIVATE_UPSTREAM_ERROR_FIXTURE"));
   const invalidPath = await fetch(`${base}/midia/lojas/loja-teste/produtos/invalido/${id}`);
   assert.equal(invalidPath.status, 404);
+  // MVP block 1c: category links, filter and pagination inside the category.
+  assert.ok(catalog.html.includes(`?categoria=${categoryId}#produtos`) && catalog.html.includes(">Camisetas<"), "Link da categoria.");
+  assert.match(catalog.html, /aria-current="page"[^>]*>Todos</);
+  const filtered = await page(`/lojas/loja-teste?categoria=${categoryId}`);
+  assert.match(filtered.html, /aria-current="page"[^>]*>Camisetas</);
+  assert.ok(filtered.html.includes(`?categoria=${categoryId}&amp;after=${id}`), "Paginação mantém a categoria.");
+  const filteredEnd = await page(`/lojas/loja-teste?categoria=${categoryId}&after=${id}`);
+  assert.match(filteredEnd.html, /Fim da lista/);
+  assert.ok(filteredEnd.html.includes(`href="/lojas/loja-teste?categoria=${categoryId}"`), "Volta ao início da categoria.");
   const next = await page(`/lojas/loja-teste?after=${id}`);
   assert.match(next.html, /Outro produto publicado/);
   assert.match(next.html, /Indisponível no momento/);
@@ -85,12 +109,14 @@ try {
   assert.ok(!next.html.includes("Ver mais produtos"));
   const empty = await page("/lojas/loja-vazia");
   assert.match(empty.html, /Nenhum produto publicado/);
+  assert.ok(!empty.html.includes("Fale com a loja") && !empty.html.includes("<script>alert"), "Contatos inválidos são descartados.");
+  assert.ok(!empty.html.includes("/midia/lojas/loja-vazia/logo"), "Sem logo, só o nome.");
   for (const path of ["/pagina-inexistente", "/entrar", "/api/auth/me"]) {
     const missing = await page(path);
     assert.equal(missing.response.status, 404, path);
     assert.match(missing.html, /Página não encontrada/);
   }
-  for (const path of ["/lojas/loja-inexistente", `/lojas/loja-teste/produtos/${nextId}`, "/lojas/loja-teste?after=invalido"]) {
+  for (const path of ["/lojas/loja-inexistente", `/lojas/loja-teste/produtos/${nextId}`, "/lojas/loja-teste?after=invalido", "/lojas/loja-teste?categoria=invalida"]) {
     const missing = await page(path);
     assert.ok([200, 404].includes(missing.response.status), path);
     // Next can stream the loading boundary before notFound; its browser result is still uniform.

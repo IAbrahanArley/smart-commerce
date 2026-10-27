@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import "./globals.css";
 import { checkoutConfigured, hostedTestEnvironment } from "@/lib/checkout-input";
 
@@ -24,11 +25,16 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="page-width footer-content">
             <div className="footer-about">
               <h2>Sobre esta vitrine</h2>
-              <p>{checkoutConfigured()
-                ? "Produtos e preços publicados pela loja. Pedidos feitos aqui são de teste: ainda não há pagamento."
-                : "Produtos e preços publicados pela loja para você consultar. A compra por aqui ainda não está disponível."}</p>
+              <p>{!checkoutConfigured()
+                ? "Produtos e preços publicados pela loja para você consultar. A compra por aqui ainda não está disponível."
+                : hostedTestEnvironment(process.env.DEPLOYMENT_ENVIRONMENT)
+                  ? "Produtos e preços publicados pela loja. Pedidos feitos aqui são de teste."
+                  : "Produtos e preços publicados pela loja. O pagamento é feito no Mercado Pago."}</p>
             </div>
-            <p className="platform-credit">Tecnologia <span className="platform-name" translate="no">Smart Commerce</span></p>
+            <div className="platform-credit">
+              <p>Tecnologia <span className="platform-name" translate="no">Smart Commerce</span></p>
+              <p><Link href="/privacidade" prefetch={false}>Privacidade</Link></p>
+            </div>
           </div>
         </footer>
       </body>

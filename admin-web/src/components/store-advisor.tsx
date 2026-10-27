@@ -10,6 +10,7 @@ import {
 } from "@/lib/advisor";
 import PageHeader from "@/components/page-header";
 import PageState from "@/components/page-state";
+import { Loading } from "@/components/ui/loading";
 
 // SC-027 (ADR-0016 A5, A7, A12): one short conversation per visit, kept only in this page. Every
 // answer shows its sources; the backend has already refused any answer with a number that has no
@@ -109,7 +110,7 @@ export default function StoreAdvisor({ tenantId, initialQuestion = null }: { ten
     <PageHeader id="advisor-title" title="Assistente"
       description="Pergunte sobre vendas, pedidos, estoque, finanças e alertas da loja. O assistente só lê dados: não altera preços, estoque nem pedidos." />
     <p className="visually-hidden" role="status" aria-live="polite">{announcement}</p>
-    {state === "loading" ? <PageState kind="loading" icon="spark" title="Consultando o assistente…">Verificando se o assistente está disponível para esta loja.</PageState> : null}
+    {state === "loading" ? <Loading context="assistente" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para usar o assistente.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="spark" title="Não foi possível consultar o assistente" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Tentar novamente">Confira a conexão e tente novamente.</PageState> : null}

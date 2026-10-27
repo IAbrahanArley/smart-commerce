@@ -67,18 +67,9 @@ h1, h2, h3, section[id], footer[id] { scroll-margin-top: var(--store-space-6); }
 .section-heading p { font-size: 0.875rem; color: var(--store-secondary); }
 .product-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: var(--store-space-6); }
 .product-list > li { min-width: 0; }
-.product-card { height: 100%; }
-.product-link { display: flex; flex-direction: column; height: 100%; gap: var(--store-space-4); padding: var(--store-space-4); background: var(--store-surface); color: var(--store-text); border: 1px solid var(--store-divider); border-radius: var(--store-radius-surface); box-shadow: var(--store-shadow-surface); text-decoration: none; transition: transform 160ms ease-out, box-shadow 160ms ease-out; }
-.product-link:hover { color: var(--store-text); transform: translateY(-2px); box-shadow: var(--store-shadow-raised); }
-.product-link:active { transform: translateY(0); }
-.product-description { min-width: 0; }
-.product-description h3 { margin-bottom: var(--store-space-3); font-size: 1.125rem; }
-.product-link:hover h3 { color: var(--store-link); text-decoration: underline; text-underline-offset: 0.2em; }
 .availability { display: inline-flex; align-items: center; max-width: 100%; padding: var(--store-space-1) var(--store-space-2); border-radius: var(--store-radius-control); background: var(--store-muted-background); color: var(--store-secondary); font-size: 0.875rem; font-weight: 700; overflow-wrap: anywhere; }
 .availability.available { color: var(--store-success); background: var(--store-success-background); }
-.product-summary { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--store-space-2) var(--store-space-4); margin-top: auto; min-width: 0; }
 .price { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.product-action { display: inline-flex; align-items: center; gap: var(--store-space-2); color: var(--store-link); font-size: 0.875rem; font-weight: 700; white-space: nowrap; }
 .pagination { display: flex; align-items: center; justify-content: space-between; gap: var(--store-space-6); flex-wrap: wrap; margin-top: var(--store-space-8); }
 .pagination a { display: inline-flex; align-items: center; min-height: 44px; }
 .pagination:empty { display: none; }
@@ -140,13 +131,6 @@ button:active, .action-link:active { background: var(--store-action-pressed); }
   .empty-state { padding: var(--store-space-6); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .product-link { transition: none; }
-  .product-link:hover { transform: none; }
-  .product-link { transition: none; }
-}
-.product-cover { width: 100%; aspect-ratio: 1; background: var(--store-muted-background); border-radius: var(--store-radius-control); }
-.product-cover img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .image-unavailable { display: flex; align-items: center; justify-content: center; min-height: 10rem; padding: var(--store-space-6); color: var(--store-secondary); text-align: center; font-size: .875rem; }
 .product-gallery { min-width: 0; padding: var(--store-space-4); background: var(--store-surface); border-radius: var(--store-radius-surface); }
 .gallery-main { width: 100%; aspect-ratio: 1; background: var(--store-background); }
@@ -308,3 +292,50 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
 .order-timeline li[data-state="done"]::before { background: var(--store-action); border-color: var(--store-action); }
 .order-timeline li[data-state="current"] { font-weight: 700; }
 .order-timeline li[data-state="current"]::before { border-color: var(--store-action); background: var(--store-muted-background); }
+/* MVP block 1b: store logo beside the name, and the store's own contacts. */
+.store-name { display: inline-flex; align-items: center; gap: var(--store-space-3); }
+.store-logo { display: block; max-height: 2.5rem; max-width: 8rem; width: auto; height: auto; object-fit: contain; flex-shrink: 0; }
+.store-contacts { margin-top: var(--store-space-6); }
+.store-contacts h2 { font-size: 1rem; }
+.store-contacts ul { display: flex; flex-wrap: wrap; gap: var(--store-space-2) var(--store-space-6); margin: var(--store-space-2) 0 0; padding: 0; list-style: none; }
+.store-contacts a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; overflow-wrap: anywhere; }
+/* MVP block 1c: category filter links; wraps on narrow screens, current one marked by aria-current. */
+.category-nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1.5rem; padding: 0; }
+.category-nav a { display: inline-block; min-height: 2.75rem; padding: 0.625rem 1rem; border: 1px solid currentColor; border-radius: 999px; text-decoration: none; }
+.category-nav a[aria-current="page"] { font-weight: 700; text-decoration: underline; text-underline-offset: 0.2em; }
+/* MVP block 1d: shopper privacy notice; the draft notice uses existing neutral tokens. */
+.legal-page h2 { margin-top: var(--store-space-8); font-size: 1.25rem; }
+.legal-page ul { margin-top: var(--store-space-4); padding-left: 1.25rem; }
+.legal-page li + li { margin-top: var(--store-space-2); }
+.legal-page .legal-updated { color: var(--store-secondary); }
+.legal-draft { padding: var(--store-space-4); background: var(--store-surface); border-left: 4px solid var(--store-secondary); border-radius: var(--store-radius-control); }
+.platform-credit p + p { margin-top: var(--store-space-2); }
+.platform-credit a { display: inline-flex; align-items: center; min-height: 44px; }
+/* Standard loading state (DESIGN.md, design system Dashtail phase 2): text only, soft pulse. */
+.loading-state { display: flex; justify-content: center; padding-block: var(--store-space-16); color: var(--store-secondary); font-size: 0.875rem; font-weight: 600; }
+.loading-state > span[aria-hidden], .loading-state > span:only-child { animation: loading-pulse 1.6s ease-in-out infinite; }
+@keyframes loading-pulse { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .loading-state > span { animation: none !important; } }
+
+/* Product card ported from Dashtail's e-commerce card (design system phase 2): framed photo with the
+   availability badge, name, price and a full-width outline call to action. The whole card is one link;
+   the photo zooms slightly on hover, never under reduced motion. */
+.product-card { height: 100%; }
+.product-link { display: flex; flex-direction: column; height: 100%; gap: var(--store-space-4); padding: var(--store-space-4); background: var(--store-surface); color: var(--store-text); border: 1px solid var(--store-divider); border-radius: var(--store-radius-surface); box-shadow: var(--store-shadow-surface); text-decoration: none; }
+.product-link:hover { color: var(--store-text); border-color: var(--store-control-border); box-shadow: var(--store-shadow-raised); }
+.product-media { position: relative; overflow: hidden; border-radius: var(--store-radius-control); }
+.product-media .availability { position: absolute; top: var(--store-space-3); left: var(--store-space-3); max-width: calc(100% - var(--store-space-6)); font-size: 0.75rem; box-shadow: var(--store-shadow-surface); }
+.product-media .availability:not(.available) { background: var(--store-surface); }
+.product-cover { width: 100%; aspect-ratio: 1; background: var(--store-muted-background); border-radius: var(--store-radius-control); }
+.product-cover img { width: 100%; height: 100%; object-fit: contain; padding: var(--store-space-6); display: block; transition: transform 300ms ease; }
+.product-link:hover .product-cover img { transform: scale(1.05); }
+.product-description { display: grid; gap: var(--store-space-2); min-width: 0; }
+.product-description h3 { margin: 0; font-size: 1rem; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.product-link:hover h3 { color: var(--store-link); }
+.product-link .price { margin: 0; font-size: 1.125rem; }
+.product-action { display: flex; align-items: center; justify-content: center; gap: var(--store-space-2); min-height: 44px; margin-top: auto; padding: 0 var(--store-space-4); color: var(--store-action); font-size: 0.875rem; font-weight: 700; border: 1px solid var(--store-action); border-radius: var(--store-radius-control); transition: background-color 200ms ease, color 200ms ease; }
+.product-link:hover .product-action { color: var(--store-on-action); background: var(--store-action); }
+@media (prefers-reduced-motion: reduce) {
+  .product-link, .product-cover img, .product-action { transition: none; }
+  .product-link:hover .product-cover img { transform: none; }
+}

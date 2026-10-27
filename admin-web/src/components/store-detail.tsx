@@ -13,6 +13,7 @@ import StoreAlerts from "@/components/store-alerts";
 import { parseStatus } from "@/lib/advisor";
 import type { ReportPeriodKey } from "@/lib/finance";
 import PageState from "@/components/page-state";
+import { Loading } from "@/components/ui/loading";
 
 export default function StoreDetail({ tenantId, period }: { tenantId: string; period: ReportPeriodKey }) {
   const [store, setStore] = useState<TenantStore | null>(null);
@@ -70,7 +71,7 @@ export default function StoreDetail({ tenantId, period }: { tenantId: string; pe
     <PageHeader id="store-title" title={state === "ready" && store ? <span translate="no">{store.store.name}</span> : "Minha loja"}
       description={state === "ready" && store ? store.store.status === "PUBLISHED" ? <StatusBadge tone="positive">Vitrine publicada</StatusBadge> : <StatusBadge tone="neutral">Vitrine oculta</StatusBadge> : undefined}
       action={state === "ready" ? <Link className="button-link" href={`/lojas/${encodeURIComponent(tenantId)}/produtos`}>Gerenciar produtos</Link> : undefined} />
-    {state === "loading" ? <PageState kind="loading" icon="store" title="Consultando sua loja…">Carregando os dados e as opções de gestão.</PageState> : null}
+    {state === "loading" ? <Loading context="sua loja" /> : null}
     {state === "signed-out" ? <><p role="status">Entre novamente para consultar sua loja. Sua sessão pode ter expirado.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="store" title="Não foi possível consultar sua loja" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar loja novamente">Confira a conexão e tente carregar os dados novamente.</PageState> : null}
@@ -81,7 +82,8 @@ export default function StoreDetail({ tenantId, period }: { tenantId: string; pe
       <StoreDashboard tenantId={tenantId} period={period} explain={explain} />
       <div className="overview-grid">
       <section className="side-card store-summary" aria-labelledby="store-data-title"><h2 id="store-data-title">Dados da loja</h2><dl className="store-data"><dt>Empresa</dt><dd>{store.companyName}</dd><dt>Nome da loja</dt><dd>{store.store.name}</dd>
-        <dt>Identificador da loja</dt><dd>{store.store.slug}</dd><dt>Seu acesso</dt><dd>Proprietário</dd></dl></section>
+        <dt>Identificador da loja</dt><dd>{store.store.slug}</dd><dt>Seu acesso</dt><dd>Proprietário</dd></dl>
+        <p><Link className="back-link" href={`/lojas/${encodeURIComponent(tenantId)}/dados`}>Editar nome, logo e contatos</Link></p></section>
       <section className="side-card" aria-labelledby="publication-title"><h2 id="publication-title">Publicação da vitrine</h2>
         <p>Somente nome, preço e disponibilidade dos produtos publicados ficam acessíveis. SKU, custo e histórico de estoque continuam restritos ao painel.</p>
         {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}

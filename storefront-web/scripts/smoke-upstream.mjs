@@ -6,6 +6,9 @@ import { setTimeout as delay } from "node:timers/promises";
 export const id = "00000000-0000-0000-0000-000000000001";
 export const nextId = "00000000-0000-0000-0000-000000000002";
 export const missingId = "00000000-0000-0000-0000-000000000003";
+// MVP block 1c: one public category; the category routes check the filter and pagination keep it.
+export const categoryId = "00000000-0000-0000-0000-0000000000c1";
+const categories = [{ id: categoryId, name: "Camisetas" }];
 export const orderId = "00000000-0000-0000-0000-0000000000a7";
 export const orderToken = "SyntheticOrderToken_0123456789abcdefghijklm";
 export const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=", "base64");
@@ -17,7 +20,8 @@ export const checkoutUrl = "https://sandbox.mercadopago.com.br/checkout/v1/redir
 // SC-013: answer of the synthetic payment start; smoke steps swap it to exercise failures.
 export const paymentReply = { status: 200, body: { checkoutUrl } };
 
-const store = { name: "Loja de teste da vitrine", slug: "loja-teste" };
+// MVP block 1b: public contacts and logo; the hostile e-mail must be dropped by the storefront.
+const store = { name: "Loja de teste da vitrine", slug: "loja-teste", profile: { contactEmail: "contato@loja.example", whatsapp: "5511988887777", instagram: "loja.teste", logo: true } };
 const item = { id, name: "Produto público de teste", price: "49.90", currency: "BRL", available: true, kind: "SIMPLE", descriptionHtml: "<p>Descrição <strong>segura</strong>.</p>", variants: [{ id, price: "49.90", currency: "BRL", available: true, options: [] }] };
 const variantItem = { ...item, id: nextId, name: "Camiseta com opções", kind: "VARIABLE", variants: [{ id, price: "59.90", currency: "BRL", available: false, options: [{ name: "Cor", value: "Azul" }, { name: "Tamanho", value: "M" }], sku: "PRIVATE_SKU_FIXTURE", cost: "PRIVATE_COST_FIXTURE", quantity: 784321 }] };
 const syntheticOrder = { id: orderId, number: 7, status: "PENDING_PAYMENT", currency: "BRL", subtotal: "99.80", shipping: "0.00", total: "99.80",
@@ -49,13 +53,15 @@ function checkout(order, headers, response) {
 }
 
 const ROUTES = {
-  "/api/public/stores/loja-teste": () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], cost: "PRIVATE_COST_FIXTURE", sku: "PRIVATE_SKU_FIXTURE", quantity: 784321 }], nextCursor: id }),
-  [`/api/public/stores/loja-teste?after=${id}`]: () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], id: nextId, name: "Outro produto publicado", available: false }], nextCursor: null }),
+  "/api/public/stores/loja-teste": () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], cost: "PRIVATE_COST_FIXTURE", sku: "PRIVATE_SKU_FIXTURE", quantity: 784321 }], categories, category: null, nextCursor: id }),
+  [`/api/public/stores/loja-teste?categoria=${categoryId}`]: () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [] }], categories, category: categoryId, nextCursor: id }),
+  [`/api/public/stores/loja-teste?after=${id}&categoria=${categoryId}`]: () => ({ ...store, products: [], categories, category: categoryId, nextCursor: null }),
+  [`/api/public/stores/loja-teste?after=${id}`]: () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], id: nextId, name: "Outro produto publicado", available: false }], categories, category: null, nextCursor: null }),
   [`/api/public/stores/loja-teste/products/${id}/images`]: () => ({ images: [{ id, alt: "Foto de teste", width: 300, height: 300 }] }),
   [`/api/public/stores/loja-teste/products/${id}`]: () => ({ store, product: item }),
   [`/api/public/stores/loja-variavel/products/${nextId}`]: () => ({ store: { ...store, slug: "loja-variavel" }, product: variantItem }),
   [`/api/public/stores/loja-variavel/products/${nextId}/images`]: () => ({ images: [] }),
-  "/api/public/stores/loja-vazia": () => ({ name: "Loja vazia de teste", slug: "loja-vazia", products: [], nextCursor: null }),
+  "/api/public/stores/loja-vazia": () => ({ name: "Loja vazia de teste", slug: "loja-vazia", profile: { contactEmail: "x@y.example\"><script>alert(1)</script>", whatsapp: "123", instagram: "a b", logo: false }, products: [], categories: [], category: null, nextCursor: null }),
 };
 
 function quote(body) {
@@ -90,6 +96,7 @@ export async function startUpstream() {
       return json(response, paymentReply.status, paymentReply.body);
     }
     if (method !== "GET") return json(response, 403, { message: "Proibido" });
+    if (url === "/api/public/stores/loja-teste/logo") { response.setHeader("Content-Type", "image/png"); return response.end(png); }
     if (url === `/api/public/stores/loja-teste/products/${id}/images/primary/content` || url === `/api/public/stores/loja-teste/products/${id}/images/${id}/content`) {
       response.setHeader("Content-Type", "image/png"); response.setHeader("Set-Cookie", "PRIVATE_UPSTREAM_COOKIE=synthetic; Path=/"); return response.end(png);
     }

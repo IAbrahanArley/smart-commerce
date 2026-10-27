@@ -17,7 +17,7 @@ Agentes de IA: instruções em [AGENTS.md](AGENTS.md) (Claude via [CLAUDE.md](CL
 
 ## Estrutura
 
-A página inicial do admin (`/`) apresenta a plataforma. `/admin/produtos` e `/loja/produto` são demonstrações locais com dados fictícios, sem API, autenticação ou persistência; `/componentes` reúne amostras dos componentes locais. Para operar lojas reais, use `/entrar` e `/lojas`; a vitrine real continua na aplicação `storefront-web`. As URLs operacionais foram preservadas. Ver [validação da landing](docs/quality/LANDING-VALIDATION.md).
+A página inicial do admin (`/`) apresenta a plataforma e leva ao cadastro e ao login. As demonstrações `/admin/produtos`, `/loja/produto` e `/componentes` foram removidas no bloco 2a do MVP ([validação](docs/quality/MVP-2A-PRODUCTION-PREP.md)). Para operar lojas reais, use `/entrar` e `/lojas`; a vitrine real continua na aplicação `storefront-web`. As URLs operacionais foram preservadas. Ver [validação da landing](docs/quality/LANDING-VALIDATION.md).
 
 ```text
 backend/          Spring Boot, Maven Wrapper, Flyway e testes
@@ -94,7 +94,7 @@ Abra o admin para criar a conta. O helper inicia o perfil `dev`; as mensagens s�
 
 Caixa DEV padrão no Windows: `%LOCALAPPDATA%/SmartCommerce/mail`; no Linux: `~/.local/share/SmartCommerce/mail`. Abra o arquivo `.eml` mais recente como texto e copie o link completo, incluindo `#token=...`. O link é sensível: não envie ao chat nem versione mensagens. Tokens duram 30 minutos; o reenvio tem cooldown de 60 segundos.
 
-Rotas: `/cadastro`, `/confirmar-email`, `/entrar`, `/lojas` (minhas lojas, destino após o login), `/conta`, `/lojas/{id}` e `/lojas/{id}/entrega`. API de mesma origem via Next.js: `/api/auth/csrf`, `/registration`, `/activation`, `/login`, `/me` e `/logout`, todos sob `/api/auth`. Mutações exigem CSRF; senhas e sessões não usam localStorage.
+Rotas: `/cadastro`, `/confirmar-email`, `/entrar`, `/esqueci-senha`, `/redefinir-senha`, `/lojas` (minhas lojas, destino após o login), `/conta`, `/lojas/{id}`, `/lojas/{id}/entrega`, `/lojas/{id}/dados` (nome, logo e contatos que a vitrine mostra; [validação](docs/quality/MVP-1B-STORE-PROFILE.md)) `/termos` e `/privacidade` (rascunho; [validação](docs/quality/MVP-1D-LEGAL.md)) e `/lojas/{id}/categorias` (categorias dos produtos, filtráveis na vitrine por `?categoria=`; [validação](docs/quality/MVP-1C-CATEGORIES.md)). API de mesma origem via Next.js: `/api/auth/csrf`, `/registration`, `/activation`, `/login`, `/me`, `/logout`, `/password-reset/request` e `/password-reset/confirmation`, todos sob `/api/auth`. A recuperação de senha responde sempre da mesma forma, usa link de uso único por 30 minutos e encerra todas as sessões ao trocar a senha ([validação](docs/quality/MVP-1A-PASSWORD-RESET.md)). Mutações exigem CSRF; senhas e sessões não usam localStorage.
 
 Para encerrar, Ctrl+C nos terminais e parada do banco preservando volume:
 
@@ -233,7 +233,7 @@ Decisões no [ADR-0015](docs/architecture/adr/0015-finance-dashboard.md). Detalh
 Para observar o sistema fora da máquina local, o [guia de deploy](docs/deploy/HOSTED-TEST-ENVIRONMENT.md) descreve o backend no Render (imagem `backend/Dockerfile`), o admin e a vitrine na Vercel e o e-mail de cadastro pelo Brevo, com todas as variáveis.
 
 - **Natureza do ambiente:** de teste, com dados fictícios e sem pagamento, conforme o [ADR-0014](docs/architecture/adr/0014-hosted-test-environment.md).
-- **Checkout fora de DEV:** só existe com `DEPLOYMENT_ENVIRONMENT=hosted-test`, como exceção H2 ao D6.
+- **Checkout fora de DEV:** existe com `DEPLOYMENT_ENVIRONMENT=hosted-test` (exceção H2 ao D6) ou, em produção, com `DEPLOYMENT_ENVIRONMENT=production` na vitrine e, no backend, a integração do Mercado Pago com o segredo do webhook e `MERCADO_PAGO_TEST_TOKEN=false` (D6 revisado no bloco 2b). Sem isso, o backend recusa iniciar com o checkout ligado.
 - **Aviso:** todas as páginas mostram que se trata de um ambiente de teste.
 
 ## Entrega da loja e carrinho (Sprint 3, parcial)

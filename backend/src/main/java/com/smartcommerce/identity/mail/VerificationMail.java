@@ -5,5 +5,10 @@ package com.smartcommerce.identity.mail;
 public interface VerificationMail {
   void send(String recipient, String activationLink);
 
+  /** Password recovery link (MVP block 1a); adapters with their own wording override it. */
+  default void sendPasswordReset(String recipient, String resetLink) {
+    send(recipient, resetLink);
+  }
+
   default void cleanup() {}
 }

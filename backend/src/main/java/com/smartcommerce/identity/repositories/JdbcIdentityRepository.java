@@ -171,6 +171,28 @@ public class JdbcIdentityRepository {
         == 1;
   }
 
+  /**
+   * Password recovery (MVP block 1a): replaces the credential of an active, verified account and
+   * bumps {@code auth_version}, so every existing session is rejected by the session filter.
+   */
+  public boolean replacePassword(UUID userId, PasswordHash replacement, Instant now) {
+    int users =
+        update(
+            """
+            UPDATE identity_user SET auth_version=auth_version+1, updated_at=?
+            WHERE id=? AND status='ACTIVE' AND verified_at IS NOT NULL
+            """,
+            Timestamp.from(now),
+            userId);
+    if (users != 1) return false;
+    return update(
+            "UPDATE identity_local_credential SET password_hash=?, updated_at=? WHERE user_id=?",
+            replacement.encoded(),
+            Timestamp.from(now),
+            userId)
+        == 1;
+  }
+
   private int update(String sql, Object... arguments) {
     try {
       return jdbc.update(sql, arguments);
