@@ -111,6 +111,8 @@ V30 (bloco 1c do MVP, 2026-10-26), aditiva: `catalog_category` (nome de 1 a 60 c
 
 V31 (SC-031, ADR-0017, 2026-10-27), aditiva: `billing_account`, uma linha por proprietário (`identity_user`). Guarda o status gravado (`TRIAL`, `ACTIVE`, `PAST_DUE`, `SUSPENDED` ou `CANCELED`), o plano e o ciclo (nulos no teste grátis), `trial_ends_at`, `current_period_end` e `past_due_since`, e os identificadores da Stripe, únicos e preenchidos na SC-032. O teste vencido (`TRIAL_EXPIRED`) e a suspensão depois da carência são calculados pelo tempo, sem rotina agendada. A conta nasce no primeiro uso, com 14 dias de teste. Os limites valem para todas as empresas do proprietário.
 
+V32 (SC-032, ADR-0017 B6, 2026-10-27), aditiva: `billing_event`, com o id de cada evento de webhook da Stripe já processado, o tipo e a data de recebimento. Serve só para idempotência: o corpo do evento não é guardado, porque a conta é conciliada pela API. Não tem dado pessoal.
+
 V27 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
 - **`DELETE`:** recusado sempre;
 - **`UPDATE`:** só para preencher `settled_at` uma única vez, a partir de nulo, que é o caminho da SC-018;

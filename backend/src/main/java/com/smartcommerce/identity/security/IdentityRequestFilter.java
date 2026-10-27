@@ -63,10 +63,12 @@ public final class IdentityRequestFilter extends OncePerRequestFilter {
       chain.doFilter(request, response);
       return;
     }
+    String uri = request.getRequestURI();
     int limit =
-        request.getRequestURI().matches("/api/tenants/[0-9a-fA-F-]{36}/products(?:/.*)?")
+        uri.matches("/api/tenants/[0-9a-fA-F-]{36}/products(?:/.*)?")
             ? 256 * 1024
-            : 8192;
+            // SC-032: Stripe events carry the whole subscription or invoice object.
+            : "/api/public/webhooks/stripe".equals(uri) ? 64 * 1024 : 8192;
     if (request.getContentLengthLong() > limit) {
       response.setStatus(413);
       return;

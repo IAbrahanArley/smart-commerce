@@ -79,9 +79,18 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `ADVISOR_ENABLED` | `true` para ligar |
 | `ANTHROPIC_API_KEY` | chave criada no console da Anthropic (segredo; cadastre só no painel do Render, nunca no chat ou no Git) |
 | `ADVISOR_GLOBAL_MONTHLY_CAP_USD` | opcional: teto mensal da plataforma em US$ (padrão 20,00) |
-| `BILLING_ENABLED` | **deixe `false` (padrão) até a SC-032.** Com `true`, valem os limites dos planos, o teste de 14 dias e o bloqueio de contas inativas (ADR-0017), mas ainda não há como pagar |
-| `BILLING_TRIAL_DAYS` / `BILLING_GRACE_DAYS` | opcionais: duração do teste grátis (padrão 14) e carência depois de uma cobrança recusada (padrão 7) |
 | `ADVISOR_MONTHLY_QUOTA` | opcional: perguntas por loja por mês (padrão 100) |
+
+   **Assinatura da plataforma (SC-031 e SC-032, opcional).** Sem estas variáveis, não há limite de plano nem cobrança. Neste ambiente, use só o **modo de teste** da Stripe: o backend recusa iniciar com chave live fora de `DEPLOYMENT_ENVIRONMENT=production` (ADR-0017 B12):
+
+| Variável | Valor |
+| --- | --- |
+| `BILLING_ENABLED` | `true` para ligar os limites dos planos, o teste de 14 dias, o bloqueio de contas inativas e a assinatura pela Stripe (ADR-0017). Exige as duas variáveis abaixo |
+| `STRIPE_SECRET_KEY` | chave de teste da Stripe, de preferência restrita (`rk_test_`) com acesso a Checkout, Customers, Prices, Subscriptions e Billing Portal (segredo; só no painel do Render) |
+| `STRIPE_WEBHOOK_SECRET` | segredo `whsec_` do endpoint de webhook (segredo). Cadastre na Stripe a URL `https://<servico>.onrender.com/api/public/webhooks/stripe` com os eventos `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, `customer.subscription.resumed`, `invoice.paid` e `invoice.payment_failed` |
+| `BILLING_TRIAL_DAYS` / `BILLING_GRACE_DAYS` | opcionais: duração do teste grátis (padrão 14) e carência depois de uma cobrança recusada (padrão 7) |
+
+   Na Stripe, crie os 3 produtos com 3 preços recorrentes em BRL cada (mensal, a cada 6 meses e anual), com as `lookup_key` `essencial_mensal`, `essencial_semestral`, `essencial_anual`, `profissional_mensal`, `profissional_semestral`, `profissional_anual`, `escala_mensal`, `escala_semestral` e `escala_anual`, nos valores de [PRICING_PROPOSAL.md](../product/PRICING_PROPOSAL.md). Ative o portal do cliente com troca entre esses preços e cancelamento no fim do período (B8).
 
 3. **Não defina** `SPRING_PROFILES_ACTIVE=dev`. A `PORT` é definida pelo Render, e a imagem já escuta em `0.0.0.0`.
 4. **Primeiro deploy:** o build Maven dentro da imagem leva alguns minutos. Na simulação local com o mesmo limite do free (0,1 CPU e 512 MB), a aplicação levou **cerca de 4 minutos para ficar pronta**, aplicando as 16 migrações, e usou cerca de 230 MB.
