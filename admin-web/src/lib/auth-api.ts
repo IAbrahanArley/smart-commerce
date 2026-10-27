@@ -1,4 +1,4 @@
-import { invalidateSession } from "@/lib/session-events";
+import { BILLING_CHANGED, invalidateSession } from "@/lib/session-events";
 
 // Credentials remain in HttpOnly cookies. No browser storage or secret logging.
 export async function authRequest(path: string, body?: object): Promise<Response> {
@@ -26,10 +26,12 @@ export async function apiRequest(path: string, options: { method?: "GET" | "POST
 
 function inspectSession(response: Response) {
   if (response.status === 401) invalidateSession();
+  if (response.status === 402 && typeof window !== "undefined") window.dispatchEvent(new Event(BILLING_CHANGED));
   return response;
 }
 
 export function requestError(status: number): string {
+  if (status === 402) return "Sua assinatura não está ativa, então o painel está só para consulta. Regularize em Plano e cobrança; nada foi apagado.";
   if (status === 429) return "Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.";
   if (status === 503) return "Serviço temporariamente ocupado. Aguarde e tente novamente.";
   if (status === 403) return "Não foi possível validar a solicitação. Tente novamente.";

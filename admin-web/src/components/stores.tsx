@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { billingRefusal } from "@/lib/billing";
 import { apiRequest, requestError } from "@/lib/auth-api";
 import type { TenantStore } from "@/lib/tenant-api";
 import PageHeader from "@/components/page-header";
@@ -54,7 +55,9 @@ export default function StoresPanel() {
     try {
       const response = await apiRequest("/api/tenants", { method: "POST", body });
       if (response.status === 401) { setSignedOut(true); return; }
-      if (response.status === 409) {
+      if (response.status === 409 || response.status === 402) {
+        const refusal = billingRefusal(response.status, await response.json().catch(() => null));
+        if (refusal) { setError(refusal); return; }
         setSlugError("Este identificador já está em uso. Escolha outro para sua loja.");
         slugField.current?.focus(); return;
       }

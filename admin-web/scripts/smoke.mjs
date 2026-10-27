@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import "./smoke-ui.mjs";
+import "./smoke-billing.mjs";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { coverUrl, decimalInput, formatBRL, photoCountText } from "../src/lib/catalog.ts";
@@ -309,6 +310,7 @@ try {
     ["/redefinir-senha", "Redefinir senha", 'autoComplete="new-password"'],
     ["/entrar", "Entrar", 'href="/esqueci-senha"'],
     ["/conta", "Minha conta", 'aria-label="Navegação da conta"'],
+    ["/conta/plano?checkout=sucesso", "Plano e cobrança", "Verificando sua sessão"],
     ["/lojas", "Minhas lojas", "Carregando suas lojas…"],
     ["/lojas/00000000-0000-0000-0000-000000000000", "Minha loja", "Carregando sua loja…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/entrega", "Entrega", "Carregando configuração de entrega…"],

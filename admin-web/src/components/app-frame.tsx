@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import AccountMenu from "@/components/account-menu";
+import BillingNotice from "@/components/billing-notice";
 import GlobalSearch from "@/components/global-search";
 import NavIcon from "@/components/nav-icon";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,7 @@ export default function AppFrame({ navLabel, context, groups, tenantId, children
           <div className="min-w-0 flex-1"><GlobalSearch groups={groups} tenantId={tenantId} /></div>
           <AccountMenu />
         </header>
-        <main id="conteudo" className="app-main" tabIndex={-1}>{children}</main>
+        <main id="conteudo" className="app-main" tabIndex={-1}><BillingNotice />{children}</main>
         <footer className="app-footer"><span translate="no">Smart Commerce</span></footer>
       </div>
     </div>

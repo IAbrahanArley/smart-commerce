@@ -8,7 +8,7 @@ export const LEGAL = {
   cnpj: null as string | null,
   contactEmail: "abrahanarley@gmail.com",
   /** Date of the current text, shown as "Atualizado em". */
-  updatedAt: "2026-10-26",
+  updatedAt: "2026-10-27",
 };
 
 /** True while the operator is not identified: the pages then show a draft notice. */

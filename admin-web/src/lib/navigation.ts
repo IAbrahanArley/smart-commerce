@@ -31,6 +31,7 @@ export function accountItems(pathname: string): NavItem[] {
   return [
     { href: "/lojas", label: "Minhas lojas", icon: "stores", current: pathname === "/lojas", keywords: "trocar loja empresas" },
     { href: "/conta", label: "Minha conta", icon: "user", current: pathname === "/conta", keywords: "perfil sessao" },
+    { href: "/conta/plano", label: "Plano e cobrança", icon: "card", current: pathname === "/conta/plano", keywords: "assinatura pagamento stripe cartao limite teste" },
   ];
 }
 

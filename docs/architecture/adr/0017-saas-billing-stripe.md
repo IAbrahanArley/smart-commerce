@@ -107,6 +107,29 @@ Status: **adotado** em 2026-10-27 para B1–B12, conforme as recomendações aba
   - `BillingSafetyCheckTest`, com as travas e as chaves de preço;
   - `StripeBillingIT`, com Postgres real e servidor falso da Stripe: Checkout pelo preço certo, cliente criado uma vez, retorno do navegador sem efeito, evento sem assinatura ou forjado recusado, ativação pelo evento assinado, reentrega sem nova consulta, segunda assinatura recusada, portal, carência mantida entre falhas, pagamento, cancelamento e nova assinatura, falha da Stripe deixando o evento para a reentrega, e corpo grande recusado.
 
+## Implementação da SC-033 (2026-10-27)
+
+- **"Plano e cobrança"** (`/conta/plano`, no menu da conta e no menu do perfil):
+  - mostra situação, plano, ciclo, fim do teste ou do período, lojas usadas e limites;
+  - sem assinatura em andamento (teste, teste encerrado ou cancelada), mostra os 3 planos com escolha de ciclo e o botão "Assinar", que abre o Checkout da Stripe;
+  - com assinatura (ativa, pendente ou suspensa), mostra "Gerenciar assinatura", que abre o portal;
+  - o navegador só sai para `https://checkout.stripe.com` ou `https://billing.stripe.com`; qualquer outra URL é recusada;
+  - na volta do Checkout (`?checkout=sucesso`), a página só mostra "confirmando" e consulta a conta a cada 3 s, por até 30 s, até o webhook ativar a assinatura. O retorno do navegador nunca muda nada;
+  - com `BILLING_ENABLED=false`, a página explica que a cobrança não está ligada e não oferece assinatura.
+- **Avisos em todas as páginas do painel:**
+  - nos últimos 3 dias do teste, aviso informativo;
+  - teste encerrado, pagamento pendente, suspensão e cancelamento, aviso de erro;
+  - todos levam a "Plano e cobrança". O aviso é consultado de novo quando uma alteração é recusada com 402.
+- **Recusas:**
+  - 402 mostra que o painel está só para consulta e que nada foi apagado;
+  - `PLAN_LIMIT` mostra a mensagem do backend na criação de loja e de produto. Antes, a criação de loja tratava todo 409 como identificador em uso.
+- **Vitrine suspensa:** a vitrine pública já responde com a página genérica "Página não encontrada", sem dizer o motivo. Assim, o comprador não fica sabendo da situação financeira da loja. Nenhuma mudança na `storefront-web`.
+- **Termos de uso:** nova seção 5, "Assinatura, teste grátis e cobrança", com teste, ciclos, Stripe, portal, arrependimento de 7 dias (B10), carência e bloqueio sem perda de dados. É rascunho para validação do responsável, como o resto dos Termos.
+- **Testes:**
+  - `scripts/smoke-billing.mjs`: leitura da conta, avisos, alvos da Stripe, mensagens de retorno e de recusa, navegação e rota protegida;
+  - rota `/conta/plano` no smoke de páginas;
+  - conferência visual com API sintética: teste, limite de lojas, suspensão e confirmação depois do Checkout.
+
 ## Fluxos
 
 1. **Cadastro:** a conta nasce em `TRIAL` com 14 dias, e o painel mostra quantos dias faltam.

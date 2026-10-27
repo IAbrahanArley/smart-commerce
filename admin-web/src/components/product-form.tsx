@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { billingRefusal } from "@/lib/billing";
 import { apiRequest, requestError } from "@/lib/auth-api";
 import { decimalInput, type Product, type VariantDraft } from "@/lib/catalog";
 import DescriptionEditor from "@/components/description-editor";
@@ -96,6 +97,8 @@ export default function ProductForm({ tenantId, product, storePublished = false,
       });
       if (response.status === 409) {
         const body: { code?: string } = await response.json().catch(() => ({}));
+        const refusal = billingRefusal(409, body);
+        if (refusal) { setMessage(refusal); return; }
         if (body.code === "SKU_CONFLICT") {
           setErrors({ sku: "Este SKU já está em uso nesta loja. Escolha outro identificador." });
           pendingErrorFocus.current = "sku";
