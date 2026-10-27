@@ -9,6 +9,8 @@ Data: 2026-10-26. **C1–C14 do [ADR-0017](../architecture/adr/0017-cash-payable
 
 Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada aqui movimenta dinheiro de verdade; tudo é registro.
 
+**Ordem:** em 2026-10-27 o responsável colocou a [Sprint 8](SPRINT_08.md) (vitrine V1) à frente desta sprint.
+
 **Dependências:**
 - A SC-018 (taxa e liberação do Mercado Pago) continua pendente. Sem ela, os pagamentos online aparecem em "a receber, data desconhecida" (C10).
 - A SC-030 (revisão integrada da Sprint 6) deve terminar antes da SC-039, que adiciona alertas ao módulo `advisor`.

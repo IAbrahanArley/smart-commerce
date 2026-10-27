@@ -32,6 +32,7 @@ Itens do PRD que ainda não existem ou estão incompletos, em ordem de execuçã
 | **1c. Categorias de produto** (implementada em 2026-10-26, [validação](../quality/MVP-1C-CATEGORIES.md)) | PRD item 3; o catálogo não tem categorias | categoria simples por loja e filtro na vitrine, sem hierarquia profunda |
 | **1d. Páginas legais** (estrutura e rascunho em 2026-10-26, [validação](../quality/MVP-1D-LEGAL.md); faltam razão social, CNPJ e validação do texto) | LGPD e termos (PRD, hipóteses e requisitos não funcionais) | termos de uso e política de privacidade da plataforma; aviso no cadastro e no checkout. **O texto precisa de validação do responsável**; a estrutura pode vir antes |
 | **1e. Planos de assinatura (SaaS)** (planos aprovados em 2026-10-26, [PRICING_PROPOSAL.md](PRICING_PROPOSAL.md); cards na landing) | PRD: assinatura paga pelo lojista; sem ela não há receita | **implementado, aguardando validação real** ([ADR-0017](../architecture/adr/0017-saas-billing-stripe.md), adotado): módulo `billing` (SC-031 a SC-033): teste grátis de 14 dias, limites por plano, cota de IA (Sonnet 5.5), assinatura pela Stripe e telas "Plano e cobrança". Falta o responsável criar a conta, os preços e o webhook na Stripe e validar em modo de teste. Pix Automático pela Asaas em cerca de 6 meses |
+| **1f. Vitrine padrão V1 (Sprint 8)** (incluída em 2026-10-27 por decisão do responsável, como exceção; [SPRINT_08.md](SPRINT_08.md), [ADR-0018](../architecture/adr/0018-storefront-v1.md)) | a vitrine é o que vende o produto, e a versão no padrão de loja grande tinha ficado de fora deste plano | SC-041 a SC-048; evolui os blocos 1b e 1c (dados da loja e categorias). Conta do cliente, loja de extensões e Sprint 7 ficam para depois da entrega |
 
 ## Bloco 2 — Remover o que é de teste e preparar a produção
 
@@ -73,6 +74,6 @@ Itens do PRD que ainda não existem ou estão incompletos, em ordem de execuçã
 
 Tudo passa a ser melhoria e entra no [ROADMAP.md](ROADMAP.md) com prioridade própria. Por exemplo:
 - ligar o assistente em produção, depois da SC-029 e de uma aprovação separada;
-- evoluções da vitrine;
+- evoluções da vitrine além da V1 (conta do cliente, loja de extensões, temas);
 - frete nacional;
 - domínio próprio por loja.

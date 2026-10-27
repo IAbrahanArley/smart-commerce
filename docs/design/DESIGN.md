@@ -27,7 +27,7 @@ Os valores abaixo são a referência oficial. Um subconjunto já existe como var
 | Autenticação | Fundo claro, painel branco de uma coluna com largura próxima de 28rem, título direto e ação principal evidente. Sem conteúdo promocional competindo com o formulário. |
 | Admin | Superfícies claras, títulos e ações consistentes, dados alinhados e densidade legível. Azul destaca ações e informação; espaço e bordas organizam grupos. Telas de uma loja e da conta usam a moldura com navegação lateral, limitada a funções existentes. Não antecipar itens de menu ou dashboards sem funcionalidade. |
 | Páginas institucionais futuras | Preservam a assinatura e os tokens; composição própria depende do escopo aprovado e da skill adequada. |
-| Vitrines futuras | Temas dos lojistas têm contrato separado; nome, cores e conteúdo da loja não alteram admin ou autenticação. |
+| Vitrine | Base padrão V1 aprovada em 2026-10-27 (seção "Vitrine padrão V1"). Temas dos lojistas têm contrato separado; nome, cores e conteúdo da loja não alteram admin ou autenticação. |
 
 Manter os raios de 4px/8px e a geometria simples existentes. Gradientes decorativos, vidro translúcido, sombras intensas, botões em cápsula, fontes externas, tema escuro e novas marcas gráficas não fazem parte deste padrão. Eventual adoção exige proposta e aprovação, sem instalação automática de biblioteca.
 
@@ -320,6 +320,44 @@ O cancelamento é uma ação destrutiva em duas etapas: "Cancelar pedido" abre o
 Ajustes aprovados em 2026-10-17 (itens V1–V4 da [proposta](PROPOSTA-REFERENCIAS-MERCADO.md)): a abertura do catálogo é compacta, com nome da loja e contagem de produtos, sem bloco azul; o azul fica reservado a ações. A grade usa cards em coluna com foto de capa real em 1:1 e `object-fit: contain`, nome, disponibilidade e preço. A página de produto coloca galeria e descrição à esquerda e um resumo fixo ao rolar (nome, preço, variações e disponibilidade) à direita a partir de 54rem; em telas menores, galeria, resumo e descrição nessa ordem. Variações são escolhidas por atributo (por exemplo Cor e Tamanho) com rádios nativos estilizados, rótulo em texto e seleção indicada por borda, peso e marca de verificação, não só por cor; combinações indisponíveis são indicadas por texto. Quando as variações não compartilham os mesmos atributos, a lista de combinações em `select` continua como alternativa.
 
 A skill design-taste-frontend apoia composição e revisão, preservando paleta/tipografia e sem impor imagens, animações ou conteúdo incompatíveis com o catálogo real e o design aprovado. Personalização visual futura e mudanças relevantes permanecem sujeitas à governança acima.
+
+## Vitrine padrão V1 (Sprint 8)
+
+Aprovada pelo responsável em 2026-10-27 (decisão V12 do [ADR-0018](../architecture/adr/0018-storefront-v1.md), D5 do [replanejamento](../product/VITRINE_REPLANEJAMENTO.md)), a partir de uma proposta com quatro telas: home desktop, categoria/busca, produto e home no celular. **Substitui a base visual da vitrine de consulta** (Arial, azul profundo, controles 4px) e o card de produto portado do Dashtail quando a SC-044 for implementada; o logo e o "Fale com a loja" do bloco 1b continuam, no novo cabeçalho e rodapé; até lá, a seção anterior continua valendo para o código atual. Não altera `--sc-*`, admin nem autenticação.
+
+**Direção:** varejo grande e neutro, que serve a moda, calçados, acessórios e cosméticos. A foto do produto é o elemento principal; a interface fica em branco e quase preto, e a cor aparece só com função (ação, desconto, contato). Referência funcional, não visual: [BENCHMARK_VITRINE_SPORTLIFE.md](../product/BENCHMARK_VITRINE_SPORTLIFE.md).
+
+**Tipografia:** Manrope (400–800), servida pela própria aplicação (`next/font`, sem requisição ao Google em tempo de execução), com fallback `system-ui, sans-serif`. Títulos em 800 com espaçamento negativo leve (−0,02 a −0,03em); marca do produto em caixa alta pequena (12px, 700, +0,06em); preço em 800; texto corrido 15–16px.
+
+**Cores (tokens `--store-*` novos, contraste medido sobre branco):**
+
+| Papel | Valor | Contraste |
+| --- | --- | --- |
+| Texto e ação principal (botões, faixa de aviso, chip ativo) | `#111418` | 18,5:1 |
+| Texto secundário | `#3D4550` / `#4E5661` | 9,7:1 / 7,4:1 |
+| Preço "de" riscado | `#5B6470` | 6,0:1 |
+| Destaque (contador do carrinho, link em hover) | `#1F4FD8` | 6,6:1 |
+| Desconto (selo "−17%", categoria Outlet) | `#B3261E` | 6,5:1 |
+| WhatsApp e confirmação | `#127C3C` | 5,3:1 |
+| Borda de controle (campos, botões de variante, seletor) | `#7A828D` | 3,9:1 |
+| Divisores e bordas decorativas | `#E3E6EA` | decorativo |
+| Superfícies (busca, fotos sem imagem, rodapé) | `#F3F4F6`, `#F1F3F5`, `#F5F6F8` | — |
+
+A proposta começou com `#A9B0BA` nas bordas de controle (2,2:1, abaixo do 3:1 exigido para componentes); o responsável aprovou `#7A828D` em 2026-10-27, já aplicado à proposta visual. Variante esgotada usa texto atenuado, borda tracejada e risco, mas a informação vem também no nome acessível ("GG, esgotado") e o botão fica desabilitado.
+
+**Geometria:** busca, botões de ação, chips e paginação em pílula; cards de produto e controles com 10–12px; banner e foto principal com 16px. Foto de produto em proporção 4:5. Alvo mínimo de 44px em tudo que é clicável, inclusive miniaturas e quantidade.
+
+**Composição:**
+- **Global:** faixa de aviso opcional (preto), cabeçalho branco com nome/logo, busca em pílula, "Acompanhar pedido" e carrinho com contador; menu de categorias logo abaixo, com a página atual sublinhada (`aria-current`). Rodapé claro em quatro colunas (sobre, categorias, ajuda/institucional, atendimento) e linha final com razão social, CNPJ e "Loja criada com Smart Commerce". Botão flutuante de WhatsApp, sem cobrir conteúdo no celular.
+- **Home:** banner com anterior/pausar/próximo (sem troca automática com `prefers-reduced-motion`), faixa de vantagens com textos vindos da configuração da loja, atalhos de categoria e seções de produtos com "Ver todos".
+- **Card de produto:** foto, selo de desconto ou "Esgotado", marca, nome, preço "de" riscado + preço, e "em até N× de R$ X no Mercado Pago" (nunca "sem juros", ADR-0018 V4).
+- **Categoria/busca:** breadcrumb, título e contagem, ordenação em `<select>` rotulado, chips dos filtros aplicados com "Limpar filtros", filtros em `<fieldset>` com contagem (painel no celular) e paginação numerada.
+- **Produto:** miniaturas verticais + foto principal com zoom; marca, nome, preço, parcelamento; variantes em botões com `aria-pressed`; quantidade e "Adicionar ao carrinho" em pílula; quadro de entrega, trocas e pagamento; descrição; relacionados.
+- **Celular:** menu em gaveta pelo botão do cabeçalho, busca logo abaixo, categorias em chips com rolagem horizontal, banner próprio para celular e grade de dois produtos.
+
+**Limites:** sem imagens, avaliações, contagens ou textos comerciais inventados; tudo que aparece vem dos dados e da configuração da loja (ADR-0018 V8). Sem pixels nem scripts de terceiros. Os valores acima são o ponto de partida do contrato de temas da V2: um tema poderá trocar cores, fonte de uma lista fechada e raios, desde que mantenha o contraste.
+
+**Evidência:** proposta visual em artefato privado do responsável (2026-10-27); contrastes calculados pela fórmula WCAG 2.x. Sem teste com leitor de tela, zoom ou Axe nesta etapa: isso entra na SC-048.
 
 ## Conteúdo do produto autorizado
 
