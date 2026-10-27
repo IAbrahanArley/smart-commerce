@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { StoreHeader } from "@/components/store-header";
+import { StoreFrame } from "@/components/store-frame";
 import { OrderSteps } from "@/components/order-steps";
 import { PaymentForm } from "@/components/payment-form";
 import { loadCatalog } from "@/lib/public-store";
@@ -26,8 +26,7 @@ export default async function PaymentReturnPage({ params }: Props) {
   const order = await loadOrder(store.slug, orderId, token);
   const statusHref = orderPath(encodeURIComponent(store.slug), order.id);
   return (
-    <>
-      <StoreHeader store={store} />
+    <StoreFrame store={store}>
       <main id="conteudo" className="page-width order-page" tabIndex={-1}>
         <h1>Pedido nº {order.number}</h1>
         <OrderSteps current={2} />
@@ -53,6 +52,6 @@ export default async function PaymentReturnPage({ params }: Props) {
           <p><Link href={statusHref} prefetch={false}>Ver acompanhamento do pedido</Link></p>
         </section>
       </main>
-    </>
+    </StoreFrame>
   );
 }

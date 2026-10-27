@@ -64,3 +64,9 @@ Regras comuns: loja resolvida só pelo slug publicado; toda consulta pública re
 - **V6, facetas:** cada faceta ignora o próprio filtro (marca, preço, categoria) para oferecer as outras escolhas. A faceta de opções de variante ignora **todos** os filtros de opção, não só o da mesma opção: com filtros de tamanho e cor ao mesmo tempo, as contagens de cor não consideram o tamanho escolhido. Simplificação aceita para o volume de uma loja pequena.
 - **Categoria oculta:** some do menu, das facetas e da navegação por endereço (404), mas os produtos dela continuam no catálogo, como decidido em V1.
 - **Paginação:** 24 por página, até a página 500.
+
+**SC-044 e SC-045 (2026-10-27):**
+- **Rota antiga do produto:** `/lojas/{loja}/produtos/{id}` **continua respondendo**, sem 308. A ação "adicionar ao carrinho" (server action) posta nessa rota, e redirecionar ali poderia quebrar o carrinho. Os cards e menus já levam a `/p/{endereço}`. A URL canônica para buscadores vem na SC-047.
+- **Endereço antigo do produto:** redireciona para o atual, mas **dentro do HTML** (status 200 com `meta refresh`), porque a página é enviada por streaming atrás do `loading.tsx` global, como já acontece com as páginas 404. Um 308 de verdade, decidido antes do streaming, fica para a SC-047 (`proxy.ts`), junto com o cache.
+- **Filtro antigo `?categoria={id}`:** a home nova ignora esse parâmetro. A loja ainda não foi lançada, então não há links antigos com ele a preservar.
+- **Filtro inválido na URL:** a API responde 400 e a vitrine mostra a página "não encontrada", em vez de erro.

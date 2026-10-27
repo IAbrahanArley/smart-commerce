@@ -6,6 +6,7 @@ import { orderCookieName, orderCookieOptions, validOrderToken } from "../src/lib
 import { signedClientIp, trustedClientIp } from "../src/lib/client-ip.ts";
 import { addLine, CART_MAX_LINES, parseCart, serializeCart } from "../src/lib/cart-cookie.ts";
 import { checkoutPage } from "../src/lib/payment-url.ts";
+import { categoryPath, parseMenu } from "../src/lib/menu.ts";
 
 // Pure rules checked before any server starts.
 export const forwardingSecret = "synthetic-forwarding-secret-for-smoke-0001";
@@ -81,3 +82,14 @@ assert.deepEqual(signedClientIp("198.51.100.7", forwardingSecret, 1760000000000)
   "X-SC-Client-IP-Signature": createHmac("sha256", forwardingSecret).update("198.51.100.7\n1760000000").digest("hex") });
 assert.deepEqual(signedClientIp("198.51.100.7", "short", 1760000000000), {});
 assert.deepEqual(signedClientIp(null, forwardingSecret, 1760000000000), {});
+
+// SC-044: the category menu keeps only well-formed entries up to 3 levels; anything else empties it.
+const menu = { menu: [{ name: "Feminino", slug: "feminino", children: [{ name: "Camisetas", slug: "camisetas", children: [] }] }, { name: "Outlet", slug: "outlet", children: [] }] };
+assert.deepEqual(parseMenu(menu).map(item => item.slug), ["feminino", "outlet"]);
+assert.equal(parseMenu(menu)[0].children[0].name, "Camisetas");
+assert.deepEqual(parseMenu({ menu: [{ name: "X", slug: "Não vale", children: [] }] }), []);
+assert.deepEqual(parseMenu({ menu: [{ name: "", slug: "vazio", children: [] }] }), []);
+const deep = (level) => level > 4 ? [] : [{ name: `N${level}`, slug: `n${level}`, children: deep(level + 1) }];
+assert.deepEqual(parseMenu({ menu: deep(1) }), []);
+assert.deepEqual(parseMenu(null), []); assert.deepEqual(parseMenu({}), []);
+assert.equal(categoryPath("loja-a", "camisetas"), "/lojas/loja-a/c/camisetas");

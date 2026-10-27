@@ -1,5 +1,7 @@
 import "server-only";
 import { notFound } from "next/navigation";
+import { type MenuItem, parseMenu } from "@/lib/menu";
+import { type Card, type CatalogPage, type Link, parseCard, parseCatalog, parseInstallments } from "@/lib/catalog-page";
 
 export type PublicProduct = {
   id: string;
@@ -19,7 +21,14 @@ export type StoreProfile = { contactEmail: string | null; whatsapp: string | nul
 export type PublicStore = { name: string; slug: string; profile: StoreProfile };
 export type PublicCategory = { id: string; name: string };
 export type PublicCatalog = PublicStore & { categories: PublicCategory[]; category: string | null; products: PublicProduct[]; nextCursor: string | null };
-export type PublicProductDetail = { store: PublicStore; product: PublicProduct; images: PublicImage[] };
+/** SC-045: what the product page shows besides the product itself (SC-042 API). */
+export type ProductExtras = {
+  slug: string | null; brand: Link | null; categoryPath: Link[]; compareAtPrice: string | null; discountPercent: number | null;
+  /** "Compare at" price of each variant id, only when above its price. */
+  variantCompareAt: Record<string, string>;
+  related: Card[]; maxInstallments: number | null;
+};
+export type PublicProductDetail = { store: PublicStore; product: PublicProduct; images: PublicImage[]; extras: ProductExtras };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -58,7 +67,8 @@ async function publicGet(path: string): Promise<unknown> {
   } catch {
     return unavailable();
   }
-  if (response.status === 404) notFound();
+  // 400: a filter in the URL the API refused (SC-045); like a missing page for the buyer.
+  if (response.status === 404 || response.status === 400) notFound();
   if (!response.ok) unavailable();
   try {
     return await response.json();
@@ -126,6 +136,41 @@ function product(value: unknown): PublicProduct {
   return { id: input.id, name: name(input.name), price: input.price, currency: "BRL", available: input.available, descriptionHtml: input.descriptionHtml, kind: input.kind as "SIMPLE" | "VARIABLE", variants };
 }
 
+/**
+ * SC-044: the category menu, from the first page of the public catalog (SC-042). A failure only
+ * hides the menu; the page around it keeps its own error handling.
+ */
+export async function loadMenu(slug: string): Promise<MenuItem[]> {
+  try {
+    return parseMenu(await publicGet(`${slugPath(slug)}/catalog`));
+  } catch {
+    return [];
+  }
+}
+
+/** SC-045: one page of the catalog with filters, facets and menu, and the store it belongs to. */
+export async function loadStoreCatalog(slug: string, query: URLSearchParams): Promise<{ store: PublicStore; catalog: CatalogPage }> {
+  const input = object(await publicGet(`${slugPath(slug)}/catalog${query.size ? `?${query}` : ""}`));
+  let catalog: CatalogPage;
+  try { catalog = parseCatalog(input); } catch { return unavailable(); }
+  return { store: store(input.store, slug), catalog };
+}
+
+/** SC-045: a product by its storefront address, or the address an old link moved to. */
+export async function loadProductBySlug(slug: string, productSlug: string): Promise<{ movedTo: string } | PublicProductDetail> {
+  const path = slugPath(slug);
+  if (productSlug.length > 80 || !SLUG.test(productSlug)) notFound();
+  const input = object(await publicGet(`${path}/p/${encodeURIComponent(productSlug)}`));
+  if (typeof input.movedTo === "string") {
+    if (input.movedTo.length > 80 || !SLUG.test(input.movedTo)) unavailable();
+    return { movedTo: input.movedTo };
+  }
+  const details = object(input.product);
+  const id = object(details.product).id;
+  if (typeof id !== "string" || !UUID.test(id)) unavailable();
+  return detail(slug, details, await publicGet(`${path}/products/${encodeURIComponent(id)}/images`), id);
+}
+
 export async function loadCatalog(slug: string, after?: string, category?: string): Promise<PublicCatalog> {
   const path = slugPath(slug);
   if ((after !== undefined && !UUID.test(after)) || (category !== undefined && !UUID.test(category))) notFound();
@@ -150,7 +195,10 @@ export async function loadProduct(slug: string, id: string): Promise<PublicProdu
   const path = slugPath(slug);
   if (!UUID.test(id)) notFound();
   const [raw, rawImages] = await Promise.all([publicGet(`${path}/products/${encodeURIComponent(id)}`), publicGet(`${path}/products/${encodeURIComponent(id)}/images`)]);
-  const input = object(raw);
+  return detail(slug, object(raw), rawImages, id);
+}
+
+function detail(slug: string, input: Record<string, unknown>, rawImages: unknown, id: string): PublicProductDetail {
   const item = product(input.product);
   if (item.id.toLowerCase() !== id.toLowerCase()) unavailable();
   if (item.kind === "VARIABLE" && item.variants.length === 0) unavailable();
@@ -163,7 +211,35 @@ export async function loadProduct(slug: string, id: string): Promise<PublicProdu
       || typeof image.height !== "number" || !Number.isInteger(image.height) || image.height < 1 || image.height > 4096) unavailable();
     return { id: image.id, alt: image.alt, width: image.width, height: image.height };
   });
-  return { store: store(input.store, slug), product: item, images };
+  return { store: store(input.store, slug), product: item, images, extras: extras(object(input.product), input) };
+}
+
+/** SC-045: storefront details of the product page; a malformed one is an unavailable page. */
+function extras(product: Record<string, unknown>, page: Record<string, unknown>): ProductExtras {
+  try {
+    const card = parseCard({ ...product, brand: null });
+    const link = (value: unknown): Link => {
+      const item = object(value);
+      if (typeof item.slug !== "string" || item.slug.length > 80 || !SLUG.test(item.slug)) unavailable();
+      return { name: name(item.name), slug: item.slug };
+    };
+    const variantCompareAt: Record<string, string> = {};
+    for (const value of Array.isArray(product.variants) ? product.variants : []) {
+      const variant = object(value);
+      if (typeof variant.compareAtPrice === "string" && /^\d{1,17}\.\d{2}$/.test(variant.compareAtPrice) && typeof variant.id === "string")
+        variantCompareAt[variant.id] = variant.compareAtPrice;
+    }
+    return {
+      slug: card.slug,
+      brand: product.brand == null ? null : link(product.brand),
+      categoryPath: Array.isArray(product.categoryPath) && product.categoryPath.length <= 3 ? product.categoryPath.map(link) : [],
+      compareAtPrice: card.compareAtPrice, discountPercent: card.discountPercent, variantCompareAt,
+      related: Array.isArray(page.related) && page.related.length <= 8 ? page.related.map(parseCard) : [],
+      maxInstallments: parseInstallments(page.maxInstallments),
+    };
+  } catch {
+    return unavailable();
+  }
 }
 
 /** The store logo through this app's own origin, like product photos (MVP block 1b). */

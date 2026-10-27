@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { forwardingSecret } from "./smoke-units.mjs";
 import { checkoutSmoke } from "./smoke-checkout.mjs";
-import { categoryId, id, missingId, nextId, orderToken, png, startNext, startUpstream, upstreamRequests } from "./smoke-upstream.mjs";
+import { id, missingId, nextId, orderToken, png, startNext, startUpstream, upstreamRequests } from "./smoke-upstream.mjs";
 
 const port = Number(process.env.SMOKE_PORT ?? 3002);
 assert.ok(Number.isInteger(port) && port > 0 && port < 65536, "SMOKE_PORT deve ser válida.");
@@ -59,11 +59,21 @@ try {
   assert.match(catalog.html, /Loja de teste da vitrine/);
   assert.match(catalog.html, /Produto público de teste/);
   assert.match(catalog.html, /49,90/);
-  assert.match(catalog.html, /Disponível/);
-  assert.ok(catalog.html.includes(`/lojas/loja-teste/produtos/${id}`));
-  assert.ok(catalog.html.includes(`?after=${id}`));
-  // MVP block 1b: logo beside the name and the store's own contacts.
-  assert.match(catalog.html, /Fale com a loja/);
+  // SC-045: the new home; cards link to the product address, with discount and installments.
+  assert.match(catalog.html, /Lançamentos/);
+  assert.match(catalog.html, /Compre por categoria/);
+  assert.ok(catalog.html.includes('href="/lojas/loja-teste/p/produto-publico"'), "Card leva ao endereço do produto.");
+  assert.ok(catalog.html.includes('href="/lojas/loja-teste/c/camisetas"'), "Atalho e menu de categoria.");
+  assert.ok(catalog.html.includes('href="/lojas/loja-teste/c/manga-longa"'), "Subcategoria no menu.");
+  assert.match(catalog.html, /−20%/); assert.match(catalog.html, /62,40/);
+  assert.match(catalog.html, /em até 6× no Mercado Pago/);
+  assert.ok(!catalog.html.includes("sem juros"), "A vitrine nunca promete sem juros.");
+  assert.match(catalog.html, /Esgotado/);
+  assert.ok(catalog.html.includes('action="/lojas/loja-teste/busca"'), "Busca no cabeçalho.");
+  assert.ok(catalog.html.includes("Marca Ágil"));
+  // MVP block 1b: logo beside the name; the store's contacts now in its footer (SC-044).
+  assert.match(catalog.html, /Atendimento/);
+  assert.ok(catalog.html.includes('class="whatsapp-float"'), "WhatsApp flutuante.");
   assert.ok(catalog.html.includes('href="https://wa.me/5511988887777"') && catalog.html.includes("(11) 98888-7777"), "WhatsApp formatado.");
   assert.ok(catalog.html.includes('href="mailto:contato@loja.example"'));
   assert.ok(catalog.html.includes('href="https://www.instagram.com/loja.teste/"'));
@@ -73,7 +83,7 @@ try {
   const detail = await page(`/lojas/loja-teste/produtos/${id}`);
   assert.equal(detail.response.status, 200);
   assert.match(detail.html, /id="product-title">Produto público de teste/);
-  assert.match(detail.html, /Voltar aos produtos/);
+  assert.match(detail.html, /Você está em/);
   assert.ok(!detail.html.includes('id="public-variant"'), "Produto SIMPLE com variante padrão não deve exibir seletor de combinações.");
   assert.match(detail.html, /<strong>segura<\/strong>/);
   assert.ok(detail.html.includes(`/midia/lojas/loja-teste/produtos/${id}/${id}`));
@@ -93,30 +103,49 @@ try {
   assert.equal(invalidPhoto.status, 503); assert.ok(!(await invalidPhoto.text()).includes("PRIVATE_UPSTREAM_ERROR_FIXTURE"));
   const invalidPath = await fetch(`${base}/midia/lojas/loja-teste/produtos/invalido/${id}`);
   assert.equal(invalidPath.status, 404);
-  // MVP block 1c: category links, filter and pagination inside the category.
-  assert.ok(catalog.html.includes(`?categoria=${categoryId}#produtos`) && catalog.html.includes(">Camisetas<"), "Link da categoria.");
-  assert.match(catalog.html, /aria-current="page"[^>]*>Todos</);
-  const filtered = await page(`/lojas/loja-teste?categoria=${categoryId}`);
-  assert.match(filtered.html, /aria-current="page"[^>]*>Camisetas</);
-  assert.ok(filtered.html.includes(`?categoria=${categoryId}&amp;after=${id}`), "Paginação mantém a categoria.");
-  const filteredEnd = await page(`/lojas/loja-teste?categoria=${categoryId}&after=${id}`);
-  assert.match(filteredEnd.html, /Fim da lista/);
-  assert.ok(filteredEnd.html.includes(`href="/lojas/loja-teste?categoria=${categoryId}"`), "Volta ao início da categoria.");
-  const next = await page(`/lojas/loja-teste?after=${id}`);
-  assert.match(next.html, /Outro produto publicado/);
-  assert.match(next.html, /Indisponível no momento/);
-  assert.match(next.html, /Voltar ao início da lista/);
-  assert.ok(!next.html.includes("Ver mais produtos"));
+  // SC-045: category page with breadcrumb, facets as links and numbered pages that keep the filters.
+  const category = await page("/lojas/loja-teste/c/camisetas");
+  assert.equal(category.response.status, 200);
+  assert.match(category.html, /<h1>Camisetas<\/h1>/);
+  assert.match(category.html, /30 produtos/);
+  assert.ok(category.html.includes('href="/lojas/loja-teste/c/camisetas?marca=agil"'), "Filtro de marca como link.");
+  assert.ok(category.html.includes('href="/lojas/loja-teste/c/camisetas?opcao=Tamanho%3AM"'), "Filtro de opção como link.");
+  assert.ok(category.html.includes('href="/lojas/loja-teste/c/camisetas?preco_min=0.00&amp;preco_max=49.99"'), "Faixa de preço até um centavo abaixo do limite.");
+  assert.ok(category.html.includes('href="/lojas/loja-teste/c/camisetas?pagina=2"'), "Página 2.");
+  assert.match(category.html, /Filtrar produtos/);
+  const branded = await page("/lojas/loja-teste/c/camisetas?marca=agil&ignorado=1");
+  assert.ok(branded.html.includes('href="/lojas/loja-teste/c/camisetas"') && branded.html.includes("Limpar filtros"), "Limpar filtros.");
+  assert.match(branded.html, /aria-current="true"[^>]*><span class="visually-hidden">Remover filtro: <\/span>Marca Ágil/);
+  const search = await page("/lojas/loja-teste/busca?q=produto");
+  assert.match(search.html, /Resultados para “produto”/);
+  assert.match(search.html, /<option value="relevancia" selected="">Relevância<\/option>/);
+  const nothing = await page("/lojas/loja-teste/busca?q=nada");
+  assert.match(nothing.html, /Nenhum produto encontrado/);
+  // SC-045: product page by address, with brand, path, "compare at", installments and related.
+  const bySlug = await page("/lojas/loja-teste/p/produto-publico");
+  assert.equal(bySlug.response.status, 200);
+  assert.match(bySlug.html, /id="product-title">Produto público de teste/);
+  assert.ok(bySlug.html.includes('class="detail-brand">Marca Ágil'));
+  assert.ok(bySlug.html.includes('href="/lojas/loja-teste/c/camisetas"'));
+  assert.match(bySlug.html, /62,40/); assert.match(bySlug.html, /−20%/);
+  assert.match(bySlug.html, /em até 6× no Mercado Pago/);
+  assert.match(bySlug.html, /Você também pode gostar/); assert.match(bySlug.html, /Outro produto publicado/);
+  const moved = await fetch(`${base}/lojas/loja-teste/p/endereco-antigo`, { redirect: "manual" });
+  // The page streams behind the loading boundary, so Next redirects inside the HTML (status 200 with
+  // a refresh to the new address). A real 308 before streaming is SC-047 (proxy), like the 404s above.
+  const movedHtml = await moved.text();
+  assert.ok(moved.status === 308 ? moved.headers.get("location") === "/lojas/loja-teste/p/produto-publico"
+    : movedHtml.includes('http-equiv="refresh" content="0;url=/lojas/loja-teste/p/produto-publico"'), "Endereço antigo leva ao novo.");
   const empty = await page("/lojas/loja-vazia");
   assert.match(empty.html, /Nenhum produto publicado/);
-  assert.ok(!empty.html.includes("Fale com a loja") && !empty.html.includes("<script>alert"), "Contatos inválidos são descartados.");
+  assert.ok(!empty.html.includes("Atendimento") && !empty.html.includes("<script>alert"), "Contatos inválidos são descartados.");
   assert.ok(!empty.html.includes("/midia/lojas/loja-vazia/logo"), "Sem logo, só o nome.");
   for (const path of ["/pagina-inexistente", "/entrar", "/api/auth/me"]) {
     const missing = await page(path);
     assert.equal(missing.response.status, 404, path);
     assert.match(missing.html, /Página não encontrada/);
   }
-  for (const path of ["/lojas/loja-inexistente", `/lojas/loja-teste/produtos/${nextId}`, "/lojas/loja-teste?after=invalido", "/lojas/loja-teste?categoria=invalida"]) {
+  for (const path of ["/lojas/loja-inexistente", `/lojas/loja-teste/produtos/${nextId}`, "/lojas/loja-teste/c/nao-existe", "/lojas/loja-teste/p/nao-existe", "/lojas/loja-teste/p/Nao_Vale"]) {
     const missing = await page(path);
     assert.ok([200, 404].includes(missing.response.status), path);
     // Next can stream the loading boundary before notFound; its browser result is still uniform.

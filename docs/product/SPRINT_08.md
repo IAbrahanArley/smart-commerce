@@ -71,6 +71,8 @@ SC-041 e SC-044 podem andar em paralelo (backend × base visual). SC-043 e SC-04
 
 ## SC-044 — Base visual e estrutura global da vitrine
 
+**Estado (2026-10-27):** implementada junto com a SC-045, na mesma branch, para a busca do cabeçalho não apontar para uma página inexistente. Validação: [SC-044/045](../quality/SC-044-045-STOREFRONT-PAGES.md).
+
 - **Tokens `--store-*` novos** conforme a proposta visual aprovada (cores, tipografia, raios, espaçamento, sombras), com contraste AA; `DESIGN.md` atualizado na mesma mudança. Nada muda em `--sc-*`.
 - **Cabeçalho:** logo/nome, busca, atalhos (Acompanhar pedido, carrinho com quantidade), faixa de aviso opcional.
 - **Menu:** categorias em até 3 níveis; no desktop, painel ao passar/focar com teclado; no celular, gaveta com navegação por níveis.
@@ -82,6 +84,8 @@ SC-041 e SC-044 podem andar em paralelo (backend × base visual). SC-043 e SC-04
 **Testes:** smoke SSR com menu, rodapé e loja sem conteúdo configurado (fallback); inspeção manual em 1280/768/375 px.
 
 ## SC-045 — Home, categoria/busca e produto
+
+**Estado (2026-10-27):** implementada; a home ainda sem banners e seções configuráveis (dependem da SC-043). A rota antiga do produto continua respondendo em vez de redirecionar, e o endereço antigo redireciona dentro do HTML, não com 308 (desvios no ADR-0018). Validação: [SC-044/045](../quality/SC-044-045-STOREFRONT-PAGES.md).
 
 - **Home:** carrossel de banners (pausa ao focar, sem rotação automática com `prefers-reduced-motion`), seções configuradas, cada uma com até 8 produtos e "Ver todos".
 - **Card de produto:** foto, marca, nome, preço "de/por", selo de desconto, "em até N× no Mercado Pago", indisponível marcado.
