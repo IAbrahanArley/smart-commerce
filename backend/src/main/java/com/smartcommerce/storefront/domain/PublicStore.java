@@ -10,4 +10,6 @@ public record PublicStore(
     String contactEmail,
     String whatsapp,
     String instagram,
-    boolean logo) {}
+    boolean logo,
+    // SC-042: card installments offered, only while Mercado Pago is connected; else null.
+    Integer maxInstallments) {}

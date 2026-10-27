@@ -7,6 +7,7 @@ import com.smartcommerce.payments.domain.PendingAuthorization;
 import com.smartcommerce.payments.domain.Pkce;
 import com.smartcommerce.payments.domain.SellerCredentials;
 import com.smartcommerce.payments.dto.response.AuthorizationStartView;
+import com.smartcommerce.payments.dto.response.InstallmentsView;
 import com.smartcommerce.payments.dto.response.PaymentConnectionView;
 import com.smartcommerce.payments.provider.PaymentProviders;
 import com.smartcommerce.payments.repositories.PaymentAccountRepository;
@@ -139,6 +140,31 @@ public class PaymentConnectionService {
           accounts.requeuePayments(tenant, now());
         });
     return new Completion(tenant, null);
+  }
+
+  /** The store's installment limit (SC-042); only its OWNER reads it. */
+  public InstallmentsView installments(UUID actor, UUID tenant) {
+    return reads.execute(
+        tx -> {
+          requireOwner(actor, tenant);
+          return new InstallmentsView(accounts.maxInstallments(tenant));
+        });
+  }
+
+  /** Sets ({@code null}: clears) the store's installment limit, used by new checkouts. */
+  public InstallmentsView installments(UUID actor, UUID tenant, Integer installments) {
+    return writes.execute(
+        tx -> {
+          requireOwner(actor, tenant);
+          if (!accounts.maxInstallments(tenant, installments))
+            throw new PaymentException(PaymentException.Reason.MISSING);
+          return new InstallmentsView(accounts.maxInstallments(tenant));
+        });
+  }
+
+  /** The installment limit for a checkout of {@code tenant}; tenant already trusted. */
+  public Integer maxInstallments(UUID tenant) {
+    return accounts.maxInstallments(tenant);
   }
 
   public PaymentConnectionView disconnect(UUID actor, UUID tenant) {

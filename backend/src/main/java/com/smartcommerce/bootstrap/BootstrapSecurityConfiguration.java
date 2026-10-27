@@ -38,6 +38,9 @@ public class BootstrapSecurityConfiguration {
                         "/api/public/stores/*",
                         "/api/public/stores/*/fulfillment",
                         "/api/public/stores/*/logo",
+                        // SC-042: catalog with search, filters and facets.
+                        "/api/public/stores/*/catalog",
+                        "/api/public/stores/*/p/*",
                         "/api/public/stores/*/products/*",
                         "/api/public/stores/*/products/*/images",
                         "/api/public/stores/*/products/*/images/*/content",
@@ -208,6 +211,11 @@ public class BootstrapSecurityConfiguration {
                         HttpMethod.GET,
                         "/api/tenants/*/payments/mercado-pago",
                         "/api/payments/mercado-pago/callback")
+                    .authenticated()
+                    // SC-042: installment limit of the store (OWNER checked in the service).
+                    .requestMatchers(HttpMethod.GET, "/api/tenants/*/payments/installments")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.PUT, "/api/tenants/*/payments/installments")
                     .authenticated()
                     .requestMatchers(
                         HttpMethod.POST, "/api/tenants/*/payments/mercado-pago/authorization")

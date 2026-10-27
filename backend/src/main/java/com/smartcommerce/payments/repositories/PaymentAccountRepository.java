@@ -25,6 +25,21 @@ public class PaymentAccountRepository {
     this.jdbc = jdbc;
   }
 
+  /** Most card installments the store offers (SC-042); {@code null}: Mercado Pago's default. */
+  public Integer maxInstallments(UUID tenant) {
+    // The column is usually NULL, which Stream.findFirst cannot carry.
+    var rows =
+        jdbc.queryForList(
+            "SELECT max_installments FROM store WHERE tenant_id=?", Integer.class, tenant);
+    return rows.isEmpty() ? null : rows.getFirst();
+  }
+
+  public boolean maxInstallments(UUID tenant, Integer installments) {
+    return jdbc.update(
+            "UPDATE store SET max_installments=? WHERE tenant_id=?", installments, tenant)
+        == 1;
+  }
+
   public boolean ownsStore(UUID actor, UUID tenant) {
     return Boolean.TRUE.equals(
         jdbc.queryForObject(

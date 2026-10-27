@@ -132,7 +132,23 @@ class StorefrontIsolationIT {
                 "{\"name\":\"Synthetic store\",\"slug\":\"catalog-a\",\"profile\":"
                     + PROFILE
                     + "}"));
-    assertThat(detail.get("product").size()).isEqualTo(8);
+    // ADR-0010 fields plus the SC-042 storefront details, all public by ADR-0018.
+    assertThat(detail.get("product").propertyNames())
+        .containsExactlyInAnyOrder(
+            "id",
+            "name",
+            "price",
+            "currency",
+            "available",
+            "descriptionHtml",
+            "kind",
+            "variants",
+            "slug",
+            "brand",
+            "categoryPath",
+            "compareAtPrice",
+            "discountPercent");
+    assertThat(detail.get("related")).isEmpty();
     for (String field :
         List.of("id", "name", "price", "currency", "available", "descriptionHtml", "kind"))
       assertThat(detail.get("product").get(field))
@@ -152,7 +168,9 @@ class StorefrontIsolationIT {
                             "available",
                             true,
                             "options",
-                            List.of())))));
+                            List.of(),
+                            "compareAtPrice",
+                            JSON.nullNode())))));
     assertThat(publish(owner, tenantA, product, false, 1).statusCode()).isEqualTo(200);
     assertThat(visitor.get(publicPath + "/products/" + product).statusCode()).isEqualTo(404);
     assertThat(

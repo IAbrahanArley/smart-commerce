@@ -52,3 +52,15 @@ Regras comuns: loja resolvida só pelo slug publicado; toda consulta pública re
 - **Promessa de preço (V3, V4):** nada exibido pode diferir do que o checkout cobra; testes comparam vitrine × cotação do carrinho × preferência.
 - **Desempenho:** imagens responsivas (tamanhos gerados no upload ou no proxy) entram na SC-044; sem CDN paga.
 - **Fora:** conta do cliente, favoritos, cupons, avise-me, newsletter, avaliações, pixels, frete por CEP, desconto no Pix, temas e loja de extensões.
+
+## Implementação e desvios registrados
+
+**SC-041 (2026-10-27, PR #55):** V1, V2, V3 e V5 implementadas conforme acima, exceto as **categorias adicionais por produto** (N:N de V1). Hoje cada produto tem só a categoria principal; coleções de marketing ("Outlet", "Promoções") funcionam como categorias comuns, mas um produto não pode estar ao mesmo tempo em "Camisetas" e em "Promoções". Fica como pendência da Sprint 8, a decidir antes da SC-045. Registros: [SC-041A](../../quality/SC-041A-CATEGORY-TREE.md) e [SC-041B](../../quality/SC-041B-BRANDS-SLUG-COMPARE-AT.md).
+
+**SC-042 (2026-10-27):**
+- **Rota nova, contrato antigo intacto.** O catálogo com busca, filtros e facetas é `GET /api/public/stores/{loja}/catalog`. A listagem original (`GET /api/public/stores/{loja}`, ADR-0010) continua campo a campo, para a vitrine atual não quebrar até a SC-045.
+- **V4, parcelamento:** o limite fica em `store.max_installments` e é **opcional**. Vazio, a preferência não manda limite (vale o padrão do Mercado Pago, como antes) e a vitrine não promete parcelas. A API pública devolve só o número máximo, e somente com o Mercado Pago conectado. **Não devolve valor de parcela:** com juros definidos na conta do lojista, "6× de R$ X" poderia não ser o valor cobrado (CDC). O aceite da SC-042 que falava em "valor da parcela calculado no backend" foi trocado por isso.
+- **V6, busca:** procura no nome do produto e no nome da marca (não no nome da categoria, que já é filtro e faceta). Termos são reduzidos a letras e números e viram prefixos (`camis` acha "Camiseta"); nada digitado altera a sintaxe da consulta.
+- **V6, facetas:** cada faceta ignora o próprio filtro (marca, preço, categoria) para oferecer as outras escolhas. A faceta de opções de variante ignora **todos** os filtros de opção, não só o da mesma opção: com filtros de tamanho e cor ao mesmo tempo, as contagens de cor não consideram o tamanho escolhido. Simplificação aceita para o volume de uma loja pequena.
+- **Categoria oculta:** some do menu, das facetas e da navegação por endereço (404), mas os produtos dela continuam no catálogo, como decidido em V1.
+- **Paginação:** 24 por página, até a página 500.

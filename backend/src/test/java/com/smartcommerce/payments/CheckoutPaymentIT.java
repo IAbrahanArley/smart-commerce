@@ -173,6 +173,8 @@ class CheckoutPaymentIT {
       throws Exception {
     Order order = checkout("pagar-a", variantA, 2, true, "44.30"); // 2 × 15.90 + 12.50
     assertThat(order.view().get("payable").asBoolean()).isTrue();
+    // SC-042: the store's installment limit travels in the preference.
+    jdbc.update("UPDATE store SET max_installments=6 WHERE slug='pagar-a'");
 
     var paid = pay("pagar-a", order.id(), order.token());
     assertThat(paid.statusCode()).isEqualTo(200);
@@ -208,6 +210,7 @@ class CheckoutPaymentIT {
         .extracting(type -> type.get("id").asString())
         .contains("ticket", "atm", "digital_currency")
         .doesNotContain("credit_card", "debit_card", "bank_transfer", "account_money");
+    assertThat(body.get("payment_methods").get("installments").asInt()).isEqualTo(6);
     String back = RETURN_ORIGIN + "/lojas/pagar-a/pedidos/" + order.id() + "/pagamento";
     assertThat(body.get("back_urls").get("success").asString()).isEqualTo(back);
     assertThat(body.get("back_urls").get("failure").asString()).isEqualTo(back);

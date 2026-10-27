@@ -87,6 +87,20 @@ public final class MercadoPagoCheckoutClient {
   /** Creates the preference the buyer pays; its id takes the place of the provider order id. */
   public ProviderOrder createPreference(
       String accessToken, String idempotencyKey, CheckoutPaymentRequest request, Instant now) {
+    return createPreference(accessToken, idempotencyKey, request, now, null);
+  }
+
+  /**
+   * Same, offering at most {@code maxInstallments} card installments (SC-042, ADR-0018 V4); {@code
+   * null} leaves Mercado Pago's own default. Interest follows the seller's own Mercado Pago
+   * account, which the platform does not see.
+   */
+  public ProviderOrder createPreference(
+      String accessToken,
+      String idempotencyKey,
+      CheckoutPaymentRequest request,
+      Instant now,
+      Integer maxInstallments) {
     HttpResponse<String> response =
         send(
             HttpRequest.newBuilder(api.resolve("/checkout/preferences"))
@@ -95,7 +109,7 @@ public final class MercadoPagoCheckoutClient {
                 .header("X-Idempotency-Key", idempotencyKey)
                 .POST(
                     HttpRequest.BodyPublishers.ofString(
-                        JSON.writeValueAsString(body(request, now)))),
+                        JSON.writeValueAsString(body(request, now, maxInstallments)))),
             "preference");
     if (response.statusCode() != 200 && response.statusCode() != 201) {
       LOG.warn(
@@ -193,6 +207,12 @@ public final class MercadoPagoCheckoutClient {
   }
 
   Map<String, Object> body(CheckoutPaymentRequest request, Instant now) {
+    return body(request, now, null);
+  }
+
+  Map<String, Object> body(CheckoutPaymentRequest request, Instant now, Integer maxInstallments) {
+    if (maxInstallments != null && (maxInstallments < 1 || maxInstallments > 12))
+      throw new IllegalArgumentException("Installments must be between 1 and 12");
     Map<String, Object> body = new LinkedHashMap<>();
     body.put(
         "items",
@@ -211,10 +231,11 @@ public final class MercadoPagoCheckoutClient {
     body.put("expires", true);
     body.put("expiration_date_from", PROVIDER_TIME.format(now.atOffset(SAO_PAULO)));
     body.put("expiration_date_to", PROVIDER_TIME.format(now.plus(EXPIRATION).atOffset(SAO_PAULO)));
-    body.put(
-        "payment_methods",
-        Map.of(
-            "excluded_payment_types", EXCLUDED_TYPES.stream().map(t -> Map.of("id", t)).toList()));
+    Map<String, Object> methods = new LinkedHashMap<>();
+    methods.put(
+        "excluded_payment_types", EXCLUDED_TYPES.stream().map(t -> Map.of("id", t)).toList());
+    if (maxInstallments != null) methods.put("installments", maxInstallments);
+    body.put("payment_methods", methods);
     if (returnOrigin != null) {
       // One return page for every outcome: it never trusts the query string (SC-013).
       String back =

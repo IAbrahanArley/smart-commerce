@@ -67,3 +67,24 @@ export const STATUS_TEXT: Record<PaymentStatus, string> = {
   EXPIRED: "Autorização expirada",
   REVOKED: "Autorização revogada",
 };
+
+// SC-042 (ADR-0018 V4): the store's card installment limit. null: Mercado Pago's own default,
+// nothing promised in the storefront. undefined: an unexpected answer.
+export function parseInstallments(raw: unknown): number | null | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const value = (raw as Record<string, unknown>).maxInstallments;
+  if (value === null) return null;
+  return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 12 ? value as number : undefined;
+}
+
+export function installmentsText(count: number | null): string {
+  if (count === null) return "padrão do Mercado Pago";
+  return count === 1 ? "somente à vista" : `em até ${count}×`;
+}
+
+export function installmentsError(status: number): string {
+  if (status === 400) return "Escolha de 1 a 12 parcelas.";
+  if (status === 404) return "Loja indisponível. Recarregue a página.";
+  if (status === 401) return "Sua sessão expirou. Entre novamente para continuar.";
+  return "Não foi possível salvar. Tente novamente.";
+}

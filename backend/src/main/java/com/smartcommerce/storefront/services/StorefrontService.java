@@ -1,7 +1,6 @@
 package com.smartcommerce.storefront.services;
 
 import com.smartcommerce.catalog.domain.ProductDescription;
-import com.smartcommerce.catalog.domain.VariantValues;
 import com.smartcommerce.inventory.domain.ReservationPolicy;
 import com.smartcommerce.storefront.domain.PublicLocator;
 import com.smartcommerce.storefront.domain.PublicProduct;
@@ -20,10 +19,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class StorefrontService {
   private final StorefrontRepository storefront;
+  private final PublicCatalogService catalog;
   private final Clock clock;
 
-  public StorefrontService(StorefrontRepository storefront, Clock clock) {
+  public StorefrontService(
+      StorefrontRepository storefront, PublicCatalogService catalog, Clock clock) {
     this.storefront = storefront;
+    this.catalog = catalog;
     this.clock = clock;
   }
 
@@ -52,33 +54,15 @@ public class StorefrontService {
         products.size() > 20 ? page.getLast().id().toString() : null);
   }
 
+  /** The product page, with its storefront details and related products (SC-042). */
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
   public PublicProductDetailsView find(String slug, UUID product) {
-    var store = storefront.store(PublicLocator.slug(slug)).orElseThrow(StorefrontException::new);
-    var now = ReservationPolicy.now(clock);
-    var found = storefront.find(slug, product, now).orElseThrow(StorefrontException::new);
-    return new PublicProductDetailsView(
-        new PublicStoreView(store.name(), store.slug(), profile(store)),
-        view(
-            found,
-            storefront.variants(slug, product, now).stream()
-                .map(
-                    v ->
-                        new PublicVariantView(
-                            v.id(),
-                            v.price().setScale(2, RoundingMode.UNNECESSARY).toPlainString(),
-                            v.currency(),
-                            v.available(),
-                            VariantValues.decode(v.optionsJson())))
-                .toList()));
+    return catalog.product(slug, product);
   }
 
-  private static PublicProductView view(PublicProduct product) {
-    return view(product, List.of());
-  }
-
-  private static PublicProductView view(PublicProduct product, List<PublicVariantView> variants) {
-    return new PublicProductView(
+  /** A product of the original list (ADR-0010), field for field. */
+  private static PublicListProductView view(PublicProduct product) {
+    return new PublicListProductView(
         product.id(),
         product.name(),
         product.price().setScale(2, RoundingMode.UNNECESSARY).toPlainString(),
@@ -86,7 +70,7 @@ public class StorefrontService {
         product.available(),
         ProductDescription.sanitize(product.descriptionHtml()),
         product.kind(),
-        variants);
+        List.of());
   }
 
   /** The published store's logo bytes and type (MVP block 1b). */

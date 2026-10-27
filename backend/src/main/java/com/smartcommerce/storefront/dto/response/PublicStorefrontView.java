@@ -13,5 +13,5 @@ public record PublicStorefrontView(
     PublicStoreProfileView profile,
     List<PublicCategoryView> categories,
     UUID category,
-    List<PublicProductView> products,
+    List<PublicListProductView> products,
     String nextCursor) {}
