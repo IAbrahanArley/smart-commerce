@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, ChevronDown, LogOut, User } from "lucide-react";
+import { Building2, ChevronDown, CreditCard, LogOut, User } from "lucide-react";
 import { useSignOut } from "@/lib/use-sign-out";
 import { useAdminSession } from "@/components/session-guard";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -47,6 +47,7 @@ export default function AccountMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild><Link href="/lojas"><Building2 aria-hidden="true" /> Minhas lojas</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link href="/conta"><User aria-hidden="true" /> Minha conta</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild><Link href="/conta/plano"><CreditCard aria-hidden="true" /> Plano e cobrança</Link></DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={pending} onSelect={() => void signOut()}><LogOut aria-hidden="true" /> {pending ? "Saindo…" : "Sair da conta"}</DropdownMenuItem>
       </DropdownMenuContent>

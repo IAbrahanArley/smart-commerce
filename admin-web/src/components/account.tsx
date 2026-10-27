@@ -38,6 +38,7 @@ export default function AccountPanel() {
     {loading ? <Loading context="sua conta" /> : account ? <>
       <p>Você está conectado ao Smart Commerce. Suas lojas ficam em <Link href="/lojas">Minhas lojas</Link>.</p>
       <dl><dt>E-mail</dt><dd className="account-email">{account.email}</dd></dl>
+      <p>Seu plano, os limites e a assinatura ficam em <Link href="/conta/plano">Plano e cobrança</Link>.</p>
       <button type="button" onClick={() => void signOut()} disabled={pending}>{pending ? "Saindo…" : "Sair da conta"}</button>
     </> : signedOut ? <><p>Entre para consultar sua conta. Sua sessão pode ter expirado.</p><Link href="/entrar">Entrar</Link></> : null}
   </section>;
