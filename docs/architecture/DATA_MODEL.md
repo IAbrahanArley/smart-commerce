@@ -113,6 +113,8 @@ V31 (SC-031, ADR-0017, 2026-10-27), aditiva: `billing_account`, uma linha por pr
 
 V32 (SC-032, ADR-0017 B6, 2026-10-27), aditiva: `billing_event`, com o id de cada evento de webhook da Stripe já processado, o tipo e a data de recebimento. Serve só para idempotência: o corpo do evento não é guardado, porque a conta é conciliada pela API. Não tem dado pessoal.
 
+V33 (SC-041, [ADR-0018](adr/0018-storefront-v1.md) V1, 2026-10-27), aditiva: `catalog_category` vira árvore de até 3 níveis. Ganha `parent_id` (FK composta `(parent_id, tenant_id)`, nunca a própria categoria), `slug` (letras minúsculas, números e hífens, único por loja), `position` (ordem entre irmãs) e `published` (ocultar a categoria na vitrine sem ocultar os produtos). A unicidade do nome passa a ser entre irmãs (`tenant_id`, pai, `name_key`). As categorias existentes viram raiz, visíveis, em ordem alfabética, com slug derivado do nome (acentos removidos; colisões ganham o início do id). Profundidade e ciclos são conferidos pela aplicação com todas as categorias do tenant bloqueadas (`FOR UPDATE`). Depende da V32.
+
 V27 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
 - **`DELETE`:** recusado sempre;
 - **`UPDATE`:** só para preencher `settled_at` uma única vez, a partir de nulo, que é o caminho da SC-018;

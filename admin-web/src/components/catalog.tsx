@@ -16,7 +16,7 @@ import { Loading } from "@/components/ui/loading";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
-import { type Category, parseCategories } from "@/lib/categories";
+import { type Category, categoryPath, parseCategories } from "@/lib/categories";
 import { EMPTY_FILTERS, filterProducts, filtersActive, filtersQuery, NO_CATEGORY, type ProductFilters, type ProductSort, resultText, type Visibility } from "@/lib/product-filters";
 
 export default function Catalog({ tenantId, productId, view, created = false, initialFilters = EMPTY_FILTERS }: { tenantId: string; productId?: string; view: "list" | "new" | "edit"; created?: boolean; initialFilters?: ProductFilters }) {
@@ -124,7 +124,7 @@ export default function Catalog({ tenantId, productId, view, created = false, in
           <SearchInput className="min-w-[min(100%,16rem)] flex-[2_1_16rem]" value={filters.query} onChange={event => setFilters(current => ({ ...current, query: event.target.value }))} placeholder="Buscar por nome ou SKU…" aria-label="Buscar por nome ou SKU" />
           {categories.length ? <Select className="flex-[1_1_11rem]" aria-label="Categoria" value={filters.category} onChange={event => setFilters(current => ({ ...current, category: event.target.value }))}>
             <option value="">Todas as categorias</option>
-            {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+            {categories.map(category => <option key={category.id} value={category.id}>{categoryPath(categories, category.id)}</option>)}
             <option value={NO_CATEGORY}>Sem categoria</option>
           </Select> : null}
           <Select className="flex-[1_1_11rem]" aria-label="Vitrine" value={filters.visibility} onChange={event => setFilters(current => ({ ...current, visibility: event.target.value as Visibility }))}>

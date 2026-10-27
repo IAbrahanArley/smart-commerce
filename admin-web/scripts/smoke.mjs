@@ -13,7 +13,7 @@ import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outc
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
 import { legalDraft, operatorText, updatedText } from "../src/lib/legal.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
-import { categoryError, categoryName, categoryNameError, parseCategories, productCountText } from "../src/lib/categories.ts";
+import { categoryError, categoryName, categoryNameError, categoryPath, categorySlugError, parentOptions, parseCategories, productCountText } from "../src/lib/categories.ts";
 import { instagramHandle, logoFileError, profileErrors, profileFields, profilePayload, whatsappText } from "../src/lib/store-profile.ts";
 
 for (const path of ["/conta", "/lojas", "/lojas/uuid/despesas"]) assert.equal(isProtectedPath(path), true, path);
@@ -37,8 +37,19 @@ assert.equal(categoryNameError("  Camisetas   de  verão "), null); assert.equal
 assert.equal(categoryNameError("   "), "Informe o nome da categoria.");
 assert.equal(categoryNameError("Linha\nquebrada"), "Use uma única linha.");
 assert.equal(categoryNameError("a".repeat(61)), "Use até 60 caracteres.");
-assert.deepEqual(parseCategories([{ id: "c-1", name: "Camisetas", products: 2, extra: true }]), [{ id: "c-1", name: "Camisetas", products: 2 }]);
-assert.equal(parseCategories([{ id: "c-1", name: "Camisetas" }]), null);
+const category = (id, name, parentId, depth) => ({ id, name, slug: id, parentId, depth, position: 0, published: true, products: 2 });
+assert.deepEqual(parseCategories([{ ...category("c-1", "Camisetas", null, 1), extra: true }]), [category("c-1", "Camisetas", null, 1)]);
+assert.equal(parseCategories([{ id: "c-1", name: "Camisetas", products: 2 }]), null);
+assert.equal(parseCategories([category("c-1", "Fundo", null, 4)]), null);
+// SC-041: the tree of up to 3 levels, its paths and the parents a category can move under.
+const tree = [category("f", "Feminino", null, 1), category("r", "Roupas", "f", 2), category("c", "Camisetas", "r", 3), category("o", "Outlet", null, 1)];
+assert.equal(categoryPath(tree, "c"), "Feminino › Roupas › Camisetas");
+assert.deepEqual(parentOptions(tree).map(item => item.id), ["f", "r", "o"]);
+assert.deepEqual(parentOptions(tree, "r").map(item => item.id), ["f", "o"]);
+assert.deepEqual(parentOptions(tree, "f").map(item => item.id), []);
+assert.equal(categorySlugError(" Moda-Praia "), null);
+assert.match(categorySlugError("moda praia"), /hífens/); assert.match(categorySlugError(""), /Informe/);
+assert.match(categoryError(409, "DEPTH"), /3 níveis/); assert.match(categoryError(409, "HAS_CHILDREN"), /subcategorias/);
 assert.equal(parseCategories({}), null);
 assert.equal(productCountText(0), "Nenhum produto"); assert.equal(productCountText(1), "1 produto"); assert.equal(productCountText(3), "3 produtos");
 assert.match(categoryError(409, "NAME_CONFLICT"), /Já existe/); assert.match(categoryError(409, "LIMIT"), /50 categorias/);

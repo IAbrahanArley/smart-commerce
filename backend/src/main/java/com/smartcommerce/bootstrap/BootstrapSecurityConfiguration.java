@@ -167,6 +167,10 @@ public class BootstrapSecurityConfiguration {
                     .requestMatchers(
                         HttpMethod.PUT,
                         "/api/tenants/*/categories/*",
+                        // SC-041: storefront address, place in the tree and visibility.
+                        "/api/tenants/*/categories/*/slug",
+                        "/api/tenants/*/categories/*/placement",
+                        "/api/tenants/*/categories/*/publication",
                         "/api/tenants/*/products/*/category")
                     .authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/tenants/*/categories/*")

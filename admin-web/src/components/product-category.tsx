@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/auth-api";
 import type { Product } from "@/lib/catalog";
-import { type Category, categoryError, parseCategories } from "@/lib/categories";
+import { type Category, categoryError, categoryPath, parseCategories } from "@/lib/categories";
 import { Loading } from "@/components/ui/loading";
 
 // MVP block 1c: the category of one product, saved as soon as it is chosen. It does not touch the
@@ -41,7 +41,7 @@ export default function ProductCategory({ tenantId, product, onSaved }: {
       }
       const saved: Product = await response.json();
       onSaved(saved);
-      const name = categories?.find(category => category.id === value)?.name;
+      const name = categories && value ? categoryPath(categories, value) : "";
       setMessage({ text: name ? `Categoria “${name}” salva.` : "Produto sem categoria.", error: false });
     } catch { setMessage({ text: "Não foi possível confirmar a categoria. Recarregue o produto.", error: true }); }
     finally { submitting.current = false; setBusy(false); }
@@ -57,7 +57,7 @@ export default function ProductCategory({ tenantId, product, onSaved }: {
         <label htmlFor="product-category">Categoria do produto</label>
         <select id="product-category" value={product.categoryId ?? ""} disabled={busy} onChange={event => void choose(event.target.value)} aria-describedby="product-category-help">
           <option value="">Sem categoria</option>
-          {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+          {categories.map(category => <option key={category.id} value={category.id}>{categoryPath(categories, category.id)}</option>)}
         </select>
         <p id="product-category-help" className="field-help">Salva ao escolher. Na vitrine, o comprador pode filtrar por categoria. <Link href={`${storePath}/categorias`}>Gerenciar categorias</Link></p>
       </div> : null}

@@ -82,8 +82,10 @@ class CategoryIT {
     var renamed =
         a.send("PUT", categories(tenantA) + "/" + camisetas, Map.of("name", "Camisetas e regatas"));
     assertThat(renamed.statusCode()).isEqualTo(200);
-    assertThat(JSON.readTree(renamed.body()).get(1).get("name").asText())
-        .isEqualTo("Camisetas e regatas"); // sorted by name
+    assertThat(JSON.readTree(renamed.body()).get(0).get("name").asText())
+        .isEqualTo("Camisetas e regatas"); // siblings keep their position (SC-041), not the name
+    assertThat(JSON.readTree(renamed.body()).get(0).get("slug").asText())
+        .isEqualTo("camisetas"); // renaming never changes the storefront address
 
     // B's owner never sees, renames or removes A's categories; A cannot use B's store.
     Browser b = login("categorias-b@example.test");
@@ -188,6 +190,114 @@ class CategoryIT {
   }
 
   @Test
+  void categoriesFormATreeOfAtMostThreeLevels() throws Exception {
+    Browser a = login("categorias-a@example.test");
+    UUID feminino = createCategory(a, "Feminino");
+    UUID masculino = createCategory(a, "Masculino");
+    UUID roupas = createChild(a, "Roupas", feminino);
+    UUID camisetas = createChild(a, "Camisetas", roupas);
+
+    // A fourth level is refused; the same name under another parent is fine, with its own slug.
+    var tooDeep =
+        a.send("POST", categories(tenantA), Map.of("name", "Manga curta", "parentId", camisetas));
+    assertThat(tooDeep.statusCode()).isEqualTo(409);
+    assertThat(JSON.readTree(tooDeep.body()).get("code").asText()).isEqualTo("DEPTH");
+    UUID camisetasMasc = createChild(a, "Camisetas", masculino);
+    var sibling =
+        a.send("POST", categories(tenantA), Map.of("name", "camisetas", "parentId", roupas));
+    assertThat(JSON.readTree(sibling.body()).get("code").asText()).isEqualTo("NAME_CONFLICT");
+
+    JsonNode list = JSON.readTree(a.get(categories(tenantA)).body());
+    assertThat(names(list))
+        .containsExactly("Feminino", "Roupas", "Camisetas", "Masculino", "Camisetas");
+    assertThat(list.get(2).get("depth").asInt()).isEqualTo(3);
+    assertThat(list.get(2).get("parentId").asText()).isEqualTo(roupas.toString());
+    assertThat(list.get(2).get("slug").asText()).isEqualTo("camisetas");
+    assertThat(list.get(4).get("slug").asText()).isEqualTo("camisetas-2");
+
+    // Moving: never under itself or a subcategory, never deeper than 3 levels.
+    var cycle =
+        a.send("PUT", placement(tenantA, feminino), Map.of("parentId", camisetas, "position", 0));
+    assertThat(JSON.readTree(cycle.body()).get("code").asText()).isEqualTo("CYCLE");
+    var deeper =
+        a.send("PUT", placement(tenantA, feminino), Map.of("parentId", masculino, "position", 0));
+    assertThat(JSON.readTree(deeper.body()).get("code").asText()).isEqualTo("DEPTH");
+    // Roupas moves to the top level, first: its subtree follows it.
+    var moved = a.send("PUT", placement(tenantA, roupas), mapWithNullParent(0));
+    assertThat(moved.statusCode()).isEqualTo(200);
+    assertThat(names(JSON.readTree(moved.body())))
+        .containsExactly("Roupas", "Camisetas", "Feminino", "Masculino", "Camisetas");
+    assertThat(JSON.readTree(moved.body()).get(1).get("depth").asInt()).isEqualTo(2);
+    assertThat(a.send("PUT", placement(tenantA, roupas), Map.of("position", -1)).statusCode())
+        .isEqualTo(400);
+
+    // A category with subcategories cannot be removed.
+    var parentRemoval = a.send("DELETE", categories(tenantA) + "/" + masculino, null);
+    assertThat(JSON.readTree(parentRemoval.body()).get("code").asText()).isEqualTo("HAS_CHILDREN");
+
+    // Slugs: editable, unique in the store, well formed.
+    assertThat(
+            a.send("PUT", slug(tenantA, camisetasMasc), Map.of("slug", "camisetas")).statusCode())
+        .isEqualTo(409);
+    assertThat(a.send("PUT", slug(tenantA, camisetasMasc), Map.of("slug", "não vale")).statusCode())
+        .isEqualTo(400);
+    assertThat(
+            a.send("PUT", slug(tenantA, camisetasMasc), Map.of("slug", "camisetas-masculinas"))
+                .statusCode())
+        .isEqualTo(200);
+
+    // Another store: one 404 for its categories and for using them as a parent.
+    Browser b = login("categorias-b@example.test");
+    UUID foreign = createCategory(b, "Da loja B");
+    assertThat(
+            a.send("POST", categories(tenantA), Map.of("name", "Filha", "parentId", foreign))
+                .statusCode())
+        .isEqualTo(404);
+    assertThat(
+            a.send("PUT", placement(tenantA, roupas), Map.of("parentId", foreign, "position", 0))
+                .statusCode())
+        .isEqualTo(404);
+    assertThat(b.send("PUT", placement(tenantA, roupas), mapWithNullParent(0)).statusCode())
+        .isEqualTo(404);
+    assertThat(b.send("PUT", publication(tenantA, roupas), Map.of("published", false)).statusCode())
+        .isEqualTo(404);
+    assertThat(b.send("PUT", slug(tenantA, roupas), Map.of("slug", "x")).statusCode())
+        .isEqualTo(404);
+  }
+
+  @Test
+  void aHiddenCategoryLeavesTheStorefrontButItsProductsStay() throws Exception {
+    Browser a = login("categorias-a@example.test");
+    UUID camisetas = createCategory(a, "Camisetas");
+    UUID shirt = product(tenantA, "Camiseta azul", true);
+    a.send("PUT", productCategory(tenantA, shirt), Map.of("categoryId", camisetas));
+    jdbc.update("UPDATE store SET status='PUBLISHED' WHERE tenant_id=?", tenantA);
+
+    // Only a JSON boolean hides it.
+    assertThat(
+            a.send("PUT", publication(tenantA, camisetas), Map.of("published", "false"))
+                .statusCode())
+        .isEqualTo(400);
+    var hidden = a.send("PUT", publication(tenantA, camisetas), Map.of("published", false));
+    assertThat(hidden.statusCode()).isEqualTo(200);
+    assertThat(JSON.readTree(hidden.body()).get(0).get("published").asBoolean()).isFalse();
+
+    Browser buyer = new Browser();
+    JsonNode all = JSON.readTree(buyer.get("/api/public/stores/categorias-a").body());
+    assertThat(all.get("categories")).isEmpty();
+    assertThat(all.get("products")).hasSize(1); // the product is still public
+    assertThat(
+            JSON.readTree(
+                    buyer.get("/api/public/stores/categorias-a?categoria=" + camisetas).body())
+                .get("products"))
+        .isEmpty();
+
+    a.send("PUT", publication(tenantA, camisetas), Map.of("published", true));
+    assertThat(JSON.readTree(buyer.get("/api/public/stores/categorias-a").body()).get("categories"))
+        .hasSize(1);
+  }
+
+  @Test
   void aStoreHasAtMostFiftyCategories() throws Exception {
     Browser a = login("categorias-a@example.test");
     for (int i = 0; i < 50; i++) createCategory(a, "Categoria " + i);
@@ -200,6 +310,44 @@ class CategoryIT {
 
   private static String categories(UUID tenant) {
     return "/api/tenants/" + tenant + "/categories";
+  }
+
+  private static String placement(UUID tenant, UUID category) {
+    return categories(tenant) + "/" + category + "/placement";
+  }
+
+  private static String publication(UUID tenant, UUID category) {
+    return categories(tenant) + "/" + category + "/publication";
+  }
+
+  private static String slug(UUID tenant, UUID category) {
+    return categories(tenant) + "/" + category + "/slug";
+  }
+
+  /** A placement at the top level: Map.of refuses null values. */
+  private static Map<String, Object> mapWithNullParent(int position) {
+    Map<String, Object> body = new HashMap<>();
+    body.put("parentId", null);
+    body.put("position", position);
+    return body;
+  }
+
+  private static java.util.List<String> names(JsonNode list) {
+    java.util.List<String> names = new java.util.ArrayList<>();
+    for (JsonNode category : list) names.add(category.get("name").asText());
+    return names;
+  }
+
+  /** Creates a subcategory in the owner's own store and returns its id. */
+  private UUID createChild(Browser owner, String name, UUID parent) throws Exception {
+    var response =
+        owner.send("POST", categories(owner.tenant), Map.of("name", name, "parentId", parent));
+    assertThat(response.statusCode()).isEqualTo(201);
+    for (JsonNode category : JSON.readTree(response.body()))
+      if (category.get("name").asText().equals(name)
+          && category.get("parentId").asText().equals(parent.toString()))
+        return UUID.fromString(category.get("id").asText());
+    throw new AssertionError("Category not returned: " + name);
   }
 
   private static String productCategory(UUID tenant, UUID product) {

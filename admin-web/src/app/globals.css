@@ -382,6 +382,14 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .category-item .form-actions { margin-top: 0; }
 .category-name { display: grid; gap: var(--sc-space-1); font-weight: 700; overflow-wrap: anywhere; }
 .category-edit { flex: 1 1 18rem; display: grid; gap: var(--sc-space-2); }
+/* SC-041: subcategories are indented under their parent; the visible path is in the list order. */
+.category-depth-2 { margin-inline-start: var(--sc-space-6); }
+.category-depth-3 { margin-inline-start: calc(var(--sc-space-6) * 2); }
+.category-hidden { margin-inline-start: var(--sc-space-2); vertical-align: middle; }
+@media (max-width: 40rem) {
+  .category-depth-2 { margin-inline-start: var(--sc-space-3); }
+  .category-depth-3 { margin-inline-start: calc(var(--sc-space-3) * 2); }
+}
 /* MVP block 1d: legal pages, a readable single column; the draft notice uses existing neutral tokens. */
 .legal-page { max-width: 45rem; margin-inline: auto; }
 .legal-page h2 { margin-top: var(--sc-space-8, 2rem); font-size: 1.25rem; }
