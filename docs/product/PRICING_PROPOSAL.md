@@ -115,7 +115,7 @@ O Pix é o meio mais barato para a plataforma. No cartão, a Stripe custa quase 
 
 ## 5. O que precisa ser construído (bloco novo, depois da aprovação)
 
-1. **ADR de assinatura:** cobrança das mensalidades pela **conta da plataforma** (Pix mensal pelo Mercado Pago e cartão recorrente pela Stripe, seção 5.1), separada das contas Mercado Pago dos lojistas, que continuam recebendo as vendas. Também define:
+1. **ADR de assinatura** ([ADR-0017](../architecture/adr/0017-saas-billing-stripe.md), adotado em 2026-10-27): cobrança das mensalidades pela **conta da plataforma** (Pix mensal pelo Mercado Pago e cartão recorrente pela Stripe, seção 5.1), separada das contas Mercado Pago dos lojistas, que continuam recebendo as vendas. Também define:
    - webhook validado, idempotência e conciliação;
    - carência e mudança de plano;
    - emissão de nota fiscal da assinatura, a definir com o contador.
