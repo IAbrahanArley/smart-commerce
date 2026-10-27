@@ -109,6 +109,8 @@ V29 (bloco 1b do MVP, 2026-10-26), aditiva: `store_profile`, uma linha opcional 
 
 V30 (bloco 1c do MVP, 2026-10-26), aditiva: `catalog_category` (nome de 1 a 60 caracteres e `name_key` minúsculo, único por tenant; FK composta para a loja) e `catalog_product.category_id`, opcional, com FK composta `(category_id, tenant_id)`, de modo que um produto nunca aponta para categoria de outro tenant. Uma categoria por produto, sem hierarquia. Remover a categoria limpa `category_id` dos produtos antes; nenhum produto é apagado. Depende da V29 (bloco 1b).
 
+V31 (SC-031, ADR-0017, 2026-10-27), aditiva: `billing_account`, uma linha por proprietário (`identity_user`). Guarda o status gravado (`TRIAL`, `ACTIVE`, `PAST_DUE`, `SUSPENDED` ou `CANCELED`), o plano e o ciclo (nulos no teste grátis), `trial_ends_at`, `current_period_end` e `past_due_since`, e os identificadores da Stripe, únicos e preenchidos na SC-032. O teste vencido (`TRIAL_EXPIRED`) e a suspensão depois da carência são calculados pelo tempo, sem rotina agendada. A conta nasce no primeiro uso, com 14 dias de teste. Os limites valem para todas as empresas do proprietário.
+
 V27 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
 - **`DELETE`:** recusado sempre;
 - **`UPDATE`:** só para preencher `settled_at` uma única vez, a partir de nulo, que é o caminho da SC-018;

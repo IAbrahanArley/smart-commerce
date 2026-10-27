@@ -61,6 +61,27 @@ Status: **adotado** em 2026-10-27 para B1–B12, conforme as recomendações aba
 | B11 | Dependência e segredos | **Adotar `com.stripe:stripe-java`** (versão fixa, aprovação de dependência necessária), pela verificação de assinatura e pelos tipos. Segredos:<ul><li>`STRIPE_SECRET_KEY`, uma **chave restrita** com permissão só para Checkout, Customers, Subscriptions, Billing Portal e leitura de Events;</li><li>`STRIPE_WEBHOOK_SECRET` (`whsec_`).</li></ul>No ambiente de teste hospedado, chaves de **modo de teste**; em produção, as chaves live, com aprovação separada | Chamar a API REST à mão (mais código e verificação de assinatura própria) | B6 |
 | B12 | Ambientes e travas | **Ambientes:**<ul><li>DEV e `hosted-test` usam só o modo de teste da Stripe; a Stripe CLI encaminha webhooks no ambiente local;</li><li>em produção, o backend **recusa iniciar** com chave `sk_test_` ou sem o segredo do webhook (como a trava D6 do bloco 2b);</li><li>sem as chaves, a cobrança fica desligada e as contas continuam em `TRIAL`, para não travar o desenvolvimento.</li></ul> | — | deploy |
 
+## Implementação da SC-031 (2026-10-27)
+
+- **Migração V31:** tabela `billing_account`, uma linha por proprietário. A conta nasce em `TRIAL` no primeiro uso (painel, criação de loja ou de produto), com 14 dias.
+- **Domínio e serviço:** o módulo `billing` tem `Plan` (empresas, produtos por loja e perguntas por mês), `BillingAccount` (estado efetivo calculado pelo tempo) e `BillingService`.
+- **Limites (B9), aplicados no backend sob trava por proprietário ou por loja, para que duas requisições não ocupem a mesma vaga:**
+  - empresas, na criação da empresa;
+  - produtos por loja, no cadastro de produto;
+  - cota de IA por conta, somada entre as lojas do proprietário (Essencial: 0).
+
+  O limite de fotos continua o técnico do ADR-0011, 6 por produto em todos os planos.
+- **Situação da conta (B7):**
+  - um interceptador recusa com **402 `PLAN_INACTIVE`** as alterações (`POST`, `PUT`, `PATCH` e `DELETE` em `/api/tenants/{id}/**`) de contas fora de dia, **menos as operações de pedidos**: cancelar e reembolsar continuam, porque há compradores esperando;
+  - a vitrine pública dessas lojas responde 404, como loja não publicada, menos o acompanhamento e o pagamento de pedidos já feitos;
+  - nada é apagado.
+- **Limite atingido:** **409 `PLAN_LIMIT`** com mensagem para o lojista.
+- **API:** `GET /api/billing/account` devolve status, plano, ciclo, datas, limites e quantas empresas o proprietário tem.
+- **Chave `billing.enabled` (`BILLING_ENABLED`), desligada por padrão até a SC-032:** sem ela não há limite nem bloqueio, e o assistente mantém a cota por loja do ADR-0016. Ligar antes da integração com a Stripe bloquearia todas as lojas no fim do teste, sem forma de pagar.
+- **Testes** (`mvnw clean verify` em 2026-10-27: 98 unitários e 167 de integração, todos passando; o 1 ignorado é a avaliação paga da SC-029):
+  - `BillingAccountTest`, com as regras de estado e a tabela de planos;
+  - `BillingIT`, com a chave ligada e Postgres real: teste com limites do Profissional, limites de empresas e de produtos, cota de IA zerada no Essencial, teste vencido e carência vencida bloqueando alterações e a vitrine sem apagar dados, e reativação ao pagar.
+
 ## Fluxos
 
 1. **Cadastro:** a conta nasce em `TRIAL` com 14 dias, e o painel mostra quantos dias faltam.

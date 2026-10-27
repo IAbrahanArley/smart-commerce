@@ -79,6 +79,8 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `ADVISOR_ENABLED` | `true` para ligar |
 | `ANTHROPIC_API_KEY` | chave criada no console da Anthropic (segredo; cadastre só no painel do Render, nunca no chat ou no Git) |
 | `ADVISOR_GLOBAL_MONTHLY_CAP_USD` | opcional: teto mensal da plataforma em US$ (padrão 20,00) |
+| `BILLING_ENABLED` | **deixe `false` (padrão) até a SC-032.** Com `true`, valem os limites dos planos, o teste de 14 dias e o bloqueio de contas inativas (ADR-0017), mas ainda não há como pagar |
+| `BILLING_TRIAL_DAYS` / `BILLING_GRACE_DAYS` | opcionais: duração do teste grátis (padrão 14) e carência depois de uma cobrança recusada (padrão 7) |
 | `ADVISOR_MONTHLY_QUOTA` | opcional: perguntas por loja por mês (padrão 100) |
 
 3. **Não defina** `SPRING_PROFILES_ACTIVE=dev`. A `PORT` é definida pelo Render, e a imagem já escuta em `0.0.0.0`.

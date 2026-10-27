@@ -1,5 +1,6 @@
 package com.smartcommerce.tenant.services;
 
+import com.smartcommerce.billing.services.BillingService;
 import com.smartcommerce.tenant.domain.TenantDetails;
 import com.smartcommerce.tenant.dto.response.TenantView;
 import com.smartcommerce.tenant.exceptions.TenantException;
@@ -16,9 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TenantService {
   private final TenantRepository tenants;
+  private final BillingService billing;
 
-  public TenantService(TenantRepository tenants) {
+  public TenantService(TenantRepository tenants, BillingService billing) {
     this.tenants = tenants;
+    this.billing = billing;
   }
 
   @Transactional
@@ -32,6 +35,7 @@ public class TenantService {
         || !slug.matches("[a-z0-9]+(?:-[a-z0-9]+)*")) {
       throw new IllegalArgumentException("Invalid slug");
     }
+    billing.requireCompanySlot(actor); // SC-031: companies per owner's plan, good standing
     try {
       return view(
           tenants.create(

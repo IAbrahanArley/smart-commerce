@@ -1,5 +1,6 @@
 package com.smartcommerce.catalog.services;
 
+import com.smartcommerce.billing.services.BillingService;
 import com.smartcommerce.catalog.domain.*;
 import com.smartcommerce.catalog.dto.response.*;
 import com.smartcommerce.catalog.entities.*;
@@ -19,12 +20,17 @@ public class CatalogService {
   private final CatalogRepository products;
   private final VariantRepository variants;
   private final ProductImageRepository images;
+  private final BillingService billing;
 
   public CatalogService(
-      CatalogRepository products, VariantRepository variants, ProductImageRepository images) {
+      CatalogRepository products,
+      VariantRepository variants,
+      ProductImageRepository images,
+      BillingService billing) {
     this.products = products;
     this.images = images;
     this.variants = variants;
+    this.billing = billing;
   }
 
   @Transactional
@@ -63,6 +69,7 @@ public class CatalogService {
     return execute(
         () -> {
           UUID store = products.requireAccess(actor, tenant);
+          billing.requireProductSlot(tenant); // SC-031: products per store of the owner's plan
           var kind = details.kind() == null ? ProductKind.SIMPLE : details.kind();
           var inputs =
               kind == ProductKind.SIMPLE

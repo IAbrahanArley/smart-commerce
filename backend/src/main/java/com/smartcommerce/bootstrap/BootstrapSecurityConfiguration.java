@@ -146,6 +146,9 @@ public class BootstrapSecurityConfiguration {
                     .authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/tenants", "/api/tenants/*")
                     .authenticated()
+                    // SC-031: the signed-in owner's plan and limits (ADR-0017).
+                    .requestMatchers(HttpMethod.GET, "/api/billing/account")
+                    .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/tenants")
                     .authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/tenants/*/fulfillment")

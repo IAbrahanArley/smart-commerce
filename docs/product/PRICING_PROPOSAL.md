@@ -67,7 +67,7 @@ Cada "loja" é uma empresa com sua vitrine (ADR-0006). O limite vale por conta d
 | Anual (por mês, cerca de 2 meses grátis) | R$ 49 | R$ 109 | R$ 249 |
 | Lojas por conta | 1 | 2 | 5 |
 | Produtos por loja | 150 | 2.000 | ilimitado (com limite técnico de segurança) |
-| Fotos por produto | 5 | 10 | 10 |
+| Fotos por produto | 6 | 6 | 6 (limite técnico do ADR-0011, igual em todos os planos desde 2026-10-27) |
 | Pedidos e vendas | ilimitados, **sem tarifa por venda** | ilimitados, sem tarifa | ilimitados, sem tarifa |
 | Mercado Pago, vitrine, categorias, estoque, logo e contatos | ✓ | ✓ | ✓ |
 | Financeiro: margem, despesas e caixa | resumo do mês | completo | completo |

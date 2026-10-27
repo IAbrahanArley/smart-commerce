@@ -12,6 +12,7 @@ import com.smartcommerce.advisor.services.AdvisorHousekeepingJob;
 import com.smartcommerce.advisor.services.AdvisorQuotaService;
 import com.smartcommerce.advisor.services.AdvisorToolService;
 import com.smartcommerce.analytics.services.DashboardService;
+import com.smartcommerce.billing.services.BillingService;
 import com.smartcommerce.finance.domain.ReportPeriod;
 import com.smartcommerce.finance.services.FinanceLedgerService;
 import com.smartcommerce.finance.services.FinanceReportService;
@@ -74,6 +75,7 @@ class AdvisorFoundationIT {
   @Autowired FinanceReportService finance;
   @Autowired DashboardService dashboard;
   @Autowired Clock clock;
+  @Autowired BillingService billing;
   UUID ownerA;
   UUID ownerB;
   UUID tenantA;
@@ -232,7 +234,7 @@ class AdvisorFoundationIT {
     assertThatThrownBy(() -> quota.start(ownerB, tenantB))
         .hasFieldOrPropertyWithValue("reason", AdvisorException.Reason.GLOBAL_CAP_REACHED);
 
-    var off = new AdvisorQuotaService(usage, clock, false, 3, new BigDecimal("1.00"));
+    var off = new AdvisorQuotaService(usage, clock, billing, false, 3, new BigDecimal("1.00"));
     assertThatThrownBy(() -> off.start(ownerA, tenantA))
         .hasFieldOrPropertyWithValue("reason", AdvisorException.Reason.DISABLED);
     assertThat(off.enabled()).isFalse();
