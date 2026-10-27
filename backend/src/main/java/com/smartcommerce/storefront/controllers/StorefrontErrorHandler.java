@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-@RestControllerAdvice(assignableTypes = StorefrontController.class)
+@RestControllerAdvice(assignableTypes = {StorefrontController.class, PublicCatalogController.class})
 public final class StorefrontErrorHandler {
   @ExceptionHandler(StorefrontException.class)
   ResponseEntity<Map<String, String>> missing() {

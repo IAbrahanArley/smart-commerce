@@ -535,7 +535,10 @@ class CatalogIsolationIT {
     jdbc.execute("INSERT INTO variant_legacy.tenant SELECT * FROM public.tenant");
     jdbc.execute(
         "INSERT INTO variant_legacy.tenant_membership SELECT * FROM public.tenant_membership");
-    jdbc.execute("INSERT INTO variant_legacy.store SELECT * FROM public.store");
+    // The V8 columns only: later migrations add store columns (SC-042: max_installments).
+    jdbc.execute(
+        "INSERT INTO variant_legacy.store(id,tenant_id,name,slug,status,created_at)"
+            + " SELECT id,tenant_id,name,slug,status,created_at FROM public.store");
     UUID id = UUID.randomUUID();
     jdbc.update(
         "INSERT INTO variant_legacy.catalog_product(id,tenant_id,store_id,name,sku,price,currency,created_at,updated_at) SELECT ?,?,id,'Legacy','LEGACY',12.34,'BRL',now(),now() FROM variant_legacy.store WHERE tenant_id=?",

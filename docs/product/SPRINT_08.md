@@ -29,6 +29,8 @@ SC-041 e SC-044 podem andar em paralelo (backend × base visual). SC-043 e SC-04
 
 ## SC-041 — Categorias, marcas, slug e preço "de"
 
+**Estado (2026-10-27):** implementada e mesclada (PR #55), exceto as categorias adicionais por produto, pendentes (ver "Implementação e desvios" no ADR-0018). Validação: [SC-041A](../quality/SC-041A-CATEGORY-TREE.md), [SC-041B](../quality/SC-041B-BRANDS-SLUG-COMPARE-AT.md).
+
 - **Migrações aditivas (V33+):** a `catalog_category` existente (V30) ganha `parent_id` (até 3 níveis), slug único por loja, ordem e publicação, com unicidade do nome por pai; as categorias atuais viram raiz. O `category_id` do produto passa a ser a categoria principal e entra `catalog_product_category` (categorias adicionais, N:N); `catalog_brand`, `catalog_product.brand_id`, `slug` do produto (único por loja, preenchido a partir do nome para os existentes), `compare_at_price` em produto e variante (maior que o preço), histórico de slugs para redirecionamento.
 - **Admin (OWNER):** a tela "Categorias" existente ganha subcategorias, mover, ordenar e ocultar (remover continua deixando os produtos sem categoria, com confirmação; categoria com subcategorias não pode ser removida); nova tela "Marcas"; o cartão "Categoria" do editor ganha categorias adicionais, e o produto ganha marca, slug editável e preço "de".
 - O filtro antigo `?categoria={id}` da vitrine redireciona (308) para a rota com slug.
@@ -39,6 +41,8 @@ SC-041 e SC-044 podem andar em paralelo (backend × base visual). SC-043 e SC-04
 **Testes:** migração sobre base com produtos e variantes; ciclo na árvore (mover pai para dentro do filho) recusado; slug duplicado; CAS de versão; categoria/marca de outra loja no produto recusada; A/B.
 
 ## SC-042 — API pública de navegação
+
+**Estado (2026-10-27):** implementada em rota nova (`/catalog`), com a listagem antiga intacta. O parcelamento devolve só o número máximo de parcelas, sem valor de parcela (desvio registrado no ADR-0018). Validação: [SC-042](../quality/SC-042-PUBLIC-CATALOG-API.md).
 
 - `GET /api/public/stores/{slug}` passa a trazer menu (categorias publicadas), dados do rodapé e configuração de parcelas.
 - **Listagem** por categoria (inclui subcategorias) e por busca: facetas com contagem (categoria, marca, faixa de preço, opções de variante), ordenação (relevância, recentes, mais vendidos, menor/maior preço, maior desconto), paginação numerada de 24.

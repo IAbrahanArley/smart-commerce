@@ -11,4 +11,10 @@ public record PublicProductView(
     boolean available,
     String descriptionHtml,
     String kind,
-    List<PublicVariantView> variants) {}
+    List<PublicVariantView> variants,
+    // SC-042: storefront details of the product page.
+    String slug,
+    PublicCatalogView.Link brand,
+    List<PublicCatalogView.Link> categoryPath,
+    String compareAtPrice,
+    Integer discountPercent) {}

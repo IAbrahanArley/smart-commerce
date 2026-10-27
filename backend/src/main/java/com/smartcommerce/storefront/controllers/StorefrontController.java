@@ -1,8 +1,10 @@
 package com.smartcommerce.storefront.controllers;
 
 import com.smartcommerce.storefront.domain.PublicLocator;
+import com.smartcommerce.storefront.dto.response.PublicProductBySlugView;
 import com.smartcommerce.storefront.dto.response.PublicProductDetailsView;
 import com.smartcommerce.storefront.dto.response.PublicStorefrontView;
+import com.smartcommerce.storefront.services.PublicCatalogService;
 import com.smartcommerce.storefront.services.StorefrontService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.CacheControl;
@@ -14,9 +16,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/public/stores/{slug}")
 public final class StorefrontController {
   private final StorefrontService storefront;
+  private final PublicCatalogService catalog;
 
-  public StorefrontController(StorefrontService storefront) {
+  public StorefrontController(StorefrontService storefront, PublicCatalogService catalog) {
     this.storefront = storefront;
+    this.catalog = catalog;
   }
 
   @GetMapping
@@ -44,6 +48,15 @@ public final class StorefrontController {
         .header("X-Content-Type-Options", "nosniff")
         .header("Content-Disposition", "inline; filename=\"store-logo\"")
         .body(logo.bytes());
+  }
+
+  /** A product by its storefront address, or the address an old link moved to (SC-042). */
+  @GetMapping("/p/{productSlug}")
+  public ResponseEntity<PublicProductBySlugView> findBySlug(
+      @PathVariable String slug, @PathVariable String productSlug) {
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .body(catalog.productBySlug(slug, productSlug));
   }
 
   @GetMapping("/products/{productId}")

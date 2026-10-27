@@ -93,7 +93,11 @@ public class PaymentCheckoutService {
     try {
       created =
           client.createPreference(
-              seller.accessToken(), idempotencyKey(request.orderId()), request, now());
+              seller.accessToken(),
+              idempotencyKey(request.orderId()),
+              request,
+              now(),
+              reads.execute(tx -> connections.maxInstallments(request.tenant())));
     } catch (PaymentException failure) {
       LOG.warn("Checkout Pro preference creation failed for order {}", request.orderId());
       throw failure;

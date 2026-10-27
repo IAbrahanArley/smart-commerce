@@ -10,6 +10,7 @@ import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 import { useConfirm } from "@/components/confirm-dialog";
 import { Loading } from "@/components/ui/loading";
+import StoreInstallments from "@/components/store-installments";
 
 // SC-012: connect the store's own Mercado Pago account (ADR-0003). The backend owns the OAuth state,
 // the PKCE verifier and the encrypted tokens; this page only starts the attempt, shows the
@@ -123,5 +124,6 @@ export default function StorePayments({ tenantId, result }: { tenantId: string; 
         {status === "CONNECTED" ? <button type="button" className="button-danger" disabled={busy} onClick={() => void disconnect()}>{busy ? "Desconectando…" : "Desconectar"}</button> : null}
       </div>
     </div> : null}
+    {state === "ready" ? <StoreInstallments tenantId={tenantId} /> : null}
   </section>;
 }

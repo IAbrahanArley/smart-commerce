@@ -117,6 +117,10 @@ V33 (SC-041, [ADR-0018](adr/0018-storefront-v1.md) V1, 2026-10-27), aditiva: `ca
 
 V34 (SC-041, [ADR-0018](adr/0018-storefront-v1.md) V2, V3 e V5, 2026-10-27), aditiva: `catalog_brand` (nome de 1 a 60 caracteres, único por tenant sem diferenciar maiúsculas, e `slug` único por loja, ambos com FK composta para a loja) e `catalog_product.brand_id`, opcional, com FK composta `(brand_id, tenant_id)`. `catalog_product.slug` é o endereço do produto na vitrine, único por loja; os produtos existentes recebem o slug derivado do nome, cortado em 60 caracteres, e colisões ganham o início do id. A coluna aceita nulo só para linhas gravadas fora da aplicação, que sempre a preenche na criação. `catalog_product_slug_history` guarda os endereços anteriores (loja, slug, produto, data da troca) para redirecionar links antigos (SC-045); um endereço reassumido sai do histórico. `catalog_variant.compare_at_price`, opcional e positivo, é o preço "de" só para exibição: a vitrine o mostra quando é maior que o preço, e o valor cobrado continua sendo o preço. Depende da V33.
 
+V35 (SC-042, ADR-0018 V6 e V7, 2026-10-27), aditiva: extensão `unaccent` (contrib confiável: o dono do banco a cria sem superusuário), função `sc_unaccent(text)` marcada `IMMUTABLE` (fixa o dicionário, forma documentada de indexar `unaccent`), índice GIN `to_tsvector('portuguese', sc_unaccent(name))` em `catalog_product` para a busca da vitrine e índice `(product_id, tenant_id)` em `sales_order_item` para "mais vendidos". Depende da V34.
+
+V36 (SC-042, ADR-0018 V4, 2026-10-27), aditiva: `store.max_installments`, opcional, de 1 a 12. Nulo mantém o comportamento anterior: a preferência do Mercado Pago não leva limite e a vitrine não promete parcelas. Depende da V35.
+
 V27 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
 - **`DELETE`:** recusado sempre;
 - **`UPDATE`:** só para preencher `settled_at` uma única vez, a partir de nulo, que é o caminho da SC-018;

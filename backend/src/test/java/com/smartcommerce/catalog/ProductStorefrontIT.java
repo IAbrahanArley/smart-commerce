@@ -185,6 +185,33 @@ class ProductStorefrontIT {
         .isNull();
   }
 
+  @Test
+  void ownerSetsTheInstallmentLimitOfTheStore() throws Exception {
+    Browser a = login("categorias-a@example.test");
+    String path = "/api/tenants/" + tenantA + "/payments/installments";
+    assertThat(JSON.readTree(a.get(path).body()).get("maxInstallments").isNull()).isTrue();
+    var saved = a.send("PUT", path, Map.of("maxInstallments", 6));
+    assertThat(saved.statusCode()).isEqualTo(200);
+    assertThat(JSON.readTree(saved.body()).get("maxInstallments").asInt()).isEqualTo(6);
+    for (Object invalid : new Object[] {0, 13, "6", 2.5})
+      assertThat(a.send("PUT", path, Map.of("maxInstallments", invalid)).statusCode())
+          .as(String.valueOf(invalid))
+          .isEqualTo(400);
+    Map<String, Object> clear = new HashMap<>();
+    clear.put("maxInstallments", null);
+    assertThat(JSON.readTree(a.send("PUT", path, clear).body()).get("maxInstallments").isNull())
+        .isTrue();
+    assertThat(a.raw("PUT", path, "{\"maxInstallments\":3}", null).statusCode()).isEqualTo(403);
+
+    Browser b = login("categorias-b@example.test");
+    assertThat(b.get(path).statusCode()).isEqualTo(404);
+    assertThat(b.send("PUT", path, Map.of("maxInstallments", 12)).statusCode()).isEqualTo(404);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT max_installments FROM store WHERE tenant_id=?", Integer.class, tenantA))
+        .isNull();
+  }
+
   // --- helpers -----------------------------------------------------------------------------
 
   private static String brands(UUID tenant) {

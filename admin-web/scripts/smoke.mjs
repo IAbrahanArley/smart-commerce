@@ -10,7 +10,7 @@ import { storefrontUrl } from "../src/lib/tenant-api.ts";
 import { backendOrigin, hostedTestEnvironment } from "../src/lib/deployment.ts";
 import { alertLink, alertText, parseAlerts } from "../src/lib/alerts.ts";
 import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outcomeText, parseAnswer, parseStatus, questionError, quotaText, sourceText } from "../src/lib/advisor.ts";
-import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
+import { authorizationTarget, callbackMessage, installmentsText, parseConnection, parseInstallments } from "../src/lib/payments.ts";
 import { legalDraft, operatorText, updatedText } from "../src/lib/legal.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
 import { brandError, compareAtInput, parseBrands, storefrontError } from "../src/lib/brands.ts";
@@ -51,6 +51,10 @@ assert.deepEqual(parentOptions(tree, "f").map(item => item.id), []);
 assert.equal(categorySlugError(" Moda-Praia "), null);
 assert.match(categorySlugError("moda praia"), /hífens/); assert.match(categorySlugError(""), /Informe/);
 assert.match(categoryError(409, "DEPTH"), /3 níveis/); assert.match(categoryError(409, "HAS_CHILDREN"), /subcategorias/);
+// SC-042: installment limit (null: Mercado Pago default; anything else unexpected).
+assert.equal(parseInstallments({ maxInstallments: null }), null); assert.equal(parseInstallments({ maxInstallments: 6 }), 6);
+assert.equal(parseInstallments({ maxInstallments: 13 }), undefined); assert.equal(parseInstallments({ maxInstallments: "6" }), undefined);
+assert.equal(installmentsText(1), "somente à vista"); assert.equal(installmentsText(6), "em até 6×");
 // SC-041: brands and the product "Vitrine" card.
 assert.deepEqual(parseBrands([{ id: "b-1", name: "Ágil", slug: "agil", products: 1, extra: 1 }]), [{ id: "b-1", name: "Ágil", slug: "agil", products: 1 }]);
 assert.equal(parseBrands([{ id: "b-1", name: "Ágil" }]), null);
