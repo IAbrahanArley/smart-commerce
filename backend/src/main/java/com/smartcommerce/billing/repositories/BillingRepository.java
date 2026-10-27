@@ -93,6 +93,77 @@ public class BillingRepository {
     return count == null ? 0 : count;
   }
 
+  public Optional<String> email(UUID user) {
+    return jdbc
+        .queryForList("SELECT email_original FROM identity_user WHERE id=?", String.class, user)
+        .stream()
+        .findFirst();
+  }
+
+  public Optional<String> stripeCustomer(UUID user) {
+    return jdbc
+        .queryForList(
+            "SELECT stripe_customer_id FROM billing_account WHERE user_id=?", String.class, user)
+        .stream()
+        .filter(customer -> customer != null)
+        .findFirst();
+  }
+
+  public void setStripeCustomer(UUID user, String customer, Instant now) {
+    jdbc.update(
+        """
+        UPDATE billing_account SET stripe_customer_id=?, updated_at=?, version=version+1
+         WHERE user_id=? AND stripe_customer_id IS NULL""",
+        customer,
+        utc(now),
+        user);
+  }
+
+  public Optional<UUID> ownerOfCustomer(String customer) {
+    return jdbc
+        .queryForList(
+            "SELECT user_id FROM billing_account WHERE stripe_customer_id=?", UUID.class, customer)
+        .stream()
+        .findFirst();
+  }
+
+  /** The subscription as Stripe reports it now (SC-032); the trial dates are kept for history. */
+  public void applySubscription(
+      UUID user,
+      String status,
+      Plan plan,
+      String cycle,
+      Instant currentPeriodEnd,
+      Instant pastDueSince,
+      String subscription,
+      Instant now) {
+    jdbc.update(
+        """
+        UPDATE billing_account
+           SET status=?, plan=?, billing_cycle=?, current_period_end=?, past_due_since=?,
+               stripe_subscription_id=?, updated_at=?, version=version+1
+         WHERE user_id=?""",
+        status,
+        plan.name(),
+        cycle,
+        currentPeriodEnd == null ? null : utc(currentPeriodEnd),
+        pastDueSince == null ? null : utc(pastDueSince),
+        subscription,
+        utc(now),
+        user);
+  }
+
+  /** Records a webhook event; false when it was already processed. */
+  public boolean recordEvent(String id, String type, Instant now) {
+    return jdbc.update(
+            "INSERT INTO billing_event (id, type, received_at) VALUES (?, ?, ?)"
+                + " ON CONFLICT (id) DO NOTHING",
+            id,
+            type,
+            utc(now))
+        == 1;
+  }
+
   /** Serializes limit checks of one owner, so two requests cannot both take the last slot. */
   public void lockOwner(UUID user) {
     lock("billing-owner:" + user);

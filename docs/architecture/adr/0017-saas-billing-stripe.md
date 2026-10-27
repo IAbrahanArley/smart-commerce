@@ -77,10 +77,35 @@ Status: **adotado** em 2026-10-27 para B1–B12, conforme as recomendações aba
   - nada é apagado.
 - **Limite atingido:** **409 `PLAN_LIMIT`** com mensagem para o lojista.
 - **API:** `GET /api/billing/account` devolve status, plano, ciclo, datas, limites e quantas empresas o proprietário tem.
-- **Chave `billing.enabled` (`BILLING_ENABLED`), desligada por padrão até a SC-032:** sem ela não há limite nem bloqueio, e o assistente mantém a cota por loja do ADR-0016. Ligar antes da integração com a Stripe bloquearia todas as lojas no fim do teste, sem forma de pagar.
+- **Chave `billing.enabled` (`BILLING_ENABLED`), desligada por padrão (desde a SC-032, ligá-la exige as chaves da Stripe):** sem ela não há limite nem bloqueio, e o assistente mantém a cota por loja do ADR-0016. Ligar antes da integração com a Stripe bloquearia todas as lojas no fim do teste, sem forma de pagar.
 - **Testes** (`mvnw clean verify` em 2026-10-27: 98 unitários e 167 de integração, todos passando; o 1 ignorado é a avaliação paga da SC-029):
   - `BillingAccountTest`, com as regras de estado e a tabela de planos;
   - `BillingIT`, com a chave ligada e Postgres real: teste com limites do Profissional, limites de empresas e de produtos, cota de IA zerada no Essencial, teste vencido e carência vencida bloqueando alterações e a vitrine sem apagar dados, e reativação ao pagar.
+
+## Implementação da SC-032 (2026-10-27)
+
+- **SDK:** `com.stripe:stripe-java` 34.0.0, isolado atrás de `StripeGateway` (`billing/provider`). Falhas da Stripe viram 503 `STRIPE_UNAVAILABLE`, sem o texto do provedor.
+- **Assinar (B3, B4):** `POST /api/billing/checkout` com `{plan, cycle}`.
+  - O preço é buscado pela `lookup_key` (`{plano}_{mensal|semestral|anual}`); o valor nunca vem do navegador.
+  - O `Customer` é criado uma vez, com o e-mail da conta e `metadata.owner_id`.
+  - A Checkout Session usa `mode=subscription`, `client_reference_id` igual ao id do proprietário e retorno para `/conta/plano?checkout=sucesso|cancelado`.
+  - Com uma assinatura em andamento (qualquer estado menos `canceled`, conferido na API), a resposta é **409 `SUBSCRIPTION_EXISTS`**: troca de plano ou ciclo é pelo portal. Depois de cancelada, pode assinar de novo.
+- **Portal (B8):** `POST /api/billing/portal` devolve a URL da sessão; sem `Customer`, **409 `NO_SUBSCRIPTION`**.
+- **Webhook (B5, B6):** `POST /api/public/webhooks/stripe`, público, sem CSRF e sem sessão, corpo de até 64 KB.
+  - `Stripe-Signature` conferida pelo SDK sobre o corpo bruto, com tolerância de 5 minutos; assinatura ausente ou inválida responde 400.
+  - Eventos tratados: os seis do B6, mais `customer.subscription.paused` e `resumed`. Os demais recebem 200 e são ignorados.
+  - O id do evento é gravado em `billing_event` (V32); uma reentrega responde 200 sem consultar a Stripe.
+  - A conta é localizada pelo `stripe_customer_id` e conciliada com a assinatura mais recente do cliente **lida na API** (lista por cliente, ignorando `incomplete`), nunca com o corpo do evento. Isso substitui o `GET /v1/subscriptions/{id}` do B5 e cobre eventos fora de ordem e a troca de assinatura depois de um cancelamento. A tabela `billing_subscription` do B5 não foi criada: os campos da assinatura ficam em `billing_account`.
+  - Mapeamento: `active` e `trialing` → `ACTIVE`; `past_due` → `PAST_DUE`, com a carência contada da **primeira** falha; `unpaid` e `paused` → `SUSPENDED`; `canceled` → `CANCELED`. Plano e ciclo vêm da `lookup_key`, e `current_period_end` do item da assinatura. Preço fora do catálogo deixa a conta como está.
+  - Uma falha da Stripe desfaz a gravação do evento e responde 503, para a Stripe reenviar.
+- **Travas (B12):** com `BILLING_ENABLED=true`, o backend recusa iniciar sem `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET`. Com `DEPLOYMENT_ENVIRONMENT=production`, só aceita chave live (`sk_live_` ou `rk_live_`); em qualquer outro ambiente, só chave de teste. Isso é mais estrito que o B12, que só proibia a chave de teste em produção.
+- **Pendências:**
+  - o teste que compara valores com `lib/plans.ts` (B4) fica para quando os preços forem criados por script, porque o backend não guarda valores, só as chaves;
+  - as telas (SC-033);
+  - a validação real em modo de teste, pelo responsável.
+- **Testes** (`mvnw clean verify` em 2026-10-27: 101 unitários e 170 de integração, todos passando; o 1 ignorado é a avaliação paga da SC-029):
+  - `BillingSafetyCheckTest`, com as travas e as chaves de preço;
+  - `StripeBillingIT`, com Postgres real e servidor falso da Stripe: Checkout pelo preço certo, cliente criado uma vez, retorno do navegador sem efeito, evento sem assinatura ou forjado recusado, ativação pelo evento assinado, reentrega sem nova consulta, segunda assinatura recusada, portal, carência mantida entre falhas, pagamento, cancelamento e nova assinatura, falha da Stripe deixando o evento para a reentrega, e corpo grande recusado.
 
 ## Fluxos
 

@@ -38,6 +38,8 @@ import tools.jackson.databind.json.JsonMapper;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
       "billing.enabled=true",
+      "billing.stripe.secret-key=sk_test_synthetic",
+      "billing.stripe.webhook-secret=whsec_synthetic",
       "orders.maintenance.enabled=false",
       "advisor.housekeeping.enabled=false"
     })

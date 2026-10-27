@@ -120,11 +120,16 @@ payments:
     enabled: ${PAYMENTS_RECONCILIATION_ENABLED:true}
     interval: PT1M
 billing:
-  # SC-031 (ADR-0017): plan limits, trial and account standing. Off until the Stripe integration
-  # (SC-032) lets owners pay; switching it on before that would lock every store at the trial's end.
+  # SC-031 (ADR-0017): plan limits, trial and account standing. Off by default; switching it on
+  # requires the Stripe keys below, so owners can pay before the trial ends (SC-032).
   enabled: ${BILLING_ENABLED:false}
   trial-days: ${BILLING_TRIAL_DAYS:14}
   grace-days: ${BILLING_GRACE_DAYS:7}
+  # SC-032 (ADR-0017 B11, B12): Stripe Billing. Required once billing is on; production takes only
+  # live keys and every other environment only test keys. Set in the environment panel, never here.
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
 advisor:
   # SC-025 (ADR-0016 A8, A11): the assistant is off by default. The quota counts questions per
   # store per calendar month (São Paulo); the cap stops every store once the platform's estimated

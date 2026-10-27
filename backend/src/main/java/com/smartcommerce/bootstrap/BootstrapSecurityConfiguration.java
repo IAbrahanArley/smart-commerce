@@ -48,7 +48,9 @@ public class BootstrapSecurityConfiguration {
                         "/api/public/stores/*/cart/quote",
                         "/api/public/stores/*/orders",
                         "/api/public/stores/*/orders/*/payment",
-                        "/api/public/webhooks/mercado-pago")
+                        "/api/public/webhooks/mercado-pago",
+                        // SC-032: Stripe subscription events (HMAC signature, ADR-0017 B6).
+                        "/api/public/webhooks/stripe")
                     .permitAll()
                     .anyRequest()
                     .denyAll())
@@ -148,6 +150,10 @@ public class BootstrapSecurityConfiguration {
                     .authenticated()
                     // SC-031: the signed-in owner's plan and limits (ADR-0017).
                     .requestMatchers(HttpMethod.GET, "/api/billing/account")
+                    .authenticated()
+                    // SC-032: hosted Checkout and customer portal of the owner's own account.
+                    .requestMatchers(
+                        HttpMethod.POST, "/api/billing/checkout", "/api/billing/portal")
                     .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/tenants")
                     .authenticated()

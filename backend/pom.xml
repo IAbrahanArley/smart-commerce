@@ -23,6 +23,12 @@
       <artifactId>anthropic-java</artifactId>
       <version>2.71.0</version>
     </dependency>
+    <!-- SC-032 (ADR-0017 B11, approved 2026-10-27): Stripe Billing for the platform subscription. -->
+    <dependency>
+      <groupId>com.stripe</groupId>
+      <artifactId>stripe-java</artifactId>
+      <version>34.0.0</version>
+    </dependency>
     <dependency>
       <groupId>org.jsoup</groupId>
       <artifactId>jsoup</artifactId>
