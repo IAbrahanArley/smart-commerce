@@ -52,11 +52,29 @@ function checkout(order, headers, response) {
   json(response, previous === undefined ? 201 : 200, { order: syntheticOrder, accessToken: previous === undefined ? orderToken : null, replayed: previous !== undefined, buyerEmail: "PRIVATE_BUYER_FIXTURE" });
 }
 
+// SC-045: the catalog API (SC-042) behind the new home, category, search and product pages.
+const menu = [{ name: "Camisetas", slug: "camisetas", children: [{ name: "Manga longa", slug: "manga-longa", children: [] }] }, { name: "Outlet", slug: "outlet", children: [] }];
+const card = { id, slug: "produto-publico", name: "Produto público de teste", brand: "Marca Ágil", price: "49.90", compareAtPrice: "62.40", discountPercent: 20, currency: "BRL", available: true, sku: "PRIVATE_SKU_FIXTURE", cost: "PRIVATE_COST_FIXTURE" };
+const soldOut = { ...card, id: nextId, slug: "outro-produto", name: "Outro produto publicado", brand: null, compareAtPrice: null, discountPercent: null, available: false };
+const facets = { categories: [{ slug: "manga-longa", name: "Manga longa", count: 1 }], brands: [{ slug: "agil", name: "Marca Ágil", count: 1 }],
+  prices: [{ min: "0.00", max: "50.00", count: 1 }, { min: "5000.00", max: null, count: 1 }], options: [{ name: "Tamanho", values: [{ value: "M", count: 2 }] }] };
+const noFacets = { categories: [], brands: [], prices: [], options: [] };
+const catalog = (overrides = {}) => ({ store, menu, category: null, search: null, sort: "recentes", page: 1, pageSize: 24, total: 2, products: [card, soldOut], facets, maxInstallments: 6, ...overrides });
+const camisetas = { name: "Camisetas", slug: "camisetas", path: [{ name: "Camisetas", slug: "camisetas" }] };
+
 const ROUTES = {
+  "/api/public/stores/loja-teste/catalog": () => catalog(),
+  "/api/public/stores/loja-teste/catalog?ordem=recentes": () => catalog(),
+  "/api/public/stores/loja-teste/catalog?categoria=camisetas": () => catalog({ category: camisetas, total: 30, products: [card] }),
+  "/api/public/stores/loja-teste/catalog?categoria=camisetas&marca=agil": () => catalog({ category: camisetas, total: 1, products: [card] }),
+  "/api/public/stores/loja-teste/catalog?q=produto": () => catalog({ search: "produto", sort: "relevancia", total: 1, products: [card], facets: noFacets }),
+  "/api/public/stores/loja-teste/catalog?q=nada": () => catalog({ search: "nada", sort: "relevancia", total: 0, products: [], facets: noFacets }),
+  "/api/public/stores/loja-teste/p/produto-publico": () => ({ movedTo: null, product: { store, product: { ...item, slug: "produto-publico", brand: { name: "Marca Ágil", slug: "agil" },
+    categoryPath: [{ name: "Camisetas", slug: "camisetas" }], compareAtPrice: "62.40", discountPercent: 20, variants: [{ ...item.variants[0], compareAtPrice: "62.40" }] }, related: [soldOut], maxInstallments: 6 } }),
+  "/api/public/stores/loja-teste/p/endereco-antigo": () => ({ movedTo: "produto-publico", product: null }),
+  "/api/public/stores/loja-vazia/catalog?ordem=recentes": () => ({ ...catalog({ menu: [], total: 0, products: [], facets: noFacets, maxInstallments: null }),
+    store: { name: "Loja vazia de teste", slug: "loja-vazia", profile: { contactEmail: "x@y.example\"><script>alert(1)</script>", whatsapp: "123", instagram: "a b", logo: false } } }),
   "/api/public/stores/loja-teste": () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], cost: "PRIVATE_COST_FIXTURE", sku: "PRIVATE_SKU_FIXTURE", quantity: 784321 }], categories, category: null, nextCursor: id }),
-  [`/api/public/stores/loja-teste?categoria=${categoryId}`]: () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [] }], categories, category: categoryId, nextCursor: id }),
-  [`/api/public/stores/loja-teste?after=${id}&categoria=${categoryId}`]: () => ({ ...store, products: [], categories, category: categoryId, nextCursor: null }),
-  [`/api/public/stores/loja-teste?after=${id}`]: () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], id: nextId, name: "Outro produto publicado", available: false }], categories, category: null, nextCursor: null }),
   [`/api/public/stores/loja-teste/products/${id}/images`]: () => ({ images: [{ id, alt: "Foto de teste", width: 300, height: 300 }] }),
   [`/api/public/stores/loja-teste/products/${id}`]: () => ({ store, product: item }),
   [`/api/public/stores/loja-variavel/products/${nextId}`]: () => ({ store: { ...store, slug: "loja-variavel" }, product: variantItem }),
@@ -103,7 +121,7 @@ export async function startUpstream() {
     if (url === `/api/public/stores/loja-teste/products/${id}/images/${nextId}/content`) {
       response.setHeader("Content-Type", "text/html"); return response.end("PRIVATE_UPSTREAM_ERROR_FIXTURE");
     }
-    if (url === "/api/public/stores/loja-indisponivel") return json(response, 503, { message: "PRIVATE_UPSTREAM_ERROR_FIXTURE" });
+    if (url.startsWith("/api/public/stores/loja-indisponivel")) return json(response, 503, { message: "PRIVATE_UPSTREAM_ERROR_FIXTURE" });
     if (ROUTES[url]) return json(response, 200, ROUTES[url]());
     json(response, 404, { message: "Não encontrado" });
   });

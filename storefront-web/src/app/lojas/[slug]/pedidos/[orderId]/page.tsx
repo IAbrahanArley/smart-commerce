@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { StoreHeader } from "@/components/store-header";
+import { StoreFrame } from "@/components/store-frame";
 import { OrderSteps } from "@/components/order-steps";
 import { Arrow } from "@/components/arrow";
 import { FocusNotice } from "@/components/focus-notice";
@@ -41,8 +41,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const order = await loadOrder(store.slug, orderId, token);
   const status = STATUS[order.status];
   return (
-    <>
-      <StoreHeader store={store} />
+    <StoreFrame store={store}>
       <main id="conteudo" className="page-width order-page" tabIndex={-1}>
         <nav className="breadcrumb" aria-label="Caminho de navegação">
           <Link href={`/lojas/${encodeURIComponent(store.slug)}`} prefetch={false}><Arrow back /> Voltar à loja</Link>
@@ -92,6 +91,6 @@ export default async function OrderPage({ params, searchParams }: Props) {
         </div>
         <StoreContacts store={store} />
       </main>
-    </>
+    </StoreFrame>
   );
 }

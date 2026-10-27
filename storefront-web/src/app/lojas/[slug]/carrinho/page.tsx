@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { FocusNotice } from "@/components/focus-notice";
-import { StoreHeader } from "@/components/store-header";
+import { StoreFrame } from "@/components/store-frame";
 import { Arrow } from "@/components/arrow";
 import { SubmitButton } from "@/components/submit-button";
 import { loadCatalog } from "@/lib/public-store";
@@ -39,8 +39,7 @@ export default async function CartPage({ params, searchParams }: Props) {
   // D6: the checkout link exists only when explicitly enabled and the whole cart can be bought.
   const canCheckout = checkoutConfigured() && quote !== null && quote.purchasable && quote.delivery.length > 0;
   return (
-    <>
-      <StoreHeader store={store} />
+    <StoreFrame store={store}>
       <main id="conteudo" className="page-width cart-page" tabIndex={-1}>
         <nav className="breadcrumb" aria-label="Caminho de navegação">
           <Link href={storeUrl} prefetch={false}><Arrow back /> Continuar comprando</Link>
@@ -76,7 +75,7 @@ export default async function CartPage({ params, searchParams }: Props) {
           </div>
         )}
       </main>
-    </>
+    </StoreFrame>
   );
 }
 

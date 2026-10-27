@@ -23,7 +23,17 @@ function matching(variants: PublicVariant[], values: string[]) {
 
 const QUANTITIES = Array.from({ length: 10 }, (_, index) => index + 1);
 
-export default function ProductOffer({ slug, product }: { slug: string; product: PublicProduct }) {
+/** Whole percent off, rounded down like the backend (ADR-0018 V3); exact cents, no floating point. */
+function percentOff(price: string, compareAt: string): number {
+  const now = BigInt(price.replace(".", "")), before = BigInt(compareAt.replace(".", ""));
+  return Number(((before - now) * BigInt(100)) / before);
+}
+
+// SC-045: compareAt holds the "compare at" price of each variant above its price; installments is
+// "em até N× no Mercado Pago" or null. Both optional, so the original product route is unchanged.
+export default function ProductOffer({ slug, product, compareAt = {}, installments = null }: {
+  slug: string; product: PublicProduct; compareAt?: Record<string, string>; installments?: string | null;
+}) {
   const [selected, setSelected] = useState(product.variants[0]?.id ?? "");
   const variant = product.variants.find(item => item.id === selected);
   const attributes = product.kind === "VARIABLE" ? attributesOf(product.variants) : null;
@@ -55,7 +65,10 @@ export default function ProductOffer({ slug, product }: { slug: string; product:
     </select></div> : null}
     <div aria-live="polite" aria-atomic="true">
       {product.kind === "VARIABLE" && attributes && variant ? <p className="selected-combination">Combinação escolhida: {variant.options.map(option => `${option.name}: ${option.value}`).join(" · ")}</p> : null}
-      <p className="price-label">Preço do produto</p><p className="detail-price">{formatBRL(variant?.price ?? product.price)}</p><p className="price-currency">Valor em reais</p><p className="offer-availability"><Availability available={variant?.available ?? product.available} /></p>
+      <p className="price-label">Preço do produto</p>
+      {variant && compareAt[variant.id] ? <p className="detail-compare"><s><span className="visually-hidden">De </span>{formatBRL(compareAt[variant.id])}</s> <span className="detail-discount">−{percentOff(variant.price, compareAt[variant.id])}%<span className="visually-hidden"> de desconto</span></span></p> : null}
+      <p className="detail-price">{variant && compareAt[variant.id] ? <span className="visually-hidden">por </span> : null}{formatBRL(variant?.price ?? product.price)}</p>
+      {installments ? <p className="detail-installments">{installments}</p> : <p className="price-currency">Valor em reais</p>}<p className="offer-availability"><Availability available={variant?.available ?? product.available} /></p>
     </div>
     {/* Only the selector and quantity are sent; the cart page shows prices quoted by the backend. */}
     <form action={addToCart} className="add-to-cart">

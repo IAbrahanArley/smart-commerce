@@ -359,6 +359,13 @@ A proposta começou com `#A9B0BA` nas bordas de controle (2,2:1, abaixo do 3:1 e
 
 **Evidência:** proposta visual em artefato privado do responsável (2026-10-27); contrastes calculados pela fórmula WCAG 2.x. Sem teste com leitor de tela, zoom ou Axe nesta etapa: isso entra na SC-048.
 
+**Implementação (SC-044 e SC-045, 2026-10-27):** a base acima está no `storefront-web` e substituiu a anterior. Os tokens `--store-*` existentes receberam os valores novos, então carrinho, checkout e pedido herdaram a paleta, a fonte e os raios sem reescrita. Entraram tokens novos: `--store-accent`, `--store-discount`, `--store-whatsapp`, `--store-strike`, `--store-link-hover`, `--store-band`, `--store-radius-large`, `--store-radius-pill` e `--store-font`. A Manrope vem do `next/font`, baixada no build e servida pela própria vitrine.
+- **Moldura de toda página da loja (`StoreFrame`):** cabeçalho com nome/logo, busca em pílula e carrinho com contador no destaque. Menu de categorias com `<details>` nativo (abre por teclado, sem JavaScript): barra com painéis a partir de 54rem e um painel único "Categorias" abaixo disso. Rodapé da loja (categorias e atendimento) e WhatsApp flutuante. A faixa da plataforma ("Loja criada com Smart Commerce", privacidade) fica abaixo, em todas as páginas.
+- **Card:** foto 4:5, selo de desconto ou "Esgotado", marca em versalete, nome, preço "de" riscado, preço e "em até N× no Mercado Pago".
+- **Categoria/busca:** caminho, título e contagem, ordenação em formulário GET com botão "Aplicar". Filtros como links (lateral a partir de 54rem, painel "Filtrar produtos" abaixo), chips para opções de variante, "Limpar filtros" e paginação numerada em pílula.
+- **Produto:** caminho pelas categorias, marca, preço "de" com selo, parcelamento, notas de entrega e pagamento, descrição e "Você também pode gostar".
+- **Ainda não entrou:** a faixa de aviso da loja, os banners e as seções configuráveis da home e o link "Acompanhar pedido" (SC-043 e SC-046). As vantagens da home também esperam a SC-043, porque o texto delas vem da configuração da loja.
+
 ## Conteúdo do produto autorizado
 
 **Ritmo das telas operacionais (2026-10-22).** O contêiner de página separa blocos irmãos por 24 px, usando os tokens existentes; grades internas conservam seu próprio gap. Filtros e navegação de competência usam superfícies e controles locais. Estados de carregamento, vazio e erro oferecem título, explicação e ação pertinente em painel reutilizável. Listas de estoque separam nome, variações e disponibilidade em linhas legíveis. Aplicação dos padrões existentes, sem mudança de identidade, cores, tipografia ou biblioteca.

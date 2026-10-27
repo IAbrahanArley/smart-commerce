@@ -3,7 +3,7 @@ import Link from "next/link";
 import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { StoreHeader } from "@/components/store-header";
+import { StoreFrame } from "@/components/store-frame";
 import { OrderSteps } from "@/components/order-steps";
 import { Arrow } from "@/components/arrow";
 import { CheckoutForm, type CheckoutOption } from "@/components/checkout-form";
@@ -33,8 +33,7 @@ export default async function CheckoutPage({ params }: Props) {
     return total ? [{ type: option.type, text: option.text, fee: option.fee, total }] : [];
   });
   return (
-    <>
-      <StoreHeader store={store} />
+    <StoreFrame store={store}>
       <main id="conteudo" className="page-width checkout-page" tabIndex={-1}>
         <nav className="breadcrumb" aria-label="Caminho de navegação">
           <Link href={cartUrl} prefetch={false}><Arrow back /> Voltar ao carrinho</Link>
@@ -70,6 +69,6 @@ export default async function CheckoutPage({ params }: Props) {
           </aside>
         </div>
       </main>
-    </>
+    </StoreFrame>
   );
 }
