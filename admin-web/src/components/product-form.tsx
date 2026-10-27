@@ -9,6 +9,7 @@ import VariantBuilder from "@/components/variant-builder";
 import StatusBadge from "@/components/status-badge";
 import { useConfirm } from "@/components/confirm-dialog";
 import ProductCategory from "@/components/product-category";
+import ProductStorefront from "@/components/product-storefront";
 
 type Fields = { name: string; sku: string; price: string; cost: string; descriptionHtml: string };
 type Errors = Partial<Record<keyof Fields | "variants", string>>;
@@ -159,6 +160,7 @@ export default function ProductForm({ tenantId, product, storePublished = false,
       <button type="button" disabled={busy || conflict || dirty} onClick={() => void publish()}>{busy ? "Aguarde a atualização…" : product.published ? "Ocultar produto" : "Publicar produto"}</button>
     </section> : null}
     {product ? <ProductCategory tenantId={tenantId} product={product} onSaved={onSaved} /> : null}
+    {product ? <ProductStorefront key={product.id} tenantId={tenantId} product={product} onSaved={onSaved} /> : null}
     {aside}
   </aside></> : <>{form}{dialog}</>;
 }

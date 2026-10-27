@@ -33,6 +33,18 @@ public class ProductVariant {
   @Column(name = "combination_key", columnDefinition = "text")
   private String combinationKey;
 
+  // SC-041: display-only "compare at" price, written only by ProductStorefrontRepository.
+  @Column(
+      name = "compare_at_price",
+      columnDefinition = "numeric",
+      insertable = false,
+      updatable = false)
+  private BigDecimal compareAtPrice;
+
+  public BigDecimal compareAtPrice() {
+    return compareAtPrice;
+  }
+
   protected ProductVariant() {}
 
   public ProductVariant(UUID id, UUID tenant, UUID product, VariantValues input) {

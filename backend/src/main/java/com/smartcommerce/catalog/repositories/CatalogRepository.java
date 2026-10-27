@@ -40,7 +40,7 @@ public class CatalogRepository {
 
   public Product create(
       UUID actor, UUID tenant, UUID store, UUID id, ProductValues input, Instant now) {
-    return create(actor, tenant, store, id, input, now, new ProductDetails("", null, null));
+    return create(actor, tenant, store, id, input, now, new ProductDetails("", null, null), null);
   }
 
   public Product create(
@@ -50,7 +50,8 @@ public class CatalogRepository {
       UUID id,
       ProductValues input,
       Instant now,
-      ProductDetails details) {
+      ProductDetails details,
+      String slug) {
     UUID authorizedStore = requireAccess(actor, tenant);
     if (!authorizedStore.equals(store)) throw new CatalogPersistenceException(Reason.MISSING);
     Product product =
@@ -69,6 +70,7 @@ public class CatalogRepository {
     product.initializeDetails(
         details.descriptionHtml() == null ? "" : details.descriptionHtml(),
         details.kind() == null ? "SIMPLE" : details.kind().name());
+    product.initializeSlug(slug);
     entities.persist(product);
     entities.flush();
     return product;

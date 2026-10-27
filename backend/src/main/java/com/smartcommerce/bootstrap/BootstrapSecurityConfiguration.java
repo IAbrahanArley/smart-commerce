@@ -160,9 +160,11 @@ public class BootstrapSecurityConfiguration {
                     .requestMatchers(HttpMethod.GET, "/api/tenants/*/fulfillment")
                     .authenticated()
                     // MVP block 1c: product categories (OWNER checked in the service).
-                    .requestMatchers(HttpMethod.GET, "/api/tenants/*/categories")
+                    .requestMatchers(
+                        HttpMethod.GET, "/api/tenants/*/categories", "/api/tenants/*/brands")
                     .authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/tenants/*/categories")
+                    .requestMatchers(
+                        HttpMethod.POST, "/api/tenants/*/categories", "/api/tenants/*/brands")
                     .authenticated()
                     .requestMatchers(
                         HttpMethod.PUT,
@@ -171,9 +173,13 @@ public class BootstrapSecurityConfiguration {
                         "/api/tenants/*/categories/*/slug",
                         "/api/tenants/*/categories/*/placement",
                         "/api/tenants/*/categories/*/publication",
-                        "/api/tenants/*/products/*/category")
+                        "/api/tenants/*/products/*/category",
+                        // SC-041: brand, address and "compare at" prices of a product.
+                        "/api/tenants/*/products/*/storefront",
+                        "/api/tenants/*/brands/*")
                     .authenticated()
-                    .requestMatchers(HttpMethod.DELETE, "/api/tenants/*/categories/*")
+                    .requestMatchers(
+                        HttpMethod.DELETE, "/api/tenants/*/categories/*", "/api/tenants/*/brands/*")
                     .authenticated()
                     // MVP block 1b: store name, contacts and logo (OWNER checked in the query).
                     .requestMatchers(

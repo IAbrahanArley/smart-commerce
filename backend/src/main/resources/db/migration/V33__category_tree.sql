@@ -14,12 +14,11 @@ ALTER TABLE catalog_category
     ADD CONSTRAINT catalog_category_not_own_parent CHECK (parent_id IS NULL OR parent_id <> id);
 
 -- Slug from the name: Portuguese accents folded, anything else becomes a hyphen.
-UPDATE catalog_category SET slug = coalesce(nullif(btrim(regexp_replace(
+UPDATE catalog_category SET slug = coalesce(nullif(rtrim(left(btrim(regexp_replace(
     translate(lower(name),
         'áàâãäåçéèêëíìîïñóòôõöúùûüýÿ',
         'aaaaaaceeeeiiiinooooouuuuyy'),
-    '[^a-z0-9]+', '-', 'g'), '-'), ''), 'categoria');
-UPDATE catalog_category SET slug = left(slug, 60);
+    '[^a-z0-9]+', '-', 'g'), '-'), 60), '-'), ''), 'categoria');
 
 -- Two names that fold to the same slug in one store: the later ones get the start of their id
 -- (an existing slug ending in those 8 hex characters is not a realistic name).

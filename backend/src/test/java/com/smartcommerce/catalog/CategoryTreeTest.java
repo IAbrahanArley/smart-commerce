@@ -3,8 +3,8 @@ package com.smartcommerce.catalog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.smartcommerce.catalog.domain.CategorySlug;
 import com.smartcommerce.catalog.domain.CategoryTree;
+import com.smartcommerce.catalog.domain.UrlSlug;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -55,19 +55,20 @@ class CategoryTreeTest {
 
   @Test
   void derivesSlugsFromNamesAndAvoidsTakenOnes() {
-    assertThat(CategorySlug.from("Óculos & Viseiras", taken -> false).value())
+    assertThat(UrlSlug.from("Óculos & Viseiras", "categoria", taken -> false).value())
         .isEqualTo("oculos-viseiras");
-    assertThat(CategorySlug.from("  ", taken -> false).value()).isEqualTo("categoria");
+    assertThat(UrlSlug.from("  ", "categoria", taken -> false).value()).isEqualTo("categoria");
     Set<String> taken = Set.of("camisetas", "camisetas-2");
-    assertThat(CategorySlug.from("Camisetas", taken::contains).value()).isEqualTo("camisetas-3");
-    assertThat(CategorySlug.from("x".repeat(100), t -> false).value()).hasSize(60);
+    assertThat(UrlSlug.from("Camisetas", "categoria", taken::contains).value())
+        .isEqualTo("camisetas-3");
+    assertThat(UrlSlug.from("x".repeat(100), "categoria", t -> false).value()).hasSize(60);
   }
 
   @Test
   void acceptsOnlyWellFormedSlugs() {
-    assertThat(CategorySlug.parse("  Moda-Praia ").value()).isEqualTo("moda-praia");
+    assertThat(UrlSlug.parse("  Moda-Praia ").value()).isEqualTo("moda-praia");
     for (String invalid : new String[] {"", "moda praia", "-moda", "moda--praia", "ç", "a/b"})
-      assertThatThrownBy(() -> CategorySlug.parse(invalid))
+      assertThatThrownBy(() -> UrlSlug.parse(invalid))
           .as(invalid)
           .isInstanceOf(IllegalArgumentException.class);
   }

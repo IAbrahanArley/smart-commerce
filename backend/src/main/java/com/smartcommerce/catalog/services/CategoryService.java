@@ -1,9 +1,9 @@
 package com.smartcommerce.catalog.services;
 
 import com.smartcommerce.catalog.domain.CategoryName;
-import com.smartcommerce.catalog.domain.CategorySlug;
 import com.smartcommerce.catalog.domain.CategorySummary;
 import com.smartcommerce.catalog.domain.CategoryTree;
+import com.smartcommerce.catalog.domain.UrlSlug;
 import com.smartcommerce.catalog.dto.response.ProductView;
 import com.smartcommerce.catalog.exceptions.CatalogPersistenceException;
 import com.smartcommerce.catalog.exceptions.CategoryException;
@@ -69,8 +69,9 @@ public class CategoryService {
             if (!tree.contains(parent)) throw missing();
             if (tree.depth(parent) >= CategoryTree.MAX_DEPTH) throw tooDeep();
           }
-          CategorySlug slug =
-              CategorySlug.from(name.name(), taken -> categories.slugTaken(tenant, taken, null));
+          UrlSlug slug =
+              UrlSlug.from(
+                  name.name(), "categoria", taken -> categories.slugTaken(tenant, taken, null));
           try {
             categories.create(
                 UUID.randomUUID(),
@@ -110,7 +111,7 @@ public class CategoryService {
   /** Changes the storefront address of the category; renaming never changes it by itself. */
   @Transactional
   public List<CategorySummary> changeSlug(UUID actor, UUID tenant, UUID category, String rawSlug) {
-    CategorySlug slug = CategorySlug.parse(rawSlug);
+    UrlSlug slug = UrlSlug.parse(rawSlug);
     return owned(
         actor,
         tenant,

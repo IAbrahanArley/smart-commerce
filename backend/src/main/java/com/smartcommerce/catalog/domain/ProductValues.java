@@ -22,7 +22,8 @@ public record ProductValues(String name, String sku, BigDecimal price, BigDecima
         name, sku, amount(price, true), cost == null ? null : amount(cost, false));
   }
 
-  private static BigDecimal amount(String input, boolean positive) {
+  /** A BRL amount as a decimal string with up to 2 places; zero only when not {@code positive}. */
+  public static BigDecimal amount(String input, boolean positive) {
     if (input == null || !input.matches("[0-9]{1,17}(?:\\.[0-9]{1,2})?")) {
       throw new IllegalArgumentException("Invalid BRL amount");
     }
