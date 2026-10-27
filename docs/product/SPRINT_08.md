@@ -8,7 +8,7 @@ Data: 2026-10-27. **Prioridade aprovada pelo responsável em 2026-10-27: esta sp
 
 **Dependências:**
 - Parte do que existe no `main` (blocos 1b e 1c do [RELEASE_PLAN.md](RELEASE_PLAN.md)): categorias planas, dados da loja com logo e contatos, card de produto do Dashtail. As tarefas abaixo evoluem isso, sem refazer.
-- Posição em relação à entrega do MVP: a confirmar (o RELEASE_PLAN deixa as evoluções da vitrine para depois da entrega).
+- **Faz parte da entrega do MVP** (decisão do responsável em 2026-10-27, como exceção): entra como bloco 1f do [RELEASE_PLAN.md](RELEASE_PLAN.md), antes da entrega em produção.
 - Nenhuma da Sprint 7. A SC-018 (taxa e liberação do Mercado Pago) continua pendente e não bloqueia.
 - A validação real do Mercado Pago continua pendente; a SC-042 só acrescenta o máximo de parcelas à preferência.
 

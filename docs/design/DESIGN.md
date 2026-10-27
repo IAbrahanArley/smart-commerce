@@ -343,7 +343,7 @@ Aprovada pelo responsável em 2026-10-27 (decisão V12 do [ADR-0018](../architec
 | Divisores e bordas decorativas | `#E3E6EA` | decorativo |
 | Superfícies (busca, fotos sem imagem, rodapé) | `#F3F4F6`, `#F1F3F5`, `#F5F6F8` | — |
 
-A proposta usava `#A9B0BA` nas bordas de controle (2,2:1, abaixo do 3:1 exigido para componentes); o valor aprovado para implementação é `#7A828D`. Variante esgotada usa texto atenuado, borda tracejada e risco, mas a informação vem também no nome acessível ("GG, esgotado") e o botão fica desabilitado.
+A proposta começou com `#A9B0BA` nas bordas de controle (2,2:1, abaixo do 3:1 exigido para componentes); o responsável aprovou `#7A828D` em 2026-10-27, já aplicado à proposta visual. Variante esgotada usa texto atenuado, borda tracejada e risco, mas a informação vem também no nome acessível ("GG, esgotado") e o botão fica desabilitado.
 
 **Geometria:** busca, botões de ação, chips e paginação em pílula; cards de produto e controles com 10–12px; banner e foto principal com 16px. Foto de produto em proporção 4:5. Alvo mínimo de 44px em tudo que é clicável, inclusive miniaturas e quantidade.
 

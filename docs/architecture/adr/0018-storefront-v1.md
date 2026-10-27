@@ -43,7 +43,7 @@ Regras comuns: loja resolvida só pelo slug publicado; toda consulta pública re
 ## Consequências e riscos
 
 - **Escopo:** é a maior mudança da vitrine desde o ADR-0010. Fatiado para que cada tarefa entregue algo publicável.
-- **Ordem das sprints:** a Sprint 7 passa para depois desta. A posição em relação à entrega do MVP ([RELEASE_PLAN.md](../../product/RELEASE_PLAN.md), que deixa "evoluções da vitrine" para depois da entrega) ainda precisa ser confirmada pelo responsável.
+- **Ordem das sprints:** a Sprint 7 passa para depois desta. Por decisão do responsável (2026-10-27), **a Sprint 8 faz parte da entrega do MVP**, como exceção: a vitrine no padrão de loja grande não tinha entrado no [RELEASE_PLAN.md](../../product/RELEASE_PLAN.md) e é o que vende o produto.
 - **Identificadores:** SC-031 a SC-033 já são usados tanto pela cobrança (Stripe) quanto pela Sprint 7; esta sprint usa SC-041 a SC-048, livres. A SC-018 (taxa e liberação do Mercado Pago) continua pendente e não bloqueia a Sprint 8.
 - **Multi-tenant:** categorias, marcas, banners e páginas são dados por loja; facetas e "mais vendidos" são agregações e precisam de testes A/B específicos (contagem de outra loja nunca aparece).
 - **Cache (V9):** risco de mostrar conteúdo oculto por até 60 s e de vazar entre lojas se a chave de cache não incluir o slug. Teste de chave e de invalidação obrigatórios.
