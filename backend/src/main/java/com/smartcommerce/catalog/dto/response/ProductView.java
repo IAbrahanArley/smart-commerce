@@ -19,4 +19,6 @@ public record ProductView(
     UUID coverImageId,
     String coverImageAlt,
     int imageCount,
-    UUID categoryId) {}
+    UUID categoryId,
+    UUID brandId,
+    String slug) {}

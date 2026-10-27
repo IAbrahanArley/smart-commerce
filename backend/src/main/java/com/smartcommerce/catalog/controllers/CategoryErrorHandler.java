@@ -15,7 +15,7 @@ public final class CategoryErrorHandler {
   ResponseEntity<Map<String, String>> category(CategoryException exception) {
     return switch (exception.reason()) {
       case MISSING -> ResponseEntity.status(404).body(Map.of("message", exception.getMessage()));
-      case NAME_CONFLICT, LIMIT ->
+      case NAME_CONFLICT, SLUG_CONFLICT, LIMIT, DEPTH, CYCLE, HAS_CHILDREN ->
           ResponseEntity.status(409)
               .body(Map.of("message", exception.getMessage(), "code", exception.reason().name()));
     };
@@ -28,7 +28,11 @@ public final class CategoryErrorHandler {
   })
   ResponseEntity<Map<String, String>> invalid() {
     return ResponseEntity.badRequest()
-        .body(Map.of("message", "Informe um nome de categoria com até 60 caracteres."));
+        .body(
+            Map.of(
+                "message",
+                "Confira os dados: nome com até 60 caracteres, endereço com letras minúsculas,"
+                    + " números e hífens."));
   }
 
   @ExceptionHandler(DataAccessException.class)

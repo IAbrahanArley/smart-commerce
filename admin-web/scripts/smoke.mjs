@@ -13,7 +13,8 @@ import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outc
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
 import { legalDraft, operatorText, updatedText } from "../src/lib/legal.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
-import { categoryError, categoryName, categoryNameError, parseCategories, productCountText } from "../src/lib/categories.ts";
+import { brandError, compareAtInput, parseBrands, storefrontError } from "../src/lib/brands.ts";
+import { categoryError, categoryName, categoryNameError, categoryPath, categorySlugError, parentOptions, parseCategories, productCountText } from "../src/lib/categories.ts";
 import { instagramHandle, logoFileError, profileErrors, profileFields, profilePayload, whatsappText } from "../src/lib/store-profile.ts";
 
 for (const path of ["/conta", "/lojas", "/lojas/uuid/despesas"]) assert.equal(isProtectedPath(path), true, path);
@@ -37,8 +38,30 @@ assert.equal(categoryNameError("  Camisetas   de  verão "), null); assert.equal
 assert.equal(categoryNameError("   "), "Informe o nome da categoria.");
 assert.equal(categoryNameError("Linha\nquebrada"), "Use uma única linha.");
 assert.equal(categoryNameError("a".repeat(61)), "Use até 60 caracteres.");
-assert.deepEqual(parseCategories([{ id: "c-1", name: "Camisetas", products: 2, extra: true }]), [{ id: "c-1", name: "Camisetas", products: 2 }]);
-assert.equal(parseCategories([{ id: "c-1", name: "Camisetas" }]), null);
+const category = (id, name, parentId, depth) => ({ id, name, slug: id, parentId, depth, position: 0, published: true, products: 2 });
+assert.deepEqual(parseCategories([{ ...category("c-1", "Camisetas", null, 1), extra: true }]), [category("c-1", "Camisetas", null, 1)]);
+assert.equal(parseCategories([{ id: "c-1", name: "Camisetas", products: 2 }]), null);
+assert.equal(parseCategories([category("c-1", "Fundo", null, 4)]), null);
+// SC-041: the tree of up to 3 levels, its paths and the parents a category can move under.
+const tree = [category("f", "Feminino", null, 1), category("r", "Roupas", "f", 2), category("c", "Camisetas", "r", 3), category("o", "Outlet", null, 1)];
+assert.equal(categoryPath(tree, "c"), "Feminino › Roupas › Camisetas");
+assert.deepEqual(parentOptions(tree).map(item => item.id), ["f", "r", "o"]);
+assert.deepEqual(parentOptions(tree, "r").map(item => item.id), ["f", "o"]);
+assert.deepEqual(parentOptions(tree, "f").map(item => item.id), []);
+assert.equal(categorySlugError(" Moda-Praia "), null);
+assert.match(categorySlugError("moda praia"), /hífens/); assert.match(categorySlugError(""), /Informe/);
+assert.match(categoryError(409, "DEPTH"), /3 níveis/); assert.match(categoryError(409, "HAS_CHILDREN"), /subcategorias/);
+// SC-041: brands and the product "Vitrine" card.
+assert.deepEqual(parseBrands([{ id: "b-1", name: "Ágil", slug: "agil", products: 1, extra: 1 }]), [{ id: "b-1", name: "Ágil", slug: "agil", products: 1 }]);
+assert.equal(parseBrands([{ id: "b-1", name: "Ágil" }]), null);
+assert.deepEqual(compareAtInput("", "199.90"), { value: null });
+assert.deepEqual(compareAtInput("249,9", "199.90"), { value: "249.90" });
+assert.match(compareAtInput("199,90", "199.90").error, /maior/);
+assert.match(compareAtInput("0", "199.90").error, /reais/);
+assert.match(compareAtInput("abc", "199.90").error, /reais/);
+assert.deepEqual(compareAtInput("1000000000000000.00", "999999999999999.99"), { value: "1000000000000000.00" });
+assert.match(brandError(409, "NAME_CONFLICT"), /Já existe/); assert.match(storefrontError(409, "SLUG_CONFLICT"), /endereço/);
+assert.match(storefrontError(400, "COMPARE_AT_NOT_ABOVE"), /maior/);
 assert.equal(parseCategories({}), null);
 assert.equal(productCountText(0), "Nenhum produto"); assert.equal(productCountText(1), "1 produto"); assert.equal(productCountText(3), "3 produtos");
 assert.match(categoryError(409, "NAME_CONFLICT"), /Já existe/); assert.match(categoryError(409, "LIMIT"), /50 categorias/);
@@ -324,6 +347,7 @@ try {
     ["/lojas/00000000-0000-0000-0000-000000000000/pedidos/00000000-0000-0000-0000-000000000001", "Carregando pedido…", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Carregando catálogo…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/categorias", "Categorias", "Carregando categorias…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/marcas", "Marcas", "Carregando marcas…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/novo", "Novo produto", 'aria-label="Navegação da loja"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001", "Editar produto", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001/estoque", "Estoque do produto", 'aria-label="Trilha de navegação"'],

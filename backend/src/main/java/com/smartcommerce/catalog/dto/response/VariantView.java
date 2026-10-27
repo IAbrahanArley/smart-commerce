@@ -11,4 +11,5 @@ public record VariantView(
     String cost,
     String currency,
     long version,
-    List<VariantOption> options) {}
+    List<VariantOption> options,
+    String compareAtPrice) {}

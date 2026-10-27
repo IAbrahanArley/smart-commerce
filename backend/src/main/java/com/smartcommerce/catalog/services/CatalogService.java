@@ -21,16 +21,19 @@ public class CatalogService {
   private final VariantRepository variants;
   private final ProductImageRepository images;
   private final BillingService billing;
+  private final ProductStorefrontRepository storefront;
 
   public CatalogService(
       CatalogRepository products,
       VariantRepository variants,
       ProductImageRepository images,
-      BillingService billing) {
+      BillingService billing,
+      ProductStorefrontRepository storefront) {
     this.products = products;
     this.images = images;
     this.variants = variants;
     this.billing = billing;
+    this.storefront = storefront;
   }
 
   @Transactional
@@ -89,7 +92,13 @@ public class CatalogService {
                   input,
                   Instant.now(),
                   new ProductDetails(
-                      ProductDescription.sanitize(details.descriptionHtml()), kind, null));
+                      ProductDescription.sanitize(details.descriptionHtml()), kind, null),
+                  // SC-041: the storefront address comes from the name; editable later.
+                  UrlSlug.from(
+                          input.name(),
+                          "produto",
+                          taken -> storefront.slugTaken(tenant, taken, null))
+                      .value());
           for (var value : inputs)
             variants.create(
                 tenant, p.id(), kind == ProductKind.SIMPLE ? p.id() : UUID.randomUUID(), value);
@@ -317,12 +326,15 @@ public class CatalogService {
                         v.cost() == null ? null : money(v.cost()),
                         v.currency(),
                         v.version(),
-                        VariantValues.decode(v.optionsJson())))
+                        VariantValues.decode(v.optionsJson()),
+                        v.compareAtPrice() == null ? null : money(v.compareAtPrice())))
             .toList(),
         photos.coverId(),
         photos.coverAlt(),
         photos.count(),
-        p.categoryId());
+        p.categoryId(),
+        p.brandId(),
+        p.slug());
   }
 
   private static String money(BigDecimal value) {

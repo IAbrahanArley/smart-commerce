@@ -62,6 +62,27 @@ public class Product {
     return categoryId;
   }
 
+  // SC-041: set once on creation; later changes go through ProductStorefrontRepository.
+  @Column(name = "slug", updatable = false)
+  private String slug;
+
+  // SC-041: written only by ProductStorefrontRepository, like the category.
+  @Column(name = "brand_id", insertable = false, updatable = false)
+  private UUID brandId;
+
+  public String slug() {
+    return slug;
+  }
+
+  public UUID brandId() {
+    return brandId;
+  }
+
+  /** The storefront address chosen by the service before the product is first saved. */
+  public void initializeSlug(String slug) {
+    this.slug = slug;
+  }
+
   public String descriptionHtml() {
     return descriptionHtml;
   }

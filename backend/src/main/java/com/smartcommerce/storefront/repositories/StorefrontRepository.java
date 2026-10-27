@@ -91,7 +91,7 @@ public class StorefrontRepository {
                 """
                 SELECT c.id,c.name FROM store s
                 JOIN catalog_category c ON c.store_id=s.id AND c.tenant_id=s.tenant_id
-                WHERE s.slug=:slug AND s.status='PUBLISHED' AND EXISTS (
+                WHERE s.slug=:slug AND s.status='PUBLISHED' AND c.published AND EXISTS (
                   SELECT 1 FROM catalog_product p
                   WHERE p.category_id=c.id AND p.tenant_id=c.tenant_id AND p.published)
                 ORDER BY c.name_key
@@ -112,7 +112,11 @@ public class StorefrontRepository {
             .createNativeQuery(
                 PRODUCTS
                     + (after == null ? "" : " AND p.id>:after")
-                    + (category == null ? "" : " AND p.category_id=:category")
+                    + (category == null
+                        ? ""
+                        // A hidden category (SC-041) filters nothing in: its products stay public.
+                        : " AND p.category_id=:category AND EXISTS (SELECT 1 FROM catalog_category c"
+                            + " WHERE c.id=p.category_id AND c.tenant_id=p.tenant_id AND c.published)")
                     + " ORDER BY p.id")
             .setParameter("slug", slug)
             .setParameter("now", utc(now))

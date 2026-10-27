@@ -1,5 +1,9 @@
 export type VariantOption = { name: string; value: string };
-export type ProductVariant = { id: string; sku: string; price: string; cost: string | null; currency: "BRL"; version: number; options: VariantOption[] };
+export type ProductVariant = {
+  id: string; sku: string; price: string; cost: string | null; currency: "BRL"; version: number; options: VariantOption[];
+  /** SC-041: display-only "compare at" price; absent in older responses. */
+  compareAtPrice?: string | null;
+};
 export type VariantDraft = { sku: string; price: string; cost: string; options: VariantOption[] };
 export type Product = {
   id: string;
@@ -18,6 +22,9 @@ export type Product = {
   imageCount: number;
   /** MVP block 1c: null when the product has no category. */
   categoryId: string | null;
+  /** SC-041: brand and storefront address; absent in older responses. */
+  brandId?: string | null;
+  slug?: string | null;
 };
 
 export const MAX_PRODUCT_PHOTOS = 6;
