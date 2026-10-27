@@ -29,6 +29,9 @@ Assinatura SaaS paga pelo lojista; pagamentos das compras são processados para 
 9. IA: agente consultivo read-only sobre métricas auditáveis, com explicações e sugestões; sem movimentar dinheiro.
 10. Configurações básicas da loja: nome, logo, contatos, política de frete e disponibilidade.
 
+## Evolução aprovada após o MVP (Sprint 7)
+Aprovada em 2026-10-26 ([ADR-0017](../architecture/adr/0017-cash-payables-receivables.md)): funcionário da loja (operador de caixa); contas financeiras com sessão de caixa, sangria e suprimento; contas a pagar; contas a receber e crediário; venda presencial registrada à mão ou por planilha, sem PDV, baixando o mesmo estoque da vitrine; livro de vendas online + loja física; fluxo de caixa projetado.
+
 ## Fora do MVP
 Emissão fiscal, contabilidade oficial, cálculo tributário automático, split de pagamento, integração de frete nacional, múltiplos adquirentes, marketplace unificado, ERP completo, campanhas automáticas, recomendação autônoma de preços e domínio personalizado automático.
 
