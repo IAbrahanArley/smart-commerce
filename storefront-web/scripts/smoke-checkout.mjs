@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { forwardingSecret } from "./smoke-units.mjs";
-import { checkoutUrl, id, orderId, orderReads, orderRequests, orderToken, paymentReply, paymentRequests, startNext } from "./smoke-upstream.mjs";
+import { checkoutUrl, id, lookupRequests, orderId, orderReads, orderRequests, orderToken, paymentReply, paymentRequests, startNext } from "./smoke-upstream.mjs";
 
 const text = async response => (await response.text()).replaceAll("<!-- -->", "");
 const hiddenValue = (html, name) => html.match(new RegExp(`name="${name}" value="([^"]*)"`))?.[1];
@@ -17,6 +17,11 @@ export async function checkoutSmoke({ base, page, cartCookie, port, upstreamPort
   const checkout = await page("/lojas/loja-teste/checkout", buyable);
   assert.equal(checkout.response.status, 200);
   assert.match(checkout.html, /<h1>Finalizar pedido<\/h1>/);
+  // SC-046: reduced frame in the checkout: no search, category menu or cart link; contact in sight.
+  assert.ok(!checkout.html.includes('id="store-search"'), "Checkout sem busca.");
+  assert.ok(!checkout.html.includes('aria-label="Categorias"'), "Checkout sem menu.");
+  assert.ok(!checkout.html.includes('class="cart-link"'), "Checkout sem atalho do carrinho.");
+  assert.match(checkout.html, /class="checkout-header-contact"/);
   assert.match(checkout.html, /Retirar na loja/);
   assert.match(checkout.html, /Frete R\$\s12,50 · Total R\$\s112,30/);
   assert.match(checkout.html, /Sem custo de entrega · Total R\$\s99,80/);
@@ -159,6 +164,33 @@ export async function checkoutSmoke({ base, page, cartCookie, port, upstreamPort
     const missing = await page(path, cookie);
     assert.match(missing.html, /Página não encontrada/, `${path} ${cookie ? "com cookie" : "sem cookie"}`);
   }
+
+  // SC-046: "Acompanhar pedido" by number and e-mail, no JavaScript; never offers payment.
+  const lookupPage = await page("/lojas/loja-teste/acompanhar-pedido", undefined);
+  assert.equal(lookupPage.response.status, 200);
+  assert.match(lookupPage.html, /<h1>Acompanhar pedido<\/h1>/);
+  const lookupFields = [...lookupPage.html.matchAll(/<input type="hidden" name="(\$ACTION_[^"]+)"(?: value="([^"]*)")?/g)].map(match => [match[1], decode(match[2] ?? "")]);
+  assert.ok(lookupFields.length > 0, "Consulta deve funcionar sem JavaScript pela server action.");
+  const lookupPost = async (fields, headers = {}) => {
+    const form = new FormData();
+    for (const [name, value] of lookupFields) form.set(name, value);
+    for (const [name, value] of Object.entries({ slug: "loja-teste", ...fields })) form.set(name, value);
+    return text(await fetch(`${base}/lojas/loja-teste/acompanhar-pedido`, { method: "POST", body: form, redirect: "manual", headers: { Origin: base, ...headers } }));
+  };
+  const lookupsBefore = lookupRequests.length;
+  const badLookup = await lookupPost({ number: "abc", email: "sem-arroba" });
+  assert.match(badLookup, /Informe o número do pedido/);
+  assert.match(badLookup, /id="lookup-email"[^>]*aria-invalid="true"/);
+  assert.equal(lookupRequests.length, lookupsBefore, "Dados inválidos não chegam ao backend.");
+  const found = await lookupPost({ number: "#7", email: "  pessoa@example.test " });
+  assert.match(found, /Pedido nº 7: Aguardando pagamento/);
+  assert.match(found, /Para pagar, use o navegador em que o pedido foi feito/);
+  assert.ok(!found.includes("Ir para o pagamento"), "Consulta por e-mail não oferece pagamento.");
+  assert.ok(!found.includes("PRIVATE_BUYER_FIXTURE"), "Consulta não mostra dados do comprador.");
+  assert.deepEqual(lookupRequests.at(-1), { number: "7", email: "pessoa@example.test", ip: undefined });
+  assert.ok(!lookupRequests.some(entry => entry.email === undefined), "E-mail vai no corpo, nunca na URL.");
+  assert.match(await lookupPost({ number: "8", email: "pessoa@example.test" }), /Não encontramos um pedido com esse número e esse e-mail/);
+  assert.match(await lookupPost({ number: "7", email: "limitado@example.test" }), /Muitas tentativas de consulta/);
 
   // A visitor-supplied X-Forwarded-For must not become the signed IP (the per-IP limit would be bypassed).
   await checkoutPost({ ...buyer, name: "Ip Forjado", requestId: "22222222-2222-4222-8222-222222222222" }, { headers: { "X-Forwarded-For": "203.0.113.99" } });

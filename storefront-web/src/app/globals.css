@@ -509,3 +509,35 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
   .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--store-space-6) var(--store-space-4); }
   .card-price { font-size: 1rem; }
 }
+
+/* SC-046: reduced checkout frame, side summary, order tracking. */
+.checkout-header { border-bottom: 1px solid var(--store-divider); }
+.checkout-header .header-main { justify-content: space-between; }
+.checkout-header-contact { margin: 0; font-size: 0.875rem; }
+.checkout-header-contact a { font-weight: 700; display: inline-flex; align-items: center; min-height: 44px; }
+.checkout-header-help { color: var(--store-secondary); }
+.checkout-footer { padding-block: var(--store-space-6); }
+.checkout-footer-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--store-space-2) var(--store-space-6); }
+.checkout-footer-links a { display: inline-flex; align-items: center; min-height: 44px; }
+.cart-summary { border: 1px solid var(--store-divider); }
+@media (min-width: 64rem) { .checkout-layout > .cart-summary { position: sticky; top: var(--store-space-6); } }
+.lookup-intro { max-width: 40rem; color: var(--store-secondary); }
+.lookup-form { max-width: 28rem; margin-top: var(--store-space-6); }
+.lookup-result { margin-top: var(--store-space-6); }
+.lookup-result:focus { outline: none; }
+.lookup-result:focus-visible { outline: 3px solid var(--store-focus); outline-offset: 4px; }
+@media (max-width: 40rem) {
+  .track-link .shortcut-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .track-link { min-width: 44px; justify-content: center; }
+}
+.cart-line-photo { width: 5.5rem; flex: none; }
+.cart-line-photo .product-cover { aspect-ratio: 4 / 5; border-radius: var(--store-radius-control); overflow: hidden; background: var(--store-muted-background); }
+.cart-line-photo .product-cover img { width: 100%; height: 100%; object-fit: cover; }
+.cart-line-photo .image-unavailable { margin: 0; padding: var(--store-space-2); font-size: 0.75rem; text-align: center; }
+.cart-line-info { flex: 1; }
+@media (max-width: 40rem) {
+  .cart-line { flex-direction: row; flex-wrap: wrap; }
+  .cart-line-photo { width: 4.5rem; }
+  .cart-line-info { flex: 1 1 0; }
+  .cart-line-actions { flex-basis: 100%; }
+}

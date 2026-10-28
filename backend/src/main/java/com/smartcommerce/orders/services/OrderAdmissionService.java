@@ -26,6 +26,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OrderAdmissionService {
   static final int MAX_ATTEMPTS = 20;
+
+  /** "Acompanhar pedido" (SC-046): attempts per client address and per order number, per hour. */
+  static final int MAX_LOOKUPS_PER_IP = 20;
+
+  static final int MAX_LOOKUPS_PER_ORDER = 10;
   private static final Duration WINDOW = Duration.ofHours(1);
   private final OrderRateLimitRepository limits;
   private final Clock clock;
@@ -45,13 +50,32 @@ public class OrderAdmissionService {
       throw new OrderException(OrderException.Reason.RATE_LIMITED);
   }
 
+  /**
+   * Counts one order lookup for the client address and for the store order number, whether the
+   * order exists or not, so the limit itself never tells an existing number from a missing one.
+   */
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void admitLookup(String clientIp, String slug, long number) {
+    Instant now = ReservationPolicy.now(clock);
+    limits.deleteExpired(now);
+    int byIp =
+        limits.increment(hash("lookup-ip:" + ClientIpBucket.of(clientIp)), now, now.plus(WINDOW));
+    int byOrder =
+        limits.increment(hash("lookup-order:" + slug + ":" + number), now, now.plus(WINDOW));
+    if (byIp > MAX_LOOKUPS_PER_IP || byOrder > MAX_LOOKUPS_PER_ORDER)
+      throw new OrderException(OrderException.Reason.RATE_LIMITED);
+  }
+
   /** {@code group} is the normalized address group (IPv6 /64), never stored in clear. */
   private String bucket(String group) {
+    return hash("checkout-ip:" + group);
+  }
+
+  private String hash(String value) {
     try {
       Mac mac = Mac.getInstance("HmacSHA256");
       mac.init(new SecretKeySpec(key, "HmacSHA256"));
-      return HexFormat.of()
-          .formatHex(mac.doFinal(("checkout-ip:" + group).getBytes(StandardCharsets.UTF_8)));
+      return HexFormat.of().formatHex(mac.doFinal(value.getBytes(StandardCharsets.UTF_8)));
     } catch (GeneralSecurityException impossible) {
       throw new IllegalStateException(impossible);
     }

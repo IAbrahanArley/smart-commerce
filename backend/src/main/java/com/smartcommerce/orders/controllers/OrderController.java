@@ -2,6 +2,7 @@ package com.smartcommerce.orders.controllers;
 
 import com.smartcommerce.orders.domain.OrderException;
 import com.smartcommerce.orders.dto.request.CheckoutRequest;
+import com.smartcommerce.orders.dto.request.OrderLookupRequest;
 import com.smartcommerce.orders.dto.response.CheckoutView;
 import com.smartcommerce.orders.dto.response.OrderView;
 import com.smartcommerce.orders.dto.response.PaymentStartView;
@@ -69,6 +70,30 @@ public final class OrderController {
     return ResponseEntity.status(result.replayed() ? 200 : 201)
         .cacheControl(CacheControl.noStore())
         .body(result);
+  }
+
+  /**
+   * "Acompanhar pedido" (SC-046): number and e-mail in the body. Limited per client address and per
+   * order number; any mismatch is the same 404 as a missing order.
+   */
+  @PostMapping(
+      path = "/lookup",
+      consumes = MediaType.APPLICATION_JSON_VALUE,
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<OrderView> lookup(
+      @PathVariable String slug, @RequestBody OrderLookupRequest body, HttpServletRequest request) {
+    if (!validSlug(slug)) throw new OrderException(OrderException.Reason.MISSING);
+    long number = body.orderNumber();
+    String emailKey = body.emailKey();
+    String ip =
+        clientIp.resolve(
+            request.getRemoteAddr(),
+            request.getHeader("X-SC-Client-IP"),
+            request.getHeader("X-SC-Client-IP-Timestamp"),
+            request.getHeader("X-SC-Client-IP-Signature"));
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .body(queries.lookup(slug, number, emailKey, ip));
   }
 
   @GetMapping(path = "/{orderId}", produces = MediaType.APPLICATION_JSON_VALUE)

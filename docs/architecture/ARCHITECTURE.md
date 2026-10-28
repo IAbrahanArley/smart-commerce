@@ -95,6 +95,14 @@ Na SC-008, o módulo `orders` (controllers/services/repositories/domain/DTOs, AD
 
 Na SC-009, o storefront-web ganha `/lojas/{slug}/checkout` e `/lojas/{slug}/pedidos/{id}`, ambos SSR e ativos só com `STOREFRONT_CHECKOUT_ENABLED=true`. A server action lê os itens do cookie do carrinho, nunca do formulário, e chama o checkout do backend. O token do pedido fica num cookie HttpOnly limitado ao caminho do próprio pedido e segue ao backend como `X-Order-Token`. O IP do visitante só é assinado quando a implantação declara um proxy confiável (`STOREFRONT_TRUST_FORWARDED_FOR`), porque o Next não sobrescreve `X-Forwarded-For`. [Validação](../quality/SC-009-VALIDATION.md).
 
+Na SC-046, entra `/lojas/{slug}/acompanhar-pedido`, que existe só onde o checkout existe. O comprador consulta o pedido em qualquer aparelho com o número e o e-mail da compra:
+- a server action chama `POST /api/public/stores/{slug}/orders/lookup`, com número e e-mail no corpo, nunca na URL, e o IP assinado como no checkout;
+- o backend conta cada tentativa por endereço (20 por hora) e por número de pedido da loja (10 por hora), antes de ler o pedido, com chaves HMAC como as do checkout;
+- e-mail errado, número inexistente e pedido de outra loja dão o mesmo 404;
+- a resposta não oferece pagamento, que continua exigindo o token do navegador da compra.
+
+O checkout passou a usar uma moldura reduzida (`StoreFrame variant="checkout"`), sem busca, menu ou carrinho e com o contato da loja à vista. [Validação](../quality/SC-046-CART-CHECKOUT-TRACKING.md).
+
 Na SC-010, o módulo `orders` ganha a área do lojista (`/api/tenants/{id}/orders`: lista por cursor, detalhe e `POST .../{orderId}/cancel`), sempre com o vínculo OWNER e uma identidade ativa na própria query, e 404 uniforme para pedido de outra loja. O cancelamento trava a linha do pedido e depois o estoque (mesma ordem em todo lugar), faz a troca de estado condicional e libera as reservas na mesma transação. Duas rotinas `@Scheduled` no processo do backend (`OrderMaintenanceJob`) usam lotes com `FOR UPDATE SKIP LOCKED`:
 - a expiração, a cada minuto, fecha as reservas vencidas sem travar o estoque, porque elas já não contam no disponível;
 - a anonimização D2, diária.

@@ -88,3 +88,10 @@ Regras comuns: loja resolvida só pelo slug publicado; toda consulta pública re
   - o "Ver todos" dos destaques usa o filtro novo `destaque=1` da API do catálogo.
 - **Destaque do produto:** marcado no cartão "Vitrine" da edição do produto, junto com marca, endereço e preço "de".
 - **Resposta do catálogo:** banners e seções vêm em toda resposta de `/catalog`, como o menu e o rodapé. O custo extra fica para o cache da SC-047.
+
+**SC-046 (2026-10-28):**
+- **V10, limites:** 20 consultas por hora por endereço e 10 por hora por número de pedido da loja. A tentativa conta mesmo quando o pedido não existe, então o limite não revela quais números existem. O limite por pedido pode atrasar o próprio comprador se alguém insistir no número dele; a janela é de uma hora.
+- **V10, sem pagamento:** a consulta por número e e-mail mostra situação, itens, entrega e valores, mas não o botão de pagar. Pagar continua exigindo o token do navegador da compra; a página orienta a usar esse navegador ou falar com a loja.
+- **Rota só com checkout:** "Acompanhar pedido", e o atalho no cabeçalho, só existem onde o checkout está ligado (D6), como o checkout.
+- **Pedido anonimizado:** sem e-mail guardado, nunca é encontrado.
+- **Restyle:** o carrinho ganhou a foto de cada produto. O checkout usa cabeçalho reduzido, sem busca, menu ou carrinho, com o contato da loja (WhatsApp, telefone ou e-mail, nessa ordem) e o resumo lateral fixo no desktop.

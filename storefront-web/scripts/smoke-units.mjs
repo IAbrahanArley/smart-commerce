@@ -9,6 +9,8 @@ import { checkoutPage } from "../src/lib/payment-url.ts";
 import { categoryPath, parseMenu } from "../src/lib/menu.ts";
 import { formatPhone, pagePath, parseFrame } from "../src/lib/frame.ts";
 import { bannerHref, parseHome, sectionHref, sectionQuery } from "../src/lib/home.ts";
+import { orderNumber, validateLookup } from "../src/lib/order-lookup.ts";
+import { parseOrder } from "../src/lib/orders-view.ts";
 
 // Pure rules checked before any server starts.
 export const forwardingSecret = "synthetic-forwarding-secret-for-smoke-0001";
@@ -120,3 +122,10 @@ assert.deepEqual(home.sections, [{ kind: "BEST", title: "Mais vendidos", categor
 assert.equal(sectionQuery({ kind: "FEATURED", title: "D", categorySlug: null }).toString(), "destaque=1&ordem=recentes");
 assert.equal(sectionHref("loja-teste", { kind: "CATEGORY", title: "C", categorySlug: "camisetas" }), "/lojas/loja-teste/c/camisetas");
 assert.deepEqual(parseHome(null), { banners: [], sections: [] });
+
+// SC-046: order number and e-mail for "Acompanhar pedido".
+assert.equal(orderNumber("#1024"), 1024); assert.equal(orderNumber("nº 7"), 7); assert.equal(orderNumber(" 7 "), 7);
+assert.equal(orderNumber("0"), null); assert.equal(orderNumber("7a"), null); assert.equal(orderNumber("1".repeat(13)), null);
+assert.deepEqual(validateLookup({ number: "7", email: " Pessoa@Example.test " }), { number: 7, email: "Pessoa@Example.test" });
+assert.deepEqual(Object.keys(validateLookup({ number: "", email: "x" }).errors).sort(), ["email", "number"]);
+assert.equal(parseOrder({ id: "nao-e-id" }), null);

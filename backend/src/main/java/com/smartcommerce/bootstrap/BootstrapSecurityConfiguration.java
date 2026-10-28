@@ -53,6 +53,7 @@ public class BootstrapSecurityConfiguration {
                         HttpMethod.POST,
                         "/api/public/stores/*/cart/quote",
                         "/api/public/stores/*/orders",
+                        "/api/public/stores/*/orders/lookup",
                         "/api/public/stores/*/orders/*/payment",
                         "/api/public/webhooks/mercado-pago",
                         // SC-032: Stripe subscription events (HMAC signature, ADR-0017 B6).

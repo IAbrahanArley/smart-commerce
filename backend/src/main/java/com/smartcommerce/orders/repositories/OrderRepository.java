@@ -258,6 +258,26 @@ public class OrderRepository {
         .findFirst();
   }
 
+  /**
+   * "Acompanhar pedido" (SC-046, ADR-0018 V10): the order of this number in the store of the slug,
+   * only when the buyer e-mail key also matches. A wrong e-mail and a missing number are the same
+   * empty result; an anonymized order (no e-mail kept) never matches.
+   */
+  public Optional<CheckoutRecords.Order> forLookup(String slug, long number, String emailKey) {
+    return jdbc
+        .query(
+            "SELECT "
+                + ORDER_COLUMNS
+                + " FROM sales_order o JOIN store s ON s.id=o.store_id AND s.tenant_id=o.tenant_id"
+                + " WHERE s.slug=? AND o.number=? AND o.buyer_email_key=?",
+            OrderRepository::order,
+            slug,
+            number,
+            emailKey)
+        .stream()
+        .findFirst();
+  }
+
   public List<CheckoutRecords.Item> items(UUID tenant, UUID order) {
     return jdbc.query(
         """

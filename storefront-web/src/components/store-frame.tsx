@@ -5,12 +5,15 @@ import { type PublicStore, loadFrame, whatsappText } from "@/lib/public-store";
 import { type MenuItem, categoryPath } from "@/lib/menu";
 import { type Frame, formatCnpj, formatPhone, pagePath } from "@/lib/frame";
 import { cartCookieName, parseCart } from "@/lib/cart-cookie";
+import { checkoutConfigured } from "@/lib/checkout-input";
 
 // Sprint 8 (SC-044, DESIGN.md "Vitrine padrão V1"): the frame of every store page. Header with the
 // store name, search and cart; the category menu (native <details>, so it opens with the keyboard
 // and without JavaScript); the store footer; and the WhatsApp link when the store shows one.
-export async function StoreFrame({ store, currentCategory, frame: loaded, children }: {
-  store: PublicStore; currentCategory?: string; frame?: Frame; children: ReactNode;
+// SC-046: the checkout uses a reduced frame, with no search, menu or cart that could pull the
+// buyer away, and the store contact always in sight.
+export async function StoreFrame({ store, currentCategory, frame: loaded, variant = "store", children }: {
+  store: PublicStore; currentCategory?: string; frame?: Frame; variant?: "store" | "checkout"; children: ReactNode;
 }) {
   // Catalog pages already have the frame from the same response; other pages fetch it.
   const [jar, frame] = await Promise.all([cookies(), loaded ?? loadFrame(store.slug)]);
@@ -19,6 +22,32 @@ export async function StoreFrame({ store, currentCategory, frame: loaded, childr
   const units = parseCart(jar.get(cartCookieName(store.slug))?.value).reduce((total, line) => total + line.quantity, 0);
   const storeUrl = `/lojas/${encodeURIComponent(store.slug)}`;
   const { contactEmail, whatsapp, instagram } = store.profile;
+  if (variant === "checkout") return <>
+    <header className="store-header checkout-header">
+      <div className="page-width header-main">
+        <Link href={storeUrl} className="store-name" translate="no" prefetch={false}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {store.profile.logo ? <img className="store-logo" src={`/midia/lojas/${encodeURIComponent(store.slug)}/logo`} alt="" /> : null}
+          <span>{store.name}</span>
+        </Link>
+        {whatsapp || company?.phone || contactEmail ? <p className="checkout-header-contact">
+          <span className="checkout-header-help">Dúvidas?</span>{" "}
+          {whatsapp ? <a href={`https://wa.me/${whatsapp}`} rel="noopener noreferrer" target="_blank">WhatsApp {whatsappText(whatsapp)}<span className="visually-hidden"> (abre em nova aba)</span></a>
+            : company?.phone ? <a href={`tel:+${company.phone}`}>{formatPhone(company.phone)}</a>
+              : <a href={`mailto:${contactEmail}`}>{contactEmail}</a>}
+        </p> : null}
+      </div>
+    </header>
+    {children}
+    <footer className="store-footer checkout-footer" aria-label="Rodapé da loja">
+      <div className="page-width">
+        {pages.length ? <ul className="checkout-footer-links">{pages.map(page => <li key={page.slug}><Link href={pagePath(store.slug, page.slug)} prefetch={false}>{page.name}</Link></li>)}</ul> : null}
+        {company?.legalName || company?.cnpj ? <p className="store-footer-legal">
+          {[company.legalName, company.cnpj ? `CNPJ ${formatCnpj(company.cnpj)}` : null].filter(Boolean).join(" · ")}
+        </p> : null}
+      </div>
+    </footer>
+  </>;
   return <>
     {company?.announcement ? <p className="store-announcement">{company.announcement}</p> : null}
     <header className="store-header">
@@ -37,6 +66,10 @@ export async function StoreFrame({ store, currentCategory, frame: loaded, childr
           </button>
         </form>
         <nav aria-label="Atalhos da loja" className="header-shortcuts">
+          {checkoutConfigured() ? <Link href={`${storeUrl}/acompanhar-pedido`} className="track-link" prefetch={false}>
+            <svg className="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M3 7h11v9H3z" /><path d="M14 10h4l3 3v3h-7" /><circle cx="7" cy="17.5" r="1.5" /><circle cx="17" cy="17.5" r="1.5" /></svg>
+            <span className="shortcut-label">Acompanhar pedido</span>
+          </Link> : null}
           <Link href={`${storeUrl}/carrinho`} className="cart-link" prefetch={false}>
             <svg className="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M5 8h14l-1.2 11H6.2z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></svg>
             Carrinho

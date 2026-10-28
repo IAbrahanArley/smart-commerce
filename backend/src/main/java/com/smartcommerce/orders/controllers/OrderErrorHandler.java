@@ -53,7 +53,11 @@ public final class OrderErrorHandler {
     return response.body(body);
   }
 
-  @ExceptionHandler({IllegalArgumentException.class, IOException.class})
+  @ExceptionHandler({
+    IllegalArgumentException.class,
+    IOException.class,
+    org.springframework.http.converter.HttpMessageNotReadableException.class
+  })
   ResponseEntity<Map<String, String>> invalid() {
     return ResponseEntity.badRequest()
         .cacheControl(CacheControl.noStore())

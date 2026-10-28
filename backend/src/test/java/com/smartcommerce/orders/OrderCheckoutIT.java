@@ -477,6 +477,101 @@ class OrderCheckoutIT {
 
   // --- helpers ---------------------------------------------------------------------------
 
+  @Test
+  void buyerFindsAnOrderByNumberAndEmailWithoutContactData() throws Exception {
+    var created = post("pedido-a", body(UUID.randomUUID(), lines(simpleA, 1), shipping(), "28.40"));
+    assertThat(created.statusCode()).isEqualTo(201);
+    JsonNode order = JSON.readTree(created.body()).get("order");
+    // Same customer e-mail on another store's order, which must never be reachable from pedido-a.
+    assertThat(
+            post(
+                    "pedido-b",
+                    body(UUID.randomUUID(), lines(simpleB, 1), Map.of("type", "PICKUP"), "5.00"))
+                .statusCode())
+        .isEqualTo(201);
+
+    // Spaces, letter case and "#" / "nº" do not matter.
+    var found = lookup("pedido-a", "#1", "  comprador.sintetico@EXAMPLE.test ", null);
+    assertThat(found.statusCode()).isEqualTo(200);
+    assertThat(found.headers().firstValue("Cache-Control").orElse("")).contains("no-store");
+    JsonNode view = JSON.readTree(found.body());
+    assertThat(view.get("number").asLong()).isEqualTo(1);
+    assertThat(view.get("status").asString()).isEqualTo("PENDING_PAYMENT");
+    assertThat(view.get("items")).isEqualTo(order.get("items"));
+    assertThat(view.get("fulfillment").get("text").asString())
+        .isEqualTo("Centro (área informativa)");
+    // Paying still needs the token of the browser that placed the order.
+    assertThat(view.get("payable").asBoolean()).isFalse();
+    assertThat(found.body())
+        .doesNotContain(
+            "Rua Sintética, 100", "Apto 1", "01001", "98888", "Sintetico", "SKU-", "cost");
+    assertThat(lookup("pedido-a", "nº 1", EMAIL, null).statusCode()).isEqualTo(200);
+
+    // Wrong e-mail, missing number and the other store's order: one identical 404.
+    var wrongEmail = lookup("pedido-a", "1", "outra.pessoa@example.test", null);
+    var missing = lookup("pedido-a", "999", EMAIL, null);
+    var foreign = lookup("pedido-b", "1", "outra.pessoa@example.test", null);
+    var draft = lookup("pedido-nao-existe", "1", EMAIL, null);
+    for (var response : List.of(wrongEmail, missing, foreign, draft)) {
+      assertThat(response.statusCode()).isEqualTo(404);
+      assertThat(response.body()).isEqualTo(wrongEmail.body());
+    }
+    assertThat(lookup("pedido-a", "1x", EMAIL, null).statusCode()).isEqualTo(400);
+    assertThat(lookup("pedido-a", "1", "sem-arroba", null).statusCode()).isEqualTo(400);
+    // An anonymized order keeps no e-mail and is never found.
+    jdbc.update(
+        """
+        UPDATE sales_order SET status='EXPIRED',buyer_name=NULL,buyer_email=NULL,buyer_email_key=NULL,
+          buyer_phone=NULL,address_line1=NULL,address_line2=NULL,address_district=NULL,
+          address_city=NULL,address_state=NULL,address_postal_code=NULL,anonymized_at=now()
+        WHERE tenant_id=? AND number=1
+        """,
+        tenantA);
+    assertThat(lookup("pedido-a", "1", EMAIL, null).statusCode()).isEqualTo(404);
+  }
+
+  @Test
+  void orderLookupsAreLimitedPerClientAddressAndPerOrderNumber() throws Exception {
+    // Per order number: ten attempts in the hour, from any address, existing order or not.
+    for (int i = 0; i < 10; i++)
+      assertThat(
+              lookup("pedido-a", "7", "x" + i + "@example.test", "198.51.100." + (i + 1))
+                  .statusCode())
+          .isEqualTo(404);
+    var byOrder = lookup("pedido-a", "7", EMAIL, "198.51.100.50");
+    assertThat(byOrder.statusCode()).isEqualTo(429);
+    assertThat(byOrder.headers().firstValue("Retry-After")).contains("3600");
+    // Per signed client address: twenty attempts in the hour across numbers.
+    for (int i = 0; i < 20; i++)
+      assertThat(lookup("pedido-a", String.valueOf(100 + i), EMAIL, "203.0.113.9").statusCode())
+          .isEqualTo(404);
+    assertThat(lookup("pedido-a", "200", EMAIL, "203.0.113.9").statusCode()).isEqualTo(429);
+    assertThat(lookup("pedido-a", "200", EMAIL, "203.0.113.10").statusCode()).isEqualTo(404);
+    assertThat(jdbc.queryForList("SELECT bucket_key FROM order_rate_limit", String.class))
+        .allSatisfy(key -> assertThat(key).matches("[0-9a-f]{64}"));
+  }
+
+  private HttpResponse<String> lookup(String slug, String number, String email, String ip)
+      throws Exception {
+    var request =
+        HttpRequest.newBuilder(
+                URI.create(
+                    "http://127.0.0.1:" + port + "/api/public/stores/" + slug + "/orders/lookup"))
+            .timeout(Duration.ofSeconds(20))
+            .header("Content-Type", "application/json")
+            .POST(
+                HttpRequest.BodyPublishers.ofString(
+                    JSON.writeValueAsString(Map.of("number", number, "email", email))));
+    if (ip != null) {
+      String timestamp = String.valueOf(Instant.now().getEpochSecond());
+      request
+          .header("X-SC-Client-IP", ip)
+          .header("X-SC-Client-IP-Timestamp", timestamp)
+          .header("X-SC-Client-IP-Signature", hmac(ip + "\n" + timestamp));
+    }
+    return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+  }
+
   private List<String> run(List<Callable<String>> tasks) throws Exception {
     List<String> outcomes = new ArrayList<>();
     try (var pool = Executors.newFixedThreadPool(tasks.size())) {

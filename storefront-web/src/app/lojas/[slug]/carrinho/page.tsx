@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ProductCover } from "@/components/product-gallery";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { FocusNotice } from "@/components/focus-notice";
@@ -84,6 +85,8 @@ function CartItem({ slug, line }: { slug: string; line: QuoteLine }) {
   const quantityId = `quantity-${line.variantId}`;
   return (
     <li className="cart-line">
+      {/* SC-046: the product photo next to the name; the name is the text alternative. */}
+      {line.productId ? <div className="cart-line-photo" aria-hidden="true"><ProductCover slug={slug} productId={line.productId} name={name} /></div> : null}
       <div className="cart-line-info">
         <h3>{line.productId ? <Link href={`/lojas/${encodeURIComponent(slug)}/produtos/${line.productId}`} prefetch={false}>{name}</Link> : name}</h3>
         {line.options.length > 0 ? <p className="cart-line-options">{line.options.map(option => `${option.name}: ${option.value}`).join(" · ")}</p> : null}

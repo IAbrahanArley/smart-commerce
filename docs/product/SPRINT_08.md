@@ -100,6 +100,8 @@ SC-041 e SC-044 podem andar em paralelo (backend × base visual). SC-043 e SC-04
 
 ## SC-046 — Carrinho, checkout e acompanhar pedido
 
+**Estado (2026-10-28):** implementada. A consulta por número e e-mail não oferece pagamento, que continua exigindo o token do navegador da compra; limites de 20 consultas por hora por endereço e 10 por hora por pedido (desvios no ADR-0018). Validação: [SC-046](../quality/SC-046-CART-CHECKOUT-TRACKING.md).
+
 - Carrinho e checkout na nova base visual; checkout com cabeçalho reduzido (sem menu), contato visível e resumo lateral.
 - **Acompanhar pedido:** número do pedido + e-mail; resposta uniforme; limite de tentativas por IP e por pedido; mostra situação, itens e entrega, sem telefone ou endereço completo.
 

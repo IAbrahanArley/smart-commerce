@@ -33,7 +33,7 @@ export default async function CheckoutPage({ params }: Props) {
     return total ? [{ type: option.type, text: option.text, fee: option.fee, total }] : [];
   });
   return (
-    <StoreFrame store={store}>
+    <StoreFrame store={store} variant="checkout">
       <main id="conteudo" className="page-width checkout-page" tabIndex={-1}>
         <nav className="breadcrumb" aria-label="Caminho de navegação">
           <Link href={cartUrl} prefetch={false}><Arrow back /> Voltar ao carrinho</Link>
