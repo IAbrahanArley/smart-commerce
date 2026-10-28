@@ -3,6 +3,8 @@
 // boundary keeps only the public fields in the expected shape and refuses anything else.
 
 import { type MenuItem, parseMenu } from "./menu.ts";
+import { type Frame, parseFrame } from "./frame.ts";
+import { type Home, parseHome } from "./home.ts";
 
 export type Link = { name: string; slug: string };
 export type Card = {
@@ -14,6 +16,10 @@ export type PriceRange = { min: string; max: string | null; count: number };
 export type OptionFacet = { name: string; values: { value: string; count: number }[] };
 export type CatalogPage = {
   menu: MenuItem[];
+  /** SC-043: menu, company details and pages for the store frame. */
+  frame: Frame;
+  /** SC-043: banners shown now and the home sections. */
+  home: Home;
   category: { name: string; slug: string; path: Link[] } | null;
   search: string | null; sort: string; page: number; pageSize: number; total: number;
   products: Card[];
@@ -93,6 +99,8 @@ export function parseCatalog(raw: unknown): CatalogPage {
   const category = input.category == null ? null : record(input.category);
   return {
     menu: parseMenu(input),
+    frame: parseFrame(input),
+    home: parseHome(input),
     category: category === null ? null : {
       name: text(category.name, 60), slug: slug(category.slug),
       path: Array.isArray(category.path) && category.path.length <= 3 ? category.path.map(link) : fail(),
@@ -120,7 +128,7 @@ export function parseCatalog(raw: unknown): CatalogPage {
 }
 
 /** The filters a catalog URL may carry, in the API's own names; anything else is dropped. */
-const FILTER_KEYS = ["q", "marca", "preco_min", "preco_max", "opcao", "ordem", "pagina"] as const;
+const FILTER_KEYS = ["q", "marca", "preco_min", "preco_max", "opcao", "ordem", "pagina", "destaque"] as const;
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 

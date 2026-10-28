@@ -11,6 +11,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -298,6 +299,66 @@ class CategoryIT {
   }
 
   @Test
+  void aProductAlsoAppearsInAdditionalCategories() throws Exception {
+    Browser a = login("categorias-a@example.test");
+    UUID camisetas = createCategory(a, "Camisetas");
+    UUID promocoes = createCategory(a, "Promoções");
+    UUID outlet = createCategory(a, "Outlet");
+    UUID shirt = product(tenantA, "Camiseta azul", true);
+    a.send("PUT", productCategory(tenantA, shirt), Map.of("categoryId", camisetas));
+    String path = "/api/tenants/" + tenantA + "/products/" + shirt + "/categories";
+
+    // The primary category is left out if sent; the rest are kept.
+    var saved = a.send("PUT", path, Map.of("categoryIds", List.of(promocoes, camisetas, outlet)));
+    assertThat(saved.statusCode()).isEqualTo(200);
+    assertThat(texts(JSON.readTree(saved.body()).get("additionalCategoryIds")))
+        .containsExactlyInAnyOrder(promocoes.toString(), outlet.toString());
+    // Counts include additional categories.
+    JsonNode list = JSON.readTree(a.get(categories(tenantA)).body());
+    for (JsonNode category : list) assertThat(category.get("products").asLong()).isEqualTo(1);
+
+    // Choosing an additional category as the primary removes it from the additional ones.
+    var primary = a.send("PUT", productCategory(tenantA, shirt), Map.of("categoryId", outlet));
+    assertThat(texts(JSON.readTree(primary.body()).get("additionalCategoryIds")))
+        .containsExactly(promocoes.toString());
+
+    // Invalid lists: too many, repeated, null; another store's category or product is a 404.
+    List<UUID> eleven = new java.util.ArrayList<>();
+    for (int i = 0; i < 11; i++) eleven.add(UUID.randomUUID());
+    assertThat(a.send("PUT", path, Map.of("categoryIds", eleven)).statusCode()).isEqualTo(400);
+    assertThat(
+            a.send("PUT", path, Map.of("categoryIds", List.of(promocoes, promocoes))).statusCode())
+        .isEqualTo(400);
+    Browser b = login("categorias-b@example.test");
+    UUID foreign = createCategory(b, "Da loja B");
+    assertThat(a.send("PUT", path, Map.of("categoryIds", List.of(foreign))).statusCode())
+        .isEqualTo(404);
+    assertThat(
+            b.send(
+                    "PUT",
+                    "/api/tenants/" + tenantB + "/products/" + shirt + "/categories",
+                    Map.of("categoryIds", List.of(foreign)))
+                .statusCode())
+        .isEqualTo(404);
+    assertThat(b.send("PUT", path, Map.of("categoryIds", List.of())).statusCode()).isEqualTo(404);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM catalog_product_category WHERE product_id=?",
+                Integer.class,
+                shirt))
+        .isEqualTo(1);
+
+    // Removing a category removes the link; the product stays.
+    a.send("DELETE", categories(tenantA) + "/" + promocoes, null);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT count(*) FROM catalog_product_category WHERE product_id=?",
+                Integer.class,
+                shirt))
+        .isZero();
+  }
+
+  @Test
   void aStoreHasAtMostFiftyCategories() throws Exception {
     Browser a = login("categorias-a@example.test");
     for (int i = 0; i < 50; i++) createCategory(a, "Categoria " + i);
@@ -330,6 +391,12 @@ class CategoryIT {
     body.put("parentId", null);
     body.put("position", position);
     return body;
+  }
+
+  private static List<String> texts(JsonNode list) {
+    List<String> texts = new java.util.ArrayList<>();
+    for (JsonNode item : list) texts.add(item.asText());
+    return texts;
   }
 
   private static java.util.List<String> names(JsonNode list) {

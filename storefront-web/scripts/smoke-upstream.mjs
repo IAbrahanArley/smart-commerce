@@ -59,20 +59,41 @@ const soldOut = { ...card, id: nextId, slug: "outro-produto", name: "Outro produ
 const facets = { categories: [{ slug: "manga-longa", name: "Manga longa", count: 1 }], brands: [{ slug: "agil", name: "Marca Ágil", count: 1 }],
   prices: [{ min: "0.00", max: "50.00", count: 1 }, { min: "5000.00", max: null, count: 1 }], options: [{ name: "Tamanho", values: [{ value: "M", count: 2 }] }] };
 const noFacets = { categories: [], brands: [], prices: [], options: [] };
-const catalog = (overrides = {}) => ({ store, menu, category: null, search: null, sort: "recentes", page: 1, pageSize: 24, total: 2, products: [card, soldOut], facets, maxInstallments: 6, ...overrides });
+// SC-043: company details (one hostile value the storefront must drop) and the written pages.
+const company = { announcement: "Retirada grátis na loja", legalName: "Loja Teste LTDA", cnpj: "11222333000181", phone: "558333334444", address: null, facebook: "loja.teste", tiktok: "x\"><script>", youtube: null };
+const pages = [{ name: "Trocas e devoluções", slug: "trocas-e-devolucoes" }];
+// SC-043: one banner with an internal link, one with an outside address the storefront must drop,
+// and sections; "Mais vendidos" fails upstream and must just be left out.
+export const bannerId = "8c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5";
+const banners = [
+  { id: bannerId, alt: "Coleção de camisetas", title: "Camisetas novas", linkKind: "CATEGORY", linkTarget: "camisetas", mobileImage: true },
+  { id: "7b0c1d2e-3f4a-4b5c-9d6e-7f8091a2b3c4", alt: "Retirada grátis na loja", title: null, linkKind: "NONE", linkTarget: null, mobileImage: false },
+  { id: "9d2e3f4a-5b6c-4d7e-8f90-a1b2c3d4e5f6", alt: "Hostil", title: null, linkKind: "PRODUCT", linkTarget: "https://evil.example", mobileImage: false },
+];
+const sections = [
+  { kind: "FEATURED", title: "Destaques da semana", categorySlug: null },
+  { kind: "CATEGORY", title: "Só camisetas", categorySlug: "camisetas" },
+  { kind: "BEST", title: "Seção que falha", categorySlug: null },
+  { kind: "NEW", title: "Lançamentos", categorySlug: null },
+];
+const catalog = (overrides = {}) => ({ store, menu, category: null, search: null, sort: "recentes", page: 1, pageSize: 24, total: 2, products: [card, soldOut], facets, maxInstallments: 6, company, pages, banners, sections, ...overrides });
 const camisetas = { name: "Camisetas", slug: "camisetas", path: [{ name: "Camisetas", slug: "camisetas" }] };
 
 const ROUTES = {
   "/api/public/stores/loja-teste/catalog": () => catalog(),
   "/api/public/stores/loja-teste/catalog?ordem=recentes": () => catalog(),
+  "/api/public/stores/loja-teste/catalog?destaque=1&ordem=recentes": () => catalog({ total: 1, products: [card] }),
+  "/api/public/stores/loja-teste/catalog?categoria=camisetas&ordem=recentes": () => catalog({ category: camisetas, total: 1, products: [soldOut] }),
   "/api/public/stores/loja-teste/catalog?categoria=camisetas": () => catalog({ category: camisetas, total: 30, products: [card] }),
   "/api/public/stores/loja-teste/catalog?categoria=camisetas&marca=agil": () => catalog({ category: camisetas, total: 1, products: [card] }),
   "/api/public/stores/loja-teste/catalog?q=produto": () => catalog({ search: "produto", sort: "relevancia", total: 1, products: [card], facets: noFacets }),
   "/api/public/stores/loja-teste/catalog?q=nada": () => catalog({ search: "nada", sort: "relevancia", total: 0, products: [], facets: noFacets }),
   "/api/public/stores/loja-teste/p/produto-publico": () => ({ movedTo: null, product: { store, product: { ...item, slug: "produto-publico", brand: { name: "Marca Ágil", slug: "agil" },
     categoryPath: [{ name: "Camisetas", slug: "camisetas" }], compareAtPrice: "62.40", discountPercent: 20, variants: [{ ...item.variants[0], compareAtPrice: "62.40" }] }, related: [soldOut], maxInstallments: 6 } }),
+  "/api/public/stores/loja-teste/pages/trocas-e-devolucoes": () => ({ store, title: "Trocas e devoluções", slug: "trocas-e-devolucoes", bodyHtml: "<p>Troca em <strong>7 dias</strong>.</p>" }),
+  "/api/public/stores/loja-teste/pages/termos": () => ({ store, title: "Termos de uso", slug: "termos", bodyHtml: "<p><a href=\"javascript:x\">PRIVATE_UPSTREAM_ERROR_FIXTURE</a></p>" }),
   "/api/public/stores/loja-teste/p/endereco-antigo": () => ({ movedTo: "produto-publico", product: null }),
-  "/api/public/stores/loja-vazia/catalog?ordem=recentes": () => ({ ...catalog({ menu: [], total: 0, products: [], facets: noFacets, maxInstallments: null }),
+  "/api/public/stores/loja-vazia/catalog?ordem=recentes": () => ({ ...catalog({ menu: [], total: 0, products: [], facets: noFacets, maxInstallments: null, company: null, pages: [], banners: [], sections: [] }),
     store: { name: "Loja vazia de teste", slug: "loja-vazia", profile: { contactEmail: "x@y.example\"><script>alert(1)</script>", whatsapp: "123", instagram: "a b", logo: false } } }),
   "/api/public/stores/loja-teste": () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], cost: "PRIVATE_COST_FIXTURE", sku: "PRIVATE_SKU_FIXTURE", quantity: 784321 }], categories, category: null, nextCursor: id }),
   [`/api/public/stores/loja-teste/products/${id}/images`]: () => ({ images: [{ id, alt: "Foto de teste", width: 300, height: 300 }] }),
@@ -114,6 +135,7 @@ export async function startUpstream() {
       return json(response, paymentReply.status, paymentReply.body);
     }
     if (method !== "GET") return json(response, 403, { message: "Proibido" });
+    if (/^\/api\/public\/stores\/loja-teste\/banners\/[0-9a-f-]{36}\/images\/(desktop|mobile)$/.test(url)) { response.setHeader("Content-Type", "image/png"); return response.end(png); }
     if (url === "/api/public/stores/loja-teste/logo") { response.setHeader("Content-Type", "image/png"); return response.end(png); }
     if (url === `/api/public/stores/loja-teste/products/${id}/images/primary/content` || url === `/api/public/stores/loja-teste/products/${id}/images/${id}/content`) {
       response.setHeader("Content-Type", "image/png"); response.setHeader("Set-Cookie", "PRIVATE_UPSTREAM_COOKIE=synthetic; Path=/"); return response.end(png);

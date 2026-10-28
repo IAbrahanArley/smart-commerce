@@ -1,6 +1,6 @@
 import "server-only";
 import { notFound } from "next/navigation";
-import { type MenuItem, parseMenu } from "@/lib/menu";
+import { type Frame, EMPTY_FRAME, parseFrame } from "@/lib/frame";
 import { type Card, type CatalogPage, type Link, parseCard, parseCatalog, parseInstallments } from "@/lib/catalog-page";
 
 export type PublicProduct = {
@@ -137,15 +137,24 @@ function product(value: unknown): PublicProduct {
 }
 
 /**
- * SC-044: the category menu, from the first page of the public catalog (SC-042). A failure only
- * hides the menu; the page around it keeps its own error handling.
+ * SC-044/SC-043: the frame of a store page (menu, company details, pages), from the first page of
+ * the public catalog. A failure only hides it; the page around it keeps its own error handling.
  */
-export async function loadMenu(slug: string): Promise<MenuItem[]> {
+export async function loadFrame(slug: string): Promise<Frame> {
   try {
-    return parseMenu(await publicGet(`${slugPath(slug)}/catalog`));
+    return parseFrame(await publicGet(`${slugPath(slug)}/catalog`));
   } catch {
-    return [];
+    return EMPTY_FRAME;
   }
+}
+
+/** SC-043: an institutional page; the same seven tags as product descriptions, nothing else. */
+export async function loadPage(slug: string, page: string): Promise<{ store: PublicStore; title: string; bodyHtml: string }> {
+  if (page.length > 40 || !/^[a-z]+(?:-[a-z]+)*$/.test(page)) notFound();
+  const input = object(await publicGet(`${slugPath(slug)}/pages/${encodeURIComponent(page)}`));
+  if (typeof input.title !== "string" || [...input.title].length > 60 || typeof input.bodyHtml !== "string"
+    || [...input.bodyHtml].length > 20000 || input.bodyHtml.replace(/<\/?(?:p|strong|em|ul|ol|li)>|<br\s*\/?>/g, "").includes("<")) unavailable();
+  return { store: store(input.store, slug), title: input.title, bodyHtml: input.bodyHtml };
 }
 
 /** SC-045: one page of the catalog with filters, facets and menu, and the store it belongs to. */
@@ -154,6 +163,22 @@ export async function loadStoreCatalog(slug: string, query: URLSearchParams): Pr
   let catalog: CatalogPage;
   try { catalog = parseCatalog(input); } catch { return unavailable(); }
   return { store: store(input.store, slug), catalog };
+}
+
+/**
+ * SC-043: the first cards of a home section. A section that fails (its category was hidden
+ * meanwhile, the API is slow) is left out instead of taking the whole home down.
+ */
+export async function loadSectionCards(slug: string, query: URLSearchParams, limit: number): Promise<Card[]> {
+  try {
+    const response = await fetch(`${apiOrigin()}${slugPath(slug)}/catalog?${query}`, {
+      cache: "no-store", credentials: "omit", redirect: "error", headers: { Accept: "application/json" }, signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return [];
+    return parseCatalog(await response.json()).products.slice(0, limit);
+  } catch {
+    return [];
+  }
 }
 
 /** SC-045: a product by its storefront address, or the address an old link moved to. */
@@ -258,6 +283,13 @@ async function proxyImage(url: string): Promise<Response> {
     if (type !== "image/png" && type !== "image/jpeg") throw new Error();
     return new Response(response.body, { status: 200, headers: { "Content-Type": type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
   } catch { return new Response(null, { status: 503, headers: { "Cache-Control": "no-store" } }); }
+}
+
+/** SC-043: a home banner image; the phone variant falls back to the desktop one in the API. */
+export async function publicBanner(slug: string, bannerId: string, variant: string): Promise<Response> {
+  if (slug.length < 3 || slug.length > 63 || !SLUG.test(slug) || !UUID.test(bannerId) || (variant !== "desktop" && variant !== "mobile"))
+    return new Response(null, { status: 404 });
+  return proxyImage(`${apiOrigin()}/api/public/stores/${encodeURIComponent(slug)}/banners/${encodeURIComponent(bannerId)}/images/${variant}`);
 }
 
 export async function publicImage(slug: string, productId: string, imageId: string): Promise<Response> {

@@ -58,6 +58,8 @@ SC-041 e SC-044 podem andar em paralelo (backend × base visual). SC-043 e SC-04
 
 ## SC-043 — Aparência e conteúdo da loja (admin)
 
+**Estado (2026-10-27):** implementada, com as categorias adicionais por produto que faltavam da SC-041. Diferenças em relação ao texto abaixo: os dados do rodapé ficam numa tabela própria, e as redes são Facebook, TikTok e YouTube, gravadas como nome de usuário (desvios no ADR-0018). Validação: [SC-043](../quality/SC-043-STORE-CONTENT.md).
+
 - Nova área **"Aparência e conteúdo"** no admin (OWNER):
   - **Banners:** até 5, imagem desktop e celular, texto alternativo obrigatório, link interno (categoria, produto, busca), período opcional, ordem.
   - **Seções da home:** tipos fechados (lançamentos, mais vendidos, destaques, categoria X), ordem e título; marcação de produtos em destaque.
@@ -85,7 +87,7 @@ SC-041 e SC-044 podem andar em paralelo (backend × base visual). SC-043 e SC-04
 
 ## SC-045 — Home, categoria/busca e produto
 
-**Estado (2026-10-27):** implementada; a home ainda sem banners e seções configuráveis (dependem da SC-043). A rota antiga do produto continua respondendo em vez de redirecionar, e o endereço antigo redireciona dentro do HTML, não com 308 (desvios no ADR-0018). Validação: [SC-044/045](../quality/SC-044-045-STOREFRONT-PAGES.md).
+**Estado (2026-10-27):** implementada; banners e seções configuráveis da home entraram com a SC-043. A rota antiga do produto continua respondendo em vez de redirecionar, e o endereço antigo redireciona dentro do HTML, não com 308 (desvios no ADR-0018). Validação: [SC-044/045](../quality/SC-044-045-STOREFRONT-PAGES.md).
 
 - **Home:** carrossel de banners (pausa ao focar, sem rotação automática com `prefers-reduced-motion`), seções configuradas, cada uma com até 8 produtos e "Ver todos".
 - **Card de produto:** foto, marca, nome, preço "de/por", selo de desconto, "em até N× no Mercado Pago", indisponível marcado.

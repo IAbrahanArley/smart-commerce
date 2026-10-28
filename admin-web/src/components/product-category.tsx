@@ -7,8 +7,11 @@ import type { Product } from "@/lib/catalog";
 import { type Category, categoryError, categoryPath, parseCategories } from "@/lib/categories";
 import { Loading } from "@/components/ui/loading";
 
+const MAX_ADDITIONAL = 10;
+
 // MVP block 1c: the category of one product, saved as soon as it is chosen. It does not touch the
-// product version, so it never conflicts with unsaved edits in the main form.
+// product version, so it never conflicts with unsaved edits in the main form. SC-043: the other
+// categories it also appears in ("Promoções", "Outlet"), saved together with their own button.
 export default function ProductCategory({ tenantId, product, onSaved }: {
   tenantId: string; product: Product; onSaved: (product: Product, notice?: string) => void;
 }) {
@@ -16,6 +19,7 @@ export default function ProductCategory({ tenantId, product, onSaved }: {
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [extra, setExtra] = useState<string[]>(product.additionalCategoryIds ?? []);
   const submitting = useRef(false);
   const tenantPath = `/api/tenants/${encodeURIComponent(tenantId)}`;
   const storePath = `/lojas/${encodeURIComponent(tenantId)}`;
@@ -47,6 +51,25 @@ export default function ProductCategory({ tenantId, product, onSaved }: {
     finally { submitting.current = false; setBusy(false); }
   }
 
+  async function saveExtra() {
+    if (submitting.current) return;
+    if (extra.length > MAX_ADDITIONAL) { setMessage({ text: `Escolha até ${MAX_ADDITIONAL} categorias adicionais.`, error: true }); return; }
+    submitting.current = true; setBusy(true); setMessage(null);
+    try {
+      const response = await apiRequest(`${tenantPath}/products/${encodeURIComponent(product.id)}/categories`, { method: "PUT", body: { categoryIds: extra } });
+      if (!response.ok) {
+        const body: { code?: string } = await response.json().catch(() => ({}));
+        setMessage({ text: categoryError(response.status, body.code), error: true }); return;
+      }
+      const saved: Product = await response.json();
+      onSaved(saved);
+      setExtra(saved.additionalCategoryIds ?? []);
+      setMessage({ text: "Categorias adicionais salvas.", error: false });
+    } catch { setMessage({ text: "Não foi possível confirmar as categorias. Recarregue o produto.", error: true }); }
+    finally { submitting.current = false; setBusy(false); }
+  }
+
+  const others = categories?.filter(category => category.id !== product.categoryId) ?? [];
   return <section className="side-card" aria-labelledby="product-category-title">
     <h2 id="product-category-title">Categoria</h2>
     {failed ? <p role="alert" className="feedback feedback-error">Não foi possível consultar as categorias.</p> : null}
@@ -59,8 +82,18 @@ export default function ProductCategory({ tenantId, product, onSaved }: {
           <option value="">Sem categoria</option>
           {categories.map(category => <option key={category.id} value={category.id}>{categoryPath(categories, category.id)}</option>)}
         </select>
-        <p id="product-category-help" className="field-help">Salva ao escolher. Na vitrine, o comprador pode filtrar por categoria. <Link href={`${storePath}/categorias`}>Gerenciar categorias</Link></p>
+        <p id="product-category-help" className="field-help">Salva ao escolher. Define o caminho do produto na vitrine. <Link href={`${storePath}/categorias`}>Gerenciar categorias</Link></p>
       </div> : null}
+    {categories && others.length ? <fieldset className="category-extra" disabled={busy}>
+      <legend>Também aparece em</legend>
+      <p className="field-help">Para coleções como “Promoções” ou “Outlet”. Até {MAX_ADDITIONAL}.</p>
+      {others.map(category => <label key={category.id} className="check-field">
+        <input type="checkbox" checked={extra.includes(category.id)}
+          onChange={event => setExtra(current => event.target.checked ? [...current, category.id] : current.filter(id => id !== category.id))} />
+        {categoryPath(categories, category.id)}
+      </label>)}
+      <button type="button" className="button-secondary" onClick={() => void saveExtra()}>Salvar categorias adicionais</button>
+    </fieldset> : null}
     {message ? <p role={message.error ? "alert" : "status"} className={`feedback feedback-${message.error ? "error" : "success"}`}>{message.text}</p> : null}
   </section>;
 }

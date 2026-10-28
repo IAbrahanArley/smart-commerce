@@ -1,7 +1,7 @@
 // Admin navigation shared by the sidebar and the global search. Pure, imported by the smoke test.
 // Links never prove authorization: the backend checks every request.
 
-export type NavIcon = "home" | "box" | "tags" | "award" | "receipt" | "store" | "truck" | "card" | "chart" | "wallet" | "spark" | "stores" | "user";
+export type NavIcon = "home" | "box" | "tags" | "award" | "palette" | "receipt" | "store" | "truck" | "card" | "chart" | "wallet" | "spark" | "stores" | "user";
 export type NavItem = { href: string; label: string; icon: NavIcon; current: boolean; keywords?: string };
 export type NavGroup = { label: string; items: NavItem[] };
 
@@ -19,6 +19,7 @@ export function storeItems(tenantId: string, pathname: string): NavItem[] {
     { href: `${base}/categorias`, label: "Categorias", icon: "tags", current: at("/categorias"), keywords: "catalogo grupos" },
     { href: `${base}/marcas`, label: "Marcas", icon: "award", current: at("/marcas"), keywords: "catalogo fabricante" },
     { href: `${base}/pedidos`, label: "Pedidos", icon: "receipt", current: under("/pedidos"), keywords: "vendas compras reembolso" },
+    { href: `${base}/conteudo`, label: "Aparência e conteúdo", icon: "palette", current: at("/conteudo"), keywords: "vitrine rodape cnpj paginas trocas privacidade aviso banner" },
     { href: `${base}/dados`, label: "Dados da loja", icon: "store", current: at("/dados"), keywords: "logo contatos whatsapp instagram nome" },
     { href: `${base}/entrega`, label: "Entrega", icon: "truck", current: at("/entrega"), keywords: "frete retirada" },
     { href: `${base}/pagamentos`, label: "Pagamentos", icon: "card", current: at("/pagamentos"), keywords: "mercado pago conectar" },

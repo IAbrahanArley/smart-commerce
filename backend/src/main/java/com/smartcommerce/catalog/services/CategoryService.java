@@ -200,6 +200,29 @@ public class CategoryService {
         });
   }
 
+  /**
+   * Replaces the categories the product also appears in (SC-043). The primary category is left out
+   * of the list if sent; a category of another tenant is the same 404 as none.
+   */
+  @Transactional
+  public ProductView assignAdditional(UUID actor, UUID tenant, UUID product, List<UUID> wanted) {
+    owned(
+        actor,
+        tenant,
+        () -> {
+          if (!categories.lockProduct(tenant, product)) throw missing();
+          return null;
+        });
+    UUID primary = products.find(actor, tenant, product).categoryId();
+    try {
+      categories.replaceAdditional(
+          tenant, product, wanted.stream().filter(id -> !id.equals(primary)).toList());
+    } catch (DataIntegrityViolationException foreign) {
+      throw missing();
+    }
+    return products.find(actor, tenant, product);
+  }
+
   /** Sets ({@code category} present) or clears the category of one product. */
   @Transactional
   public ProductView assign(UUID actor, UUID tenant, UUID product, UUID category) {

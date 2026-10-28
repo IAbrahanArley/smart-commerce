@@ -35,9 +35,10 @@ public final class PublicCatalogController {
       @RequestParam(required = false) List<String> opcao,
       @RequestParam(required = false) String q,
       @RequestParam(required = false) String ordem,
-      @RequestParam(required = false) String pagina) {
+      @RequestParam(required = false) String pagina,
+      @RequestParam(required = false) String destaque) {
     CatalogQuery query =
-        CatalogQuery.parse(categoria, marca, precoMin, precoMax, opcao, q, ordem, pagina);
+        CatalogQuery.parse(categoria, marca, precoMin, precoMax, opcao, q, ordem, pagina, destaque);
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
         .body(catalog.catalog(slug, query));

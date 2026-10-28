@@ -73,6 +73,7 @@ public class ProductStorefrontService {
     } catch (DataIntegrityViolationException foreign) {
       throw missing(); // a brand of another tenant is the same as none
     }
+    if (request.featured() != null) storefront.feature(tenant, product, request.featured());
     compareAt.forEach((variant, value) -> storefront.compareAt(tenant, product, variant, value));
     return products.find(actor, tenant, product);
   }

@@ -21,4 +21,8 @@ public record ProductView(
     int imageCount,
     UUID categoryId,
     UUID brandId,
-    String slug) {}
+    // SC-043: shown in the "Destaques" home section.
+    boolean featured,
+    String slug,
+    // SC-043: categories besides the primary one.
+    List<UUID> additionalCategoryIds) {}

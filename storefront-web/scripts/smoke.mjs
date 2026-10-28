@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { forwardingSecret } from "./smoke-units.mjs";
 import { checkoutSmoke } from "./smoke-checkout.mjs";
-import { id, missingId, nextId, orderToken, png, startNext, startUpstream, upstreamRequests } from "./smoke-upstream.mjs";
+import { bannerId, id, missingId, nextId, orderToken, png, startNext, startUpstream, upstreamRequests } from "./smoke-upstream.mjs";
 
 const port = Number(process.env.SMOKE_PORT ?? 3002);
 assert.ok(Number.isInteger(port) && port > 0 && port < 65536, "SMOKE_PORT deve ser válida.");
@@ -61,6 +61,22 @@ try {
   assert.match(catalog.html, /49,90/);
   // SC-045: the new home; cards link to the product address, with discount and installments.
   assert.match(catalog.html, /Lançamentos/);
+  // SC-043: banners and the sections the owner chose; a failing section and a banner leading out
+  // of the store are left out.
+  assert.ok(catalog.html.includes(`src="/midia/lojas/loja-teste/banners/${bannerId}/desktop"`), "Banner com imagem.");
+  assert.ok(catalog.html.includes(`srcSet="/midia/lojas/loja-teste/banners/${bannerId}/mobile"`) || catalog.html.includes(`srcset="/midia/lojas/loja-teste/banners/${bannerId}/mobile"`), "Variante de celular.");
+  assert.ok(catalog.html.includes('alt="Coleção de camisetas"'));
+  assert.match(catalog.html, /aria-roledescription="carrossel"/);
+  assert.doesNotMatch(catalog.html, /evil\.example|>Hostil</);
+  assert.match(catalog.html, /Destaques da semana/);
+  assert.match(catalog.html, /Só camisetas/);
+  assert.doesNotMatch(catalog.html, /Seção que falha/);
+  assert.ok(catalog.html.includes('href="/lojas/loja-teste/busca?destaque=1"'), "Ver todos os destaques.");
+  assert.ok(catalog.html.indexOf("Destaques da semana") < catalog.html.indexOf("Só camisetas"), "Ordem das seções.");
+  const banner = await fetch(`${base}/midia/lojas/loja-teste/banners/${bannerId}/desktop`);
+  assert.equal(banner.status, 200);
+  assert.equal(banner.headers.get("content-type"), "image/png");
+  assert.equal((await fetch(`${base}/midia/lojas/loja-teste/banners/nao-e-id/desktop`)).status, 404);
   assert.match(catalog.html, /Compre por categoria/);
   assert.ok(catalog.html.includes('href="/lojas/loja-teste/p/produto-publico"'), "Card leva ao endereço do produto.");
   assert.ok(catalog.html.includes('href="/lojas/loja-teste/c/camisetas"'), "Atalho e menu de categoria.");
@@ -74,6 +90,17 @@ try {
   // MVP block 1b: logo beside the name; the store's contacts now in its footer (SC-044).
   assert.match(catalog.html, /Atendimento/);
   assert.ok(catalog.html.includes('class="whatsapp-float"'), "WhatsApp flutuante.");
+  // SC-043: announcement bar, legal line, phone, other networks and institutional pages.
+  assert.match(catalog.html, /class="store-announcement">Retirada grátis na loja/);
+  assert.match(catalog.html, /Loja Teste LTDA · CNPJ 11\.222\.333\/0001-81/);
+  assert.ok(catalog.html.includes('href="tel:+558333334444"') && catalog.html.includes("(83) 3333-4444"));
+  assert.ok(catalog.html.includes('href="https://www.facebook.com/loja.teste"') && !catalog.html.includes("tiktok.com"), "Rede inválida é descartada.");
+  assert.ok(catalog.html.includes('href="/lojas/loja-teste/paginas/trocas-e-devolucoes"'), "Página no rodapé.");
+  const policy = await page("/lojas/loja-teste/paginas/trocas-e-devolucoes");
+  assert.equal(policy.response.status, 200);
+  assert.match(policy.html, /<h1>Trocas e devoluções<\/h1>/); assert.match(policy.html, /<strong>7 dias<\/strong>/);
+  const hostile = await page("/lojas/loja-teste/paginas/termos");
+  assert.ok(!hostile.html.includes("javascript:x"), "Página com marcação fora do formato não é exibida.");
   assert.ok(catalog.html.includes('href="https://wa.me/5511988887777"') && catalog.html.includes("(11) 98888-7777"), "WhatsApp formatado.");
   assert.ok(catalog.html.includes('href="mailto:contato@loja.example"'));
   assert.ok(catalog.html.includes('href="https://www.instagram.com/loja.teste/"'));

@@ -25,6 +25,10 @@ export type Product = {
   /** SC-041: brand and storefront address; absent in older responses. */
   brandId?: string | null;
   slug?: string | null;
+  /** SC-043: categories besides the primary one; absent in older responses. */
+  additionalCategoryIds?: string[];
+  /** SC-043: shown in the "Destaques" home section; absent in older responses. */
+  featured?: boolean;
 };
 
 export const MAX_PRODUCT_PHOTOS = 6;

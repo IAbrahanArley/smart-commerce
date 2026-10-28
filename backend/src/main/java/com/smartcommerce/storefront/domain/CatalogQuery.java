@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
  * @param options variant option values by option name (any value of a name, every name)
  * @param search a PostgreSQL {@code to_tsquery} expression of prefix terms, or {@code null}
  * @param text the search as typed, trimmed, for display
+ * @param featured only the products the store marked as featured (SC-043, {@code destaque=1})
  */
 public record CatalogQuery(
     String category,
@@ -35,7 +36,8 @@ public record CatalogQuery(
     String search,
     String text,
     CatalogSort sort,
-    int page) {
+    int page,
+    boolean featured) {
   public static final int PAGE_SIZE = 24;
   static final int MAX_PAGE = 500;
   private static final int MAX_FILTERS = 20;
@@ -52,6 +54,21 @@ public record CatalogQuery(
       String text,
       String sort,
       String page) {
+    return parse(category, brands, priceMin, priceMax, options, text, sort, page, null);
+  }
+
+  public static CatalogQuery parse(
+      String category,
+      List<String> brands,
+      String priceMin,
+      String priceMax,
+      List<String> options,
+      String text,
+      String sort,
+      String page,
+      String featured) {
+    if (featured != null && !featured.isBlank() && !"1".equals(featured.strip()))
+      throw new IllegalArgumentException("Featured");
     String search = terms(text);
     CatalogSort order =
         sort == null || sort.isBlank()
@@ -70,7 +87,8 @@ public record CatalogQuery(
         search,
         text == null ? null : text.strip(),
         order,
-        page(page));
+        page(page),
+        featured != null && "1".equals(featured.strip()));
   }
 
   public int offset() {

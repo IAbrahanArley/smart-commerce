@@ -100,6 +100,14 @@ public class ProductStorefrontRepository {
         "UPDATE catalog_product SET brand_id=? WHERE tenant_id=? AND id=?", brand, tenant, product);
   }
 
+  public void feature(UUID tenant, UUID product, boolean featured) {
+    jdbc.update(
+        "UPDATE catalog_product SET featured=? WHERE tenant_id=? AND id=?",
+        featured,
+        tenant,
+        product);
+  }
+
   public void compareAt(UUID tenant, UUID product, UUID variant, BigDecimal price) {
     jdbc.update(
         "UPDATE catalog_variant SET compare_at_price=? WHERE tenant_id=? AND product_id=? AND id=?",

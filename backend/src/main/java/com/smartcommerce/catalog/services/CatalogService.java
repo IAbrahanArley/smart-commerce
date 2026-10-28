@@ -22,18 +22,21 @@ public class CatalogService {
   private final ProductImageRepository images;
   private final BillingService billing;
   private final ProductStorefrontRepository storefront;
+  private final CategoryRepository categories;
 
   public CatalogService(
       CatalogRepository products,
       VariantRepository variants,
       ProductImageRepository images,
       BillingService billing,
-      ProductStorefrontRepository storefront) {
+      ProductStorefrontRepository storefront,
+      CategoryRepository categories) {
     this.products = products;
     this.images = images;
     this.variants = variants;
     this.billing = billing;
     this.storefront = storefront;
+    this.categories = categories;
   }
 
   @Transactional
@@ -112,9 +115,16 @@ public class CatalogService {
         () -> {
           products.requireAccess(actor, tenant);
           var list = products.list(actor, tenant);
-          var summaries = images.summaries(tenant, list.stream().map(Product::id).toList());
+          var ids = list.stream().map(Product::id).toList();
+          var summaries = images.summaries(tenant, ids);
+          var additional = categories.additional(tenant, ids);
           return list.stream()
-              .map(p -> view(p, summaries.getOrDefault(p.id(), ProductImageSummary.NONE)))
+              .map(
+                  p ->
+                      view(
+                          p,
+                          summaries.getOrDefault(p.id(), ProductImageSummary.NONE),
+                          additional.getOrDefault(p.id(), List.of())))
               .toList();
         });
   }
@@ -299,10 +309,11 @@ public class CatalogService {
         p,
         images
             .summaries(p.tenantId(), List.of(p.id()))
-            .getOrDefault(p.id(), ProductImageSummary.NONE));
+            .getOrDefault(p.id(), ProductImageSummary.NONE),
+        categories.additional(p.tenantId(), List.of(p.id())).getOrDefault(p.id(), List.of()));
   }
 
-  private ProductView view(Product p, ProductImageSummary photos) {
+  private ProductView view(Product p, ProductImageSummary photos, List<UUID> additional) {
     var rows = variants.list(p.tenantId(), p.id());
     return new ProductView(
         p.id(),
@@ -334,7 +345,9 @@ public class CatalogService {
         photos.count(),
         p.categoryId(),
         p.brandId(),
-        p.slug());
+        p.featured(),
+        p.slug(),
+        additional);
   }
 
   private static String money(BigDecimal value) {

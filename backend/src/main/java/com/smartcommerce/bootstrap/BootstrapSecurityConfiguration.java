@@ -41,6 +41,9 @@ public class BootstrapSecurityConfiguration {
                         // SC-042: catalog with search, filters and facets.
                         "/api/public/stores/*/catalog",
                         "/api/public/stores/*/p/*",
+                        // SC-043: institutional pages.
+                        "/api/public/stores/*/pages/*",
+                        "/api/public/stores/*/banners/*/images/*",
                         "/api/public/stores/*/products/*",
                         "/api/public/stores/*/products/*/images",
                         "/api/public/stores/*/products/*/images/*/content",
@@ -177,6 +180,8 @@ public class BootstrapSecurityConfiguration {
                         "/api/tenants/*/categories/*/placement",
                         "/api/tenants/*/categories/*/publication",
                         "/api/tenants/*/products/*/category",
+                        // SC-043: additional categories of a product.
+                        "/api/tenants/*/products/*/categories",
                         // SC-041: brand, address and "compare at" prices of a product.
                         "/api/tenants/*/products/*/storefront",
                         "/api/tenants/*/brands/*")
@@ -211,6 +216,31 @@ public class BootstrapSecurityConfiguration {
                         HttpMethod.GET,
                         "/api/tenants/*/payments/mercado-pago",
                         "/api/payments/mercado-pago/callback")
+                    .authenticated()
+                    // SC-043: company details and institutional pages (OWNER checked in the
+                    // service).
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/tenants/*/content/company",
+                        "/api/tenants/*/content/pages",
+                        "/api/tenants/*/content/banners",
+                        "/api/tenants/*/content/banners/*/images/*",
+                        "/api/tenants/*/content/sections")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.PUT,
+                        "/api/tenants/*/content/company",
+                        "/api/tenants/*/content/pages/*",
+                        "/api/tenants/*/content/banners/order",
+                        "/api/tenants/*/content/banners/*",
+                        "/api/tenants/*/content/sections")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/tenants/*/content/banners",
+                        "/api/tenants/*/content/banners/*/images/*")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/tenants/*/content/banners/*")
                     .authenticated()
                     // SC-042: installment limit of the store (OWNER checked in the service).
                     .requestMatchers(HttpMethod.GET, "/api/tenants/*/payments/installments")

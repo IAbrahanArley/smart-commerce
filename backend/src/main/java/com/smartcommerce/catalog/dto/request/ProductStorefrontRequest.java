@@ -9,9 +9,10 @@ import tools.jackson.databind.JsonNode;
 /**
  * The "Vitrine" card of a product (SC-041): its brand ({@code null} clears it), its address and the
  * "compare at" price of each listed variant (a decimal string, or {@code null} to clear it).
- * Variants left out keep their value.
+ * Variants left out keep their value; {@code featured} left out keeps it too (SC-043).
  */
-public record ProductStorefrontRequest(UUID brandId, String slug, List<VariantCompareAt> variants) {
+public record ProductStorefrontRequest(
+    UUID brandId, String slug, List<VariantCompareAt> variants, Boolean featured) {
   public record VariantCompareAt(UUID id, JsonNode compareAtPrice) {
     /** {@code null} clears the price. */
     public BigDecimal value() {
