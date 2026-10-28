@@ -10,7 +10,7 @@ export function ProductCard({ store, card, maxInstallments }: { store: string; c
   return <article className="catalog-card">
     <Link className="catalog-card-link" href={productPath(store, card)} prefetch={false}>
       <div className="catalog-card-media">
-        <ProductCover slug={store} productId={card.id} name={card.name} />
+        <ProductCover slug={store} productId={card.id} imageId={card.imageId} name={card.name} />
         {!card.available ? <span className="card-badge card-badge-out">Esgotado</span>
           : card.discountPercent ? <span className="card-badge card-badge-discount">−{card.discountPercent}%<span className="visually-hidden"> de desconto</span></span> : null}
       </div>

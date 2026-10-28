@@ -2,15 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StoreFrame } from "@/components/store-frame";
 import { loadPage } from "@/lib/public-store";
+import { storeMetadata } from "@/lib/store-metadata";
 
-export const dynamic = "force-dynamic";
+// SC-047: no "force-dynamic": it would force no-store on the backend reads, which are cached for
+// 60 s per store. The page still renders per request (it reads the cart cookie).
 
 type Props = { params: Promise<{ slug: string; pagina: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { pagina } = await params;
-  const words = pagina.replaceAll("-", " ");
-  return { title: words.charAt(0).toUpperCase() + words.slice(1) };
+  const { slug, pagina } = await params;
+  const page = await loadPage(slug, pagina);
+  return storeMetadata({
+    title: `${page.title} | ${page.store.name}`,
+    description: `${page.title} da loja ${page.store.name}.`,
+    path: `/lojas/${encodeURIComponent(page.store.slug)}/paginas/${encodeURIComponent(pagina)}`,
+  });
 }
 
 // SC-043: an institutional page the store wrote (Sobre, Trocas e devoluções, Entrega, Privacidade,

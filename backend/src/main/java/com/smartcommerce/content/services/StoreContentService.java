@@ -5,6 +5,7 @@ import com.smartcommerce.content.domain.CompanyInfo;
 import com.smartcommerce.content.domain.ContentException;
 import com.smartcommerce.content.domain.StorePageKind;
 import com.smartcommerce.content.repositories.StoreContentRepository;
+import com.smartcommerce.storefront.services.StorefrontChanges;
 import com.smartcommerce.tenant.repositories.TenantAccessRepository;
 import java.time.Instant;
 import java.util.Map;
@@ -22,7 +23,11 @@ public class StoreContentService {
   private final TenantAccessRepository access;
   private final StoreContentRepository content;
 
-  public StoreContentService(TenantAccessRepository access, StoreContentRepository content) {
+  private final StorefrontChanges changes;
+
+  public StoreContentService(
+      TenantAccessRepository access, StoreContentRepository content, StorefrontChanges changes) {
+    this.changes = changes;
     this.access = access;
     this.content = content;
   }
@@ -35,6 +40,7 @@ public class StoreContentService {
 
   @Transactional
   public CompanyInfo saveCompany(UUID actor, UUID tenant, CompanyInfo info) {
+    changes.changed(tenant);
     content.saveCompany(store(actor, tenant), tenant, info, Instant.now());
     return content.company(tenant).orElse(CompanyInfo.EMPTY);
   }
@@ -49,6 +55,7 @@ public class StoreContentService {
   @Transactional
   public Map<StorePageKind, String> savePage(
       UUID actor, UUID tenant, StorePageKind kind, String rawHtml) {
+    changes.changed(tenant);
     String html = ProductDescription.sanitize(rawHtml == null ? "" : rawHtml).strip();
     // Markup without text ("<p></p>") is an empty page too.
     if (html.replaceAll("<[^>]*>", "").isBlank()) html = "";

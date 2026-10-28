@@ -111,6 +111,8 @@ SC-041 e SC-044 podem andar em paralelo (backend × base visual). SC-043 e SC-04
 
 ## SC-047 — SEO, cache e imagens
 
+**Estado (2026-10-28):** implementada. Ficam em cache as leituras do backend, não o HTML, que traz o carrinho do visitante. A invalidação é assinada e acontece depois do commit; o 308 real sai pelo `proxy.ts` (desvios no ADR-0018). Validação: [SC-047](../quality/SC-047-SEO-CACHE-IMAGES.md).
+
 - Metadados por página, `canonical`, Open Graph, JSON-LD (`Product`, `BreadcrumbList`, `Organization`), `sitemap.xml` e `robots.txt` por loja; rascunho com `noindex`.
 - Cache das páginas públicas com revalidação de 60 s e invalidação por etiqueta da loja ao publicar, ocultar ou editar conteúdo; carrinho, checkout e pedido continuam `no-store`.
 - Imagens públicas em tamanhos responsivos, cache de 1 dia com URL versionada.

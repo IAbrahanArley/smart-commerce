@@ -1,6 +1,7 @@
 import "server-only";
 import { notFound } from "next/navigation";
 import { type Frame, EMPTY_FRAME, parseFrame } from "@/lib/frame";
+import { type SitemapInput, parseSitemap, storeTag } from "@/lib/seo";
 import { type Card, type CatalogPage, type Link, parseCard, parseCatalog, parseInstallments } from "@/lib/catalog-page";
 
 export type PublicProduct = {
@@ -54,11 +55,21 @@ export function apiOrigin(): string {
   }
 }
 
+/**
+ * SC-047 (ADR-0018 V9): public reads are cached for 60 s under the tag of their store, so the key
+ * always contains the store (the URL) and the backend can drop one store's reads after a change.
+ * Pages that must stay fresh (cart, checkout, order) force no-store on their own segment.
+ */
+function cached(path: string): RequestInit {
+  const store = /^\/api\/public\/stores\/([a-z0-9-]+)/.exec(path)?.[1];
+  return store ? { next: { revalidate: 60, tags: [storeTag(store)] } } : { cache: "no-store" };
+}
+
 async function publicGet(path: string): Promise<unknown> {
   let response: Response;
   try {
     response = await fetch(`${apiOrigin()}${path}`, {
-      cache: "no-store",
+      ...cached(path),
       credentials: "omit",
       redirect: "error",
       headers: { Accept: "application/json" },
@@ -148,6 +159,23 @@ export async function loadFrame(slug: string): Promise<Frame> {
   }
 }
 
+/** SC-047: what the store sitemap lists (published content only), or null for an unknown store. */
+export async function loadSitemap(slug: string): Promise<SitemapInput | null> {
+  if (slug.length < 3 || slug.length > 63 || !SLUG.test(slug)) return null;
+  try {
+    const response = await fetch(`${apiOrigin()}${slugPath(slug)}/sitemap`, {
+      ...cached(`${slugPath(slug)}/sitemap`), credentials: "omit", redirect: "error", headers: { Accept: "application/json" }, signal: AbortSignal.timeout(5000),
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error();
+    const parsed = parseSitemap(await response.json());
+    if (!parsed) throw new Error();
+    return parsed;
+  } catch {
+    return unavailable();
+  }
+}
+
 /** SC-043: an institutional page; the same seven tags as product descriptions, nothing else. */
 export async function loadPage(slug: string, page: string): Promise<{ store: PublicStore; title: string; bodyHtml: string }> {
   if (page.length > 40 || !/^[a-z]+(?:-[a-z]+)*$/.test(page)) notFound();
@@ -172,7 +200,7 @@ export async function loadStoreCatalog(slug: string, query: URLSearchParams): Pr
 export async function loadSectionCards(slug: string, query: URLSearchParams, limit: number): Promise<Card[]> {
   try {
     const response = await fetch(`${apiOrigin()}${slugPath(slug)}/catalog?${query}`, {
-      cache: "no-store", credentials: "omit", redirect: "error", headers: { Accept: "application/json" }, signal: AbortSignal.timeout(5000),
+      ...cached(`${slugPath(slug)}/catalog`), credentials: "omit", redirect: "error", headers: { Accept: "application/json" }, signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) return [];
     return parseCatalog(await response.json()).products.slice(0, limit);
@@ -273,7 +301,15 @@ export async function publicLogo(slug: string): Promise<Response> {
   return proxyImage(`${apiOrigin()}/api/public/stores/${encodeURIComponent(slug)}/logo`);
 }
 
-async function proxyImage(url: string): Promise<Response> {
+/**
+ * SC-047: a photo by its id never changes (a new upload is a new id), so browsers and this
+ * server's image optimizer keep it for a day; "primary", the logo and banners can change under the
+ * same address and are kept for 60 s only.
+ */
+const IMMUTABLE = "public, max-age=86400, immutable";
+const SHORT = "public, max-age=60";
+
+async function proxyImage(url: string, cacheControl = SHORT): Promise<Response> {
   try {
     const response = await fetch(url, {
       credentials: "omit", cache: "no-store", redirect: "error", headers: { Accept: "image/jpeg, image/png" }, signal: AbortSignal.timeout(5000),
@@ -281,7 +317,7 @@ async function proxyImage(url: string): Promise<Response> {
     if (!response.ok) return new Response(null, { status: response.status === 404 ? 404 : 503, headers: { "Cache-Control": "no-store" } });
     const type = response.headers.get("content-type")?.split(";")[0];
     if (type !== "image/png" && type !== "image/jpeg") throw new Error();
-    return new Response(response.body, { status: 200, headers: { "Content-Type": type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
+    return new Response(response.body, { status: 200, headers: { "Content-Type": type, "Cache-Control": cacheControl, "X-Content-Type-Options": "nosniff" } });
   } catch { return new Response(null, { status: 503, headers: { "Cache-Control": "no-store" } }); }
 }
 
@@ -294,13 +330,6 @@ export async function publicBanner(slug: string, bannerId: string, variant: stri
 
 export async function publicImage(slug: string, productId: string, imageId: string): Promise<Response> {
   if (slug.length < 3 || slug.length > 63 || !SLUG.test(slug) || !UUID.test(productId) || (imageId !== "primary" && !UUID.test(imageId))) return new Response(null, { status: 404 });
-  try {
-    const response = await fetch(`${apiOrigin()}/api/public/stores/${encodeURIComponent(slug)}/products/${encodeURIComponent(productId)}/images/${encodeURIComponent(imageId)}/content`, {
-      credentials: "omit", cache: "no-store", redirect: "error", headers: { Accept: "image/jpeg, image/png" }, signal: AbortSignal.timeout(5000),
-    });
-    if (!response.ok) return new Response(null, { status: response.status === 404 ? 404 : 503, headers: { "Cache-Control": "no-store" } });
-    const type = response.headers.get("content-type")?.split(";")[0];
-    if (type !== "image/png" && type !== "image/jpeg") throw new Error();
-    return new Response(response.body, { status: 200, headers: { "Content-Type": type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
-  } catch { return new Response(null, { status: 503, headers: { "Cache-Control": "no-store" } }); }
+  return proxyImage(`${apiOrigin()}/api/public/stores/${encodeURIComponent(slug)}/products/${encodeURIComponent(productId)}/images/${encodeURIComponent(imageId)}/content`,
+    imageId === "primary" ? SHORT : IMMUTABLE);
 }

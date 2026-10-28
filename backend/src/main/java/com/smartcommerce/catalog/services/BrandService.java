@@ -7,6 +7,7 @@ import com.smartcommerce.catalog.exceptions.BrandException;
 import com.smartcommerce.catalog.exceptions.CatalogPersistenceException;
 import com.smartcommerce.catalog.repositories.BrandRepository;
 import com.smartcommerce.catalog.repositories.CatalogRepository;
+import com.smartcommerce.storefront.services.StorefrontChanges;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -28,7 +29,11 @@ public class BrandService {
   private final CatalogRepository catalog;
   private final BrandRepository brands;
 
-  public BrandService(CatalogRepository catalog, BrandRepository brands) {
+  private final StorefrontChanges changes;
+
+  public BrandService(
+      CatalogRepository catalog, BrandRepository brands, StorefrontChanges changes) {
+    this.changes = changes;
     this.catalog = catalog;
     this.brands = brands;
   }
@@ -41,6 +46,7 @@ public class BrandService {
 
   @Transactional
   public List<BrandSummary> create(UUID actor, UUID tenant, String rawName) {
+    changes.changed(tenant);
     CategoryName name = CategoryName.parse(rawName);
     return owned(
         actor,
@@ -70,6 +76,7 @@ public class BrandService {
 
   @Transactional
   public List<BrandSummary> rename(UUID actor, UUID tenant, UUID brand, String rawName) {
+    changes.changed(tenant);
     CategoryName name = CategoryName.parse(rawName);
     return owned(
         actor,
@@ -89,6 +96,7 @@ public class BrandService {
   /** Products of the brand stay in the catalog, without a brand. */
   @Transactional
   public List<BrandSummary> delete(UUID actor, UUID tenant, UUID brand) {
+    changes.changed(tenant);
     return owned(
         actor,
         tenant,

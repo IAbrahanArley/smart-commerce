@@ -4,6 +4,7 @@ import com.smartcommerce.storefront.domain.PublicLocator;
 import com.smartcommerce.storefront.dto.response.PublicPageView;
 import com.smartcommerce.storefront.dto.response.PublicProductBySlugView;
 import com.smartcommerce.storefront.dto.response.PublicProductDetailsView;
+import com.smartcommerce.storefront.dto.response.PublicSitemapView;
 import com.smartcommerce.storefront.dto.response.PublicStorefrontView;
 import com.smartcommerce.storefront.services.PublicCatalogService;
 import com.smartcommerce.storefront.services.StorefrontService;
@@ -55,6 +56,21 @@ public final class StorefrontController {
   @GetMapping("/pages/{page}")
   public ResponseEntity<PublicPageView> page(@PathVariable String slug, @PathVariable String page) {
     return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(catalog.page(slug, page));
+  }
+
+  /** SC-047: what the store sitemap lists. */
+  @GetMapping("/sitemap")
+  public ResponseEntity<PublicSitemapView> sitemap(@PathVariable String slug) {
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(catalog.sitemap(slug));
+  }
+
+  /** SC-047: whether a product address is current, moved (old link) or unknown (404). */
+  @GetMapping("/p/{productSlug}/address")
+  public ResponseEntity<PublicProductBySlugView> address(
+      @PathVariable String slug, @PathVariable String productSlug) {
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .body(catalog.address(slug, productSlug));
   }
 
   /** A product by its storefront address, or the address an old link moved to (SC-042). */

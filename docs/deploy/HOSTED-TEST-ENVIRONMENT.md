@@ -53,6 +53,8 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `DEPLOYMENT_ENVIRONMENT` | `hosted-test` |
 | `ORDERS_CHECKOUT_ENABLED` | `true` (exceção H2; o backend recusa iniciar sem `hosted-test`) |
 | `STOREFRONT_FORWARDING_SECRET` | o segredo gerado no passo 0 |
+| `STOREFRONT_REVALIDATION_URL` | URL de produção da vitrine na Vercel (passo 5), por exemplo `https://<projeto-vitrine>.vercel.app`; vazio: as páginas se atualizam a cada 60 s (SC-047) |
+| `STOREFRONT_REVALIDATION_SECRET` | outro segredo aleatório de pelo menos 32 caracteres, só para a revalidação da vitrine |
 | `IDENTITY_PUBLIC_ORIGIN` | URL **de produção** do admin na Vercel (passo 4), por exemplo `https://<projeto-admin>.vercel.app`; até lá, um valor HTTPS provisório |
 | `IDENTITY_SECURE_COOKIES` | `true` |
 | `IDENTITY_MAIL_PROVIDER` | `brevo` |
@@ -124,6 +126,8 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | `DEPLOYMENT_ENVIRONMENT` | `hosted-test` (sem ele, a vitrine não mostra o checkout: D6) |
 | `STOREFRONT_FORWARDING_SECRET` | o mesmo segredo do backend |
 | `STOREFRONT_TRUST_FORWARDED_FOR` | `true` (a Vercel sobrescreve `X-Forwarded-For` na borda; requisito R1 da SC-011) |
+| `STOREFRONT_PUBLIC_ORIGIN` | a URL de produção da própria vitrine (SC-047: `canonical`, Open Graph e JSON-LD) |
+| `STOREFRONT_REVALIDATION_SECRET` | o mesmo segredo de revalidação do backend |
 
 3. Atualize `NEXT_PUBLIC_STOREFRONT_ORIGIN` no admin e faça um novo deploy dele.
 

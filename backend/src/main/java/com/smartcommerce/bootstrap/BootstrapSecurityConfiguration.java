@@ -41,6 +41,8 @@ public class BootstrapSecurityConfiguration {
                         // SC-042: catalog with search, filters and facets.
                         "/api/public/stores/*/catalog",
                         "/api/public/stores/*/p/*",
+                        "/api/public/stores/*/p/*/address",
+                        "/api/public/stores/*/sitemap",
                         // SC-043: institutional pages.
                         "/api/public/stores/*/pages/*",
                         "/api/public/stores/*/banners/*/images/*",

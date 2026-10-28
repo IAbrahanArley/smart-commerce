@@ -94,6 +94,10 @@ const ROUTES = {
   "/api/public/stores/loja-teste/pages/trocas-e-devolucoes": () => ({ store, title: "Trocas e devoluções", slug: "trocas-e-devolucoes", bodyHtml: "<p>Troca em <strong>7 dias</strong>.</p>" }),
   "/api/public/stores/loja-teste/pages/termos": () => ({ store, title: "Termos de uso", slug: "termos", bodyHtml: "<p><a href=\"javascript:x\">PRIVATE_UPSTREAM_ERROR_FIXTURE</a></p>" }),
   "/api/public/stores/loja-teste/p/endereco-antigo": () => ({ movedTo: "produto-publico", product: null }),
+  // SC-047: the proxy's address question, and the sitemap (one draft-like store answers 404 below).
+  "/api/public/stores/loja-teste/p/endereco-antigo/address": () => ({ movedTo: "produto-publico", product: null }),
+  "/api/public/stores/loja-teste/p/produto-publico/address": () => ({ movedTo: null, product: null }),
+  "/api/public/stores/loja-teste/sitemap": () => ({ products: [{ slug: "produto-publico", updatedAt: "2026-10-20T12:00:00Z" }, { slug: "../fora", updatedAt: "2026-10-20T12:00:00Z" }], categories: ["camisetas", "manga-longa"], pages: ["trocas-e-devolucoes"] }),
   "/api/public/stores/loja-vazia/catalog?ordem=recentes": () => ({ ...catalog({ menu: [], total: 0, products: [], facets: noFacets, maxInstallments: null, company: null, pages: [], banners: [], sections: [] }),
     store: { name: "Loja vazia de teste", slug: "loja-vazia", profile: { contactEmail: "x@y.example\"><script>alert(1)</script>", whatsapp: "123", instagram: "a b", logo: false } } }),
   "/api/public/stores/loja-teste": () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], cost: "PRIVATE_COST_FIXTURE", sku: "PRIVATE_SKU_FIXTURE", quantity: 784321 }], categories, category: null, nextCursor: id }),

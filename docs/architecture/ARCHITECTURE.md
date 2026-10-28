@@ -101,6 +101,13 @@ Na SC-046, entra `/lojas/{slug}/acompanhar-pedido`, que existe só onde o checko
 - e-mail errado, número inexistente e pedido de outra loja dão o mesmo 404;
 - a resposta não oferece pagamento, que continua exigindo o token do navegador da compra.
 
+Na SC-047, a vitrine deixa de buscar tudo a cada visita:
+- as leituras públicas do backend ficam 60 s em cache, com a etiqueta da loja;
+- depois do commit, o backend avisa a vitrine em `POST /interno/revalidar`, assinado com `STOREFRONT_REVALIDATION_SECRET`, e ela descarta as leituras daquela loja;
+- o `proxy.ts` responde 308 para endereços antigos de produto;
+- as fotos passam pelo otimizador de imagens do Next;
+- as páginas ganham metadados, `canonical`, JSON-LD, `sitemap.xml` por loja e `robots.txt`.
+
 O checkout passou a usar uma moldura reduzida (`StoreFrame variant="checkout"`), sem busca, menu ou carrinho e com o contato da loja à vista. [Validação](../quality/SC-046-CART-CHECKOUT-TRACKING.md).
 
 Na SC-010, o módulo `orders` ganha a área do lojista (`/api/tenants/{id}/orders`: lista por cursor, detalhe e `POST .../{orderId}/cancel`), sempre com o vínculo OWNER e uma identidade ativa na própria query, e 404 uniforme para pedido de outra loja. O cancelamento trava a linha do pedido e depois o estoque (mesma ordem em todo lugar), faz a troca de estado condicional e libera as reservas na mesma transação. Duas rotinas `@Scheduled` no processo do backend (`OrderMaintenanceJob`) usam lotes com `FOR UPDATE SKIP LOCKED`:

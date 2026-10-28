@@ -1,6 +1,7 @@
 package com.smartcommerce.tenant.services;
 
 import com.smartcommerce.billing.services.BillingService;
+import com.smartcommerce.storefront.services.StorefrontChanges;
 import com.smartcommerce.tenant.domain.TenantDetails;
 import com.smartcommerce.tenant.dto.response.TenantView;
 import com.smartcommerce.tenant.exceptions.TenantException;
@@ -19,7 +20,11 @@ public class TenantService {
   private final TenantRepository tenants;
   private final BillingService billing;
 
-  public TenantService(TenantRepository tenants, BillingService billing) {
+  private final StorefrontChanges changes;
+
+  public TenantService(
+      TenantRepository tenants, BillingService billing, StorefrontChanges changes) {
+    this.changes = changes;
     this.tenants = tenants;
     this.billing = billing;
   }
@@ -65,6 +70,7 @@ public class TenantService {
 
   @Transactional
   public TenantView publish(UUID actor, UUID tenant, boolean published) {
+    changes.changed(tenant);
     try {
       return view(tenants.publish(actor, tenant, published));
     } catch (TenantPersistenceException exception) {

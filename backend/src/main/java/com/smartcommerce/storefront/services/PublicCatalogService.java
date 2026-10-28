@@ -14,6 +14,7 @@ import com.smartcommerce.storefront.dto.response.PublicPageView;
 import com.smartcommerce.storefront.dto.response.PublicProductBySlugView;
 import com.smartcommerce.storefront.dto.response.PublicProductDetailsView;
 import com.smartcommerce.storefront.dto.response.PublicProductView;
+import com.smartcommerce.storefront.dto.response.PublicSitemapView;
 import com.smartcommerce.storefront.dto.response.PublicStoreProfileView;
 import com.smartcommerce.storefront.dto.response.PublicStoreView;
 import com.smartcommerce.storefront.dto.response.PublicVariantView;
@@ -254,6 +255,57 @@ public class PublicCatalogService {
         .orElseThrow(StorefrontException::new);
   }
 
+  /** At most this many products in a store sitemap (one file, well under the 50,000 URL limit). */
+  public static final int SITEMAP_PRODUCTS = 5000;
+
+  /**
+   * What a store sitemap lists (SC-047, ADR-0018 V11): published products with an address, the
+   * categories the menu shows and the pages the store wrote. Nothing of a draft store.
+   */
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+  public PublicSitemapView sitemap(String rawSlug) {
+    String slug = PublicLocator.slug(rawSlug);
+    stores.store(slug).orElseThrow(StorefrontException::new);
+    PublicCategoryTree tree = tree(slug);
+    List<String> categories = new ArrayList<>();
+    collect(menu(tree, null, catalog.categoryMembers(slug, EVERYTHING)), categories);
+    var written = catalog.pages(slug);
+    return new PublicSitemapView(
+        catalog.sitemapProducts(slug, SITEMAP_PRODUCTS).stream()
+            .map(p -> new PublicSitemapView.Product(p.slug(), p.updatedAt()))
+            .toList(),
+        categories,
+        java.util.Arrays.stream(StorePageKind.values())
+            .filter(written::containsKey)
+            .map(StorePageKind::slug)
+            .toList());
+  }
+
+  private static void collect(List<PublicCatalogView.MenuItem> items, List<String> slugs) {
+    for (var item : items) {
+      slugs.add(item.slug());
+      collect(item.children(), slugs);
+    }
+  }
+
+  /**
+   * Where a product address leads (SC-047), for the storefront proxy to answer old links with a
+   * real 308: {@code movedTo} is null for a current address; a missing one is a 404.
+   */
+  @Transactional(readOnly = true)
+  public PublicProductBySlugView address(String rawSlug, String productSlug) {
+    String slug = PublicLocator.slug(rawSlug);
+    if (productSlug == null
+        || productSlug.length() > 80
+        || !productSlug.matches("[a-z0-9]+(-[a-z0-9]+)*")) throw new StorefrontException();
+    if (catalog.productBySlug(slug, productSlug).isPresent())
+      return new PublicProductBySlugView(null, null);
+    return catalog
+        .movedTo(slug, productSlug, ReservationPolicy.now(clock))
+        .map(moved -> new PublicProductBySlugView(moved, null))
+        .orElseThrow(StorefrontException::new);
+  }
+
   private PublicCategoryTree tree(String slug) {
     return new PublicCategoryTree(
         catalog.categories(slug).stream()
@@ -290,7 +342,8 @@ public class PublicCatalogService {
         discounted ? money(card.compareAt()) : null,
         discounted ? discountPercent(card.price(), card.compareAt()) : null,
         card.currency(),
-        card.available());
+        card.available(),
+        card.imageId());
   }
 
   /** Rounded down: the storefront never promises more discount than there is (ADR-0018 V3). */

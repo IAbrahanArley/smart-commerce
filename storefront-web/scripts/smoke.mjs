@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { forwardingSecret } from "./smoke-units.mjs";
 import { checkoutSmoke } from "./smoke-checkout.mjs";
+import { revalidationSecret, seoSmoke } from "./smoke-seo.mjs";
 import { bannerId, id, missingId, nextId, orderToken, png, startNext, startUpstream, upstreamRequests } from "./smoke-upstream.mjs";
 
 const port = Number(process.env.SMOKE_PORT ?? 3002);
@@ -38,7 +39,8 @@ async function page(path, cartCookie) {
 }
 
 try {
-  server = await startNext(port, { ...process.env, STOREFRONT_API_ORIGIN: `http://127.0.0.1:${upstreamPort}`, STOREFRONT_CHECKOUT_ENABLED: "true", STOREFRONT_FORWARDING_SECRET: forwardingSecret, STOREFRONT_TRUST_FORWARDED_FOR: "", DEPLOYMENT_ENVIRONMENT: "hosted-test" },
+  server = await startNext(port, { ...process.env, STOREFRONT_API_ORIGIN: `http://127.0.0.1:${upstreamPort}`, STOREFRONT_CHECKOUT_ENABLED: "true", STOREFRONT_FORWARDING_SECRET: forwardingSecret, STOREFRONT_TRUST_FORWARDED_FOR: "", DEPLOYMENT_ENVIRONMENT: "hosted-test",
+    STOREFRONT_PUBLIC_ORIGIN: "https://vitrine.example", STOREFRONT_REVALIDATION_SECRET: revalidationSecret },
     data => { output = (output + data).slice(-8000); });
   const home = await page("/");
   assert.equal(home.response.status, 200);
@@ -113,8 +115,9 @@ try {
   assert.match(detail.html, /Você está em/);
   assert.ok(!detail.html.includes('id="public-variant"'), "Produto SIMPLE com variante padrão não deve exibir seletor de combinações.");
   assert.match(detail.html, /<strong>segura<\/strong>/);
-  assert.ok(detail.html.includes(`/midia/lojas/loja-teste/produtos/${id}/${id}`));
-  assert.ok(!detail.html.includes("/_next/image?"), "Imagens públicas não devem usar cache do otimizador.");
+  // SC-047: photos resized by this server's optimizer, by their immutable id address.
+  assert.ok(detail.html.includes(`/_next/image?url=%2Fmidia%2Flojas%2Floja-teste%2Fprodutos%2F${id}%2F${id}`), "Foto otimizada pelo endereço com id.");
+  assert.match(detail.html, /srcSet="[^"]*\/_next\/image\?url=[^"]* \d+w/, "Foto em vários tamanhos.");
   const variable = await page(`/lojas/loja-variavel/produtos/${nextId}`);
   assert.match(variable.html, /Escolha a combinação/);
   assert.match(variable.html, /Cor: Azul/);
@@ -124,7 +127,8 @@ try {
   assert.match(variable.html, /59,90/);
   const photo = await fetch(`${base}/midia/lojas/loja-teste/produtos/${id}/${id}`, { headers: { Cookie: "ADMIN_SESSION=synthetic-not-a-credential", Authorization: "Bearer synthetic-not-a-credential" } });
   assert.equal(photo.status, 200); assert.equal(photo.headers.get("content-type"), "image/png");
-  assert.equal(photo.headers.get("set-cookie"), null); assert.match(photo.headers.get("cache-control"), /no-store/);
+  assert.equal(photo.headers.get("set-cookie"), null); assert.equal(photo.headers.get("cache-control"), "public, max-age=86400, immutable");
+  assert.equal((await fetch(`${base}/midia/lojas/loja-teste/produtos/${id}/primary`)).headers.get("cache-control"), "public, max-age=60");
   assert.deepEqual(Buffer.from(await photo.arrayBuffer()), png);
   const invalidPhoto = await fetch(`${base}/midia/lojas/loja-teste/produtos/${id}/${nextId}`);
   assert.equal(invalidPhoto.status, 503); assert.ok(!(await invalidPhoto.text()).includes("PRIVATE_UPSTREAM_ERROR_FIXTURE"));
@@ -157,12 +161,12 @@ try {
   assert.match(bySlug.html, /62,40/); assert.match(bySlug.html, /−20%/);
   assert.match(bySlug.html, /em até 6× no Mercado Pago/);
   assert.match(bySlug.html, /Você também pode gostar/); assert.match(bySlug.html, /Outro produto publicado/);
-  const moved = await fetch(`${base}/lojas/loja-teste/p/endereco-antigo`, { redirect: "manual" });
-  // The page streams behind the loading boundary, so Next redirects inside the HTML (status 200 with
-  // a refresh to the new address). A real 308 before streaming is SC-047 (proxy), like the 404s above.
-  const movedHtml = await moved.text();
-  assert.ok(moved.status === 308 ? moved.headers.get("location") === "/lojas/loja-teste/p/produto-publico"
-    : movedHtml.includes('http-equiv="refresh" content="0;url=/lojas/loja-teste/p/produto-publico"'), "Endereço antigo leva ao novo.");
+  // SC-047: the proxy answers an old product address with a real 308, before the page streams.
+  const moved = await fetch(`${base}/lojas/loja-teste/p/endereco-antigo?origem=x`, { redirect: "manual" });
+  assert.equal(moved.status, 308);
+  const location = new URL(moved.headers.get("location"), base);
+  assert.equal(location.pathname + location.search, "/lojas/loja-teste/p/produto-publico?origem=x");
+  await seoSmoke(base, bySlug, catalog);
   const empty = await page("/lojas/loja-vazia");
   assert.match(empty.html, /Nenhum produto publicado/);
   assert.ok(!empty.html.includes("Atendimento") && !empty.html.includes("<script>alert"), "Contatos inválidos são descartados.");
@@ -264,6 +268,14 @@ try {
     assert.match((await (await fetch(`${offBase}/lojas/loja-teste/acompanhar-pedido`)).text()).replaceAll("<!-- -->", ""), /Página não encontrada/);
     assert.ok(!offCheckout.includes("Confirmar pedido"));
     assert.ok(!offCart.includes("test-environment-banner"), "Fora do ambiente de teste não há aviso.");
+    // SC-047: outside the test environment store pages are indexed and crawlers see the rules;
+    // without a secret the revalidation route does not exist.
+    const offHome = (await (await fetch(`${offBase}/lojas/loja-teste`)).text());
+    assert.match(offHome, /<meta name="robots" content="index, follow"\/>/);
+    assert.ok(!offHome.includes('rel="canonical"'), "Sem origem pública configurada, sem canonical adivinhado.");
+    const offRobots = await (await fetch(`${offBase}/robots.txt`)).text();
+    assert.match(offRobots, /Allow: \/lojas\//); assert.match(offRobots, /Disallow: \/lojas\/\*\/checkout/);
+    assert.equal((await fetch(`${offBase}/interno/revalidar`, { method: "POST", body: "{}" })).status, 404);
   } finally {
     off.kill();
   }
