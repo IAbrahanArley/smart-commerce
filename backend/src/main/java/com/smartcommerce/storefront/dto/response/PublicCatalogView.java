@@ -26,7 +26,37 @@ public record PublicCatalogView(
     long total,
     List<Card> products,
     Facets facets,
-    Integer maxInstallments) {
+    Integer maxInstallments,
+    // SC-043: footer details and the institutional pages the store wrote.
+    Company company,
+    List<Link> pages,
+    // SC-043: the home banners shown now and the home sections, in order.
+    List<Banner> banners,
+    List<Section> sections) {
+
+  /**
+   * A home banner. The link is internal: {@code linkKind} CATEGORY or PRODUCT with a slug, SEARCH
+   * with the search text, or NONE. Images are served by the public banner image route.
+   */
+  public record Banner(
+      UUID id, String alt, String title, String linkKind, String linkTarget, boolean mobileImage) {}
+
+  /** A home section: NEW, BEST, FEATURED or CATEGORY (with {@code categorySlug}). */
+  public record Section(String kind, String title, String categorySlug) {}
+
+  /**
+   * What the store shows about the company (SC-043); every field may be null. {@code cnpj} and
+   * {@code phone} are digits; social networks are handles.
+   */
+  public record Company(
+      String announcement,
+      String legalName,
+      String cnpj,
+      String phone,
+      String address,
+      String facebook,
+      String tiktok,
+      String youtube) {}
 
   /** A link to a category or brand. */
   public record Link(String name, String slug) {}

@@ -7,6 +7,8 @@ import { signedClientIp, trustedClientIp } from "../src/lib/client-ip.ts";
 import { addLine, CART_MAX_LINES, parseCart, serializeCart } from "../src/lib/cart-cookie.ts";
 import { checkoutPage } from "../src/lib/payment-url.ts";
 import { categoryPath, parseMenu } from "../src/lib/menu.ts";
+import { formatPhone, pagePath, parseFrame } from "../src/lib/frame.ts";
+import { bannerHref, parseHome, sectionHref, sectionQuery } from "../src/lib/home.ts";
 
 // Pure rules checked before any server starts.
 export const forwardingSecret = "synthetic-forwarding-secret-for-smoke-0001";
@@ -93,3 +95,28 @@ const deep = (level) => level > 4 ? [] : [{ name: `N${level}`, slug: `n${level}`
 assert.deepEqual(parseMenu({ menu: deep(1) }), []);
 assert.deepEqual(parseMenu(null), []); assert.deepEqual(parseMenu({}), []);
 assert.equal(categoryPath("loja-a", "camisetas"), "/lojas/loja-a/c/camisetas");
+
+// SC-043: the frame keeps valid company fields and pages only.
+const frame = parseFrame({ menu: [], company: { cnpj: "11222333000181", phone: "123", facebook: "a b", announcement: "Aviso" }, pages: [{ name: "Sobre", slug: "sobre" }, { name: "X", slug: "../x" }] });
+assert.equal(frame.company.cnpj, "11222333000181"); assert.equal(frame.company.phone, null); assert.equal(frame.company.facebook, null);
+assert.deepEqual(frame.pages, [{ name: "Sobre", slug: "sobre" }]);
+assert.equal(parseFrame({ company: { phone: "x" } }).company, null);
+assert.equal(formatPhone("5583999998888"), "(83) 99999-8888"); assert.equal(pagePath("loja-a", "sobre"), "/lojas/loja-a/paginas/sobre");
+
+// SC-043: banners keep internal links only; sections keep their known kinds.
+const home = parseHome({
+  banners: [
+    { id: "8c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5", alt: "Ok", title: null, linkKind: "SEARCH", linkTarget: "tênis azul", mobileImage: false },
+    { id: "8c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e6", alt: "X", linkKind: "CATEGORY", linkTarget: "../admin" },
+    { id: "nao-e-id", alt: "X", linkKind: "NONE" },
+    { id: "8c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e7", alt: "", linkKind: "NONE" },
+  ],
+  sections: [{ kind: "BEST", title: "Mais vendidos" }, { kind: "CATEGORY", title: "Sem categoria" }, { kind: "OTHER", title: "X" }],
+});
+assert.equal(home.banners.length, 1);
+assert.equal(bannerHref("loja-teste", home.banners[0]), "/lojas/loja-teste/busca?q=t%C3%AAnis+azul");
+assert.equal(bannerHref("loja-teste", { ...home.banners[0], linkKind: "NONE", linkTarget: null }), null);
+assert.deepEqual(home.sections, [{ kind: "BEST", title: "Mais vendidos", categorySlug: null }]);
+assert.equal(sectionQuery({ kind: "FEATURED", title: "D", categorySlug: null }).toString(), "destaque=1&ordem=recentes");
+assert.equal(sectionHref("loja-teste", { kind: "CATEGORY", title: "C", categorySlug: "camisetas" }), "/lojas/loja-teste/c/camisetas");
+assert.deepEqual(parseHome(null), { banners: [], sections: [] });

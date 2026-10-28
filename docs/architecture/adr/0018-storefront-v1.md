@@ -55,7 +55,7 @@ Regras comuns: loja resolvida só pelo slug publicado; toda consulta pública re
 
 ## Implementação e desvios registrados
 
-**SC-041 (2026-10-27, PR #55):** V1, V2, V3 e V5 implementadas conforme acima, exceto as **categorias adicionais por produto** (N:N de V1). Hoje cada produto tem só a categoria principal; coleções de marketing ("Outlet", "Promoções") funcionam como categorias comuns, mas um produto não pode estar ao mesmo tempo em "Camisetas" e em "Promoções". Fica como pendência da Sprint 8, a decidir antes da SC-045. Registros: [SC-041A](../../quality/SC-041A-CATEGORY-TREE.md) e [SC-041B](../../quality/SC-041B-BRANDS-SLUG-COMPARE-AT.md).
+**SC-041 (2026-10-27, PR #55):** V1, V2, V3 e V5 implementadas conforme acima, exceto as **categorias adicionais por produto** (N:N de V1). Hoje cada produto tem só a categoria principal; coleções de marketing ("Outlet", "Promoções") funcionam como categorias comuns, mas um produto não pode estar ao mesmo tempo em "Camisetas" e em "Promoções". Ficou como pendência da Sprint 8 e foi resolvida na SC-043 (V37). Registros: [SC-041A](../../quality/SC-041A-CATEGORY-TREE.md) e [SC-041B](../../quality/SC-041B-BRANDS-SLUG-COMPARE-AT.md).
 
 **SC-042 (2026-10-27):**
 - **Rota nova, contrato antigo intacto.** O catálogo com busca, filtros e facetas é `GET /api/public/stores/{loja}/catalog`. A listagem original (`GET /api/public/stores/{loja}`, ADR-0010) continua campo a campo, para a vitrine atual não quebrar até a SC-045.
@@ -70,3 +70,21 @@ Regras comuns: loja resolvida só pelo slug publicado; toda consulta pública re
 - **Endereço antigo do produto:** redireciona para o atual, mas **dentro do HTML** (status 200 com `meta refresh`), porque a página é enviada por streaming atrás do `loading.tsx` global, como já acontece com as páginas 404. Um 308 de verdade, decidido antes do streaming, fica para a SC-047 (`proxy.ts`), junto com o cache.
 - **Filtro antigo `?categoria={id}`:** a home nova ignora esse parâmetro. A loja ainda não foi lançada, então não há links antigos com ele a preservar.
 - **Filtro inválido na URL:** a API responde 400 e a vitrine mostra a página "não encontrada", em vez de erro.
+
+**SC-043 (2026-10-27):**
+- **Categorias adicionais (pendência da SC-041):** feitas com a V37, até 10 por produto. A principal continua definindo o caminho e os relacionados.
+- **Dados do rodapé fora do `store_profile`:** ficam em `store_company`, separada, porque o perfil tem versão e logo próprios ("Dados da loja"). WhatsApp, e-mail, Instagram e logo continuam onde estavam.
+- **Redes sociais:** só Facebook, TikTok e YouTube, além do Instagram que já existia. São gravadas como nome de usuário e a vitrine monta o link para o domínio fixo, então nenhum endereço digitado vira link. X, LinkedIn e Pinterest ficam para quando houver pedido.
+- **Banners:**
+  - a imagem passa pelo mesmo normalizador das fotos de produto, com pelo menos 300 px no menor lado;
+  - a de celular é opcional; sem ela, vale a principal;
+  - banner sem imagem principal não aparece;
+  - o período é gravado como instante; o admin converte a data digitada pelo fuso do navegador do lojista;
+  - a troca automática acontece a cada 7 s, para com o ponteiro ou o foco dentro do carrossel, tem botão "Pausar" e não acontece com `prefers-reduced-motion`.
+- **Seções:**
+  - até 8, cada uma com até 8 produtos;
+  - seção de categoria oculta não aparece, e seção sem produtos também não;
+  - sem nenhuma seção configurada, a home mostra "Lançamentos", como antes;
+  - o "Ver todos" dos destaques usa o filtro novo `destaque=1` da API do catálogo.
+- **Destaque do produto:** marcado no cartão "Vitrine" da edição do produto, junto com marca, endereço e preço "de".
+- **Resposta do catálogo:** banners e seções vêm em toda resposta de `/catalog`, como o menu e o rodapé. O custo extra fica para o cache da SC-047.

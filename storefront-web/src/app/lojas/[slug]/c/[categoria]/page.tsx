@@ -22,7 +22,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const { store, catalog } = await loadStoreCatalog(slug, apiQuery(query, categoria));
   const storeUrl = `/lojas/${encodeURIComponent(store.slug)}`;
   const path = catalog.category?.path ?? [];
-  return <StoreFrame store={store} menu={catalog.menu} currentCategory={path[0]?.slug}>
+  return <StoreFrame store={store} frame={catalog.frame} currentCategory={path[0]?.slug}>
     <CatalogListing store={store.slug} base={categoryPath(store.slug, categoria)} params={query} catalog={catalog}
       title={catalog.category?.name ?? "Categoria"}
       breadcrumb={[{ name: "Início", href: storeUrl }, ...path.map(item => ({ name: item.name, href: categoryPath(store.slug, item.slug) }))]} />

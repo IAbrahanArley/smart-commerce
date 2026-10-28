@@ -378,6 +378,12 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
 .store-footer li a:hover { text-decoration: underline; }
 .whatsapp-float { position: fixed; right: var(--store-space-6); bottom: var(--store-space-6); z-index: 5; display: flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem; color: #ffffff; background: var(--store-whatsapp); border-radius: 50%; box-shadow: var(--store-shadow-raised); }
 .whatsapp-float:hover { color: #ffffff; background: #0e6431; }
+/* SC-043: the store's announcement bar, and its legal line in the footer. */
+.store-announcement { margin: 0; padding: var(--store-space-2) var(--store-space-4); text-align: center; font-size: 0.8125rem; font-weight: 600; color: var(--store-on-action); background: var(--store-action); overflow-wrap: anywhere; }
+.store-footer-legal { margin-top: var(--store-space-8); padding-top: var(--store-space-4); border-top: 1px solid var(--store-divider); font-size: 0.8125rem; color: var(--store-secondary); overflow-wrap: anywhere; }
+.store-page { padding-block: var(--store-space-6) var(--store-space-4); max-width: 46rem; }
+.store-page h1 { margin-block: var(--store-space-4) var(--store-space-6); }
+.store-page-body p, .store-page-body ul, .store-page-body ol { margin-block: var(--store-space-3); line-height: 1.7; }
 /* The platform bar under every page (root layout): checkout status, credit and privacy. */
 .site-footer { padding-block: var(--store-space-4); background: var(--store-band); border-top: 1px solid var(--store-divider); font-size: 0.8125rem; color: var(--store-secondary); }
 .footer-content { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--store-space-2) var(--store-space-6); }
@@ -416,6 +422,22 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
 @media (prefers-reduced-motion: reduce) { .catalog-card-media .product-cover img { transition: none; } .catalog-card-link:hover .product-cover img { transform: none; } }
 
 .store-home { padding-block: var(--store-space-8) var(--store-space-4); }
+/* SC-043: home banners. The image keeps its own proportion; controls sit below it, never over it. */
+.banner-carousel { margin-top: var(--store-space-4); }
+.banner-slides { position: relative; }
+.banner-slide { position: relative; }
+.banner-slide[hidden] { display: none; }
+.banner-slide picture, .banner-slide img { display: block; width: 100%; height: auto; max-height: min(70vh, 36rem); object-fit: cover; border-radius: var(--store-radius-large); background: var(--store-muted-background); }
+.banner-link { display: block; color: inherit; text-decoration: none; border-radius: var(--store-radius-large); }
+.banner-link:focus-visible { outline: 3px solid var(--store-focus); outline-offset: 4px; }
+.banner-title { display: block; margin-top: var(--store-space-2); font-weight: 700; font-size: 1.0625rem; color: var(--store-text); }
+.banner-link:hover .banner-title { color: var(--store-link-hover); text-decoration: underline; }
+.banner-controls { display: flex; align-items: center; justify-content: flex-end; gap: var(--store-space-2); margin-bottom: var(--store-space-2); }
+.banner-control { min-height: 44px; min-width: 44px; padding: 0 var(--store-space-4); border: 1px solid var(--store-control-border); border-radius: var(--store-radius-pill); background: var(--store-surface); color: var(--store-text); font: inherit; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.banner-control:hover { background: var(--store-muted-background); }
+.banner-arrow { padding: 0; }
+.banner-position { min-width: 3.5rem; text-align: center; font-variant-numeric: tabular-nums; color: var(--store-secondary); font-weight: 600; }
+
 .home-section { margin-top: var(--store-space-12); }
 .home-section:first-of-type { margin-top: var(--store-space-4); }
 .home-section h2 { font-size: 1.5rem; margin-bottom: var(--store-space-6); }

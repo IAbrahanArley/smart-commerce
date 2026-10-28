@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import "./smoke-ui.mjs";
 import "./smoke-billing.mjs";
+import "./smoke-sprint8.mjs";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { coverUrl, decimalInput, formatBRL, photoCountText } from "../src/lib/catalog.ts";
@@ -10,11 +11,10 @@ import { storefrontUrl } from "../src/lib/tenant-api.ts";
 import { backendOrigin, hostedTestEnvironment } from "../src/lib/deployment.ts";
 import { alertLink, alertText, parseAlerts } from "../src/lib/alerts.ts";
 import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outcomeText, parseAnswer, parseStatus, questionError, quotaText, sourceText } from "../src/lib/advisor.ts";
-import { authorizationTarget, callbackMessage, installmentsText, parseConnection, parseInstallments } from "../src/lib/payments.ts";
+import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
 import { legalDraft, operatorText, updatedText } from "../src/lib/legal.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
-import { brandError, compareAtInput, parseBrands, storefrontError } from "../src/lib/brands.ts";
-import { categoryError, categoryName, categoryNameError, categoryPath, categorySlugError, parentOptions, parseCategories, productCountText } from "../src/lib/categories.ts";
+import { categoryError, categoryName, categoryNameError, parseCategories, productCountText } from "../src/lib/categories.ts";
 import { instagramHandle, logoFileError, profileErrors, profileFields, profilePayload, whatsappText } from "../src/lib/store-profile.ts";
 
 for (const path of ["/conta", "/lojas", "/lojas/uuid/despesas"]) assert.equal(isProtectedPath(path), true, path);
@@ -42,30 +42,6 @@ const category = (id, name, parentId, depth) => ({ id, name, slug: id, parentId,
 assert.deepEqual(parseCategories([{ ...category("c-1", "Camisetas", null, 1), extra: true }]), [category("c-1", "Camisetas", null, 1)]);
 assert.equal(parseCategories([{ id: "c-1", name: "Camisetas", products: 2 }]), null);
 assert.equal(parseCategories([category("c-1", "Fundo", null, 4)]), null);
-// SC-041: the tree of up to 3 levels, its paths and the parents a category can move under.
-const tree = [category("f", "Feminino", null, 1), category("r", "Roupas", "f", 2), category("c", "Camisetas", "r", 3), category("o", "Outlet", null, 1)];
-assert.equal(categoryPath(tree, "c"), "Feminino › Roupas › Camisetas");
-assert.deepEqual(parentOptions(tree).map(item => item.id), ["f", "r", "o"]);
-assert.deepEqual(parentOptions(tree, "r").map(item => item.id), ["f", "o"]);
-assert.deepEqual(parentOptions(tree, "f").map(item => item.id), []);
-assert.equal(categorySlugError(" Moda-Praia "), null);
-assert.match(categorySlugError("moda praia"), /hífens/); assert.match(categorySlugError(""), /Informe/);
-assert.match(categoryError(409, "DEPTH"), /3 níveis/); assert.match(categoryError(409, "HAS_CHILDREN"), /subcategorias/);
-// SC-042: installment limit (null: Mercado Pago default; anything else unexpected).
-assert.equal(parseInstallments({ maxInstallments: null }), null); assert.equal(parseInstallments({ maxInstallments: 6 }), 6);
-assert.equal(parseInstallments({ maxInstallments: 13 }), undefined); assert.equal(parseInstallments({ maxInstallments: "6" }), undefined);
-assert.equal(installmentsText(1), "somente à vista"); assert.equal(installmentsText(6), "em até 6×");
-// SC-041: brands and the product "Vitrine" card.
-assert.deepEqual(parseBrands([{ id: "b-1", name: "Ágil", slug: "agil", products: 1, extra: 1 }]), [{ id: "b-1", name: "Ágil", slug: "agil", products: 1 }]);
-assert.equal(parseBrands([{ id: "b-1", name: "Ágil" }]), null);
-assert.deepEqual(compareAtInput("", "199.90"), { value: null });
-assert.deepEqual(compareAtInput("249,9", "199.90"), { value: "249.90" });
-assert.match(compareAtInput("199,90", "199.90").error, /maior/);
-assert.match(compareAtInput("0", "199.90").error, /reais/);
-assert.match(compareAtInput("abc", "199.90").error, /reais/);
-assert.deepEqual(compareAtInput("1000000000000000.00", "999999999999999.99"), { value: "1000000000000000.00" });
-assert.match(brandError(409, "NAME_CONFLICT"), /Já existe/); assert.match(storefrontError(409, "SLUG_CONFLICT"), /endereço/);
-assert.match(storefrontError(400, "COMPARE_AT_NOT_ABOVE"), /maior/);
 assert.equal(parseCategories({}), null);
 assert.equal(productCountText(0), "Nenhum produto"); assert.equal(productCountText(1), "1 produto"); assert.equal(productCountText(3), "3 produtos");
 assert.match(categoryError(409, "NAME_CONFLICT"), /Já existe/); assert.match(categoryError(409, "LIMIT"), /50 categorias/);
@@ -352,6 +328,7 @@ try {
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos", "Produtos", "Carregando catálogo…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/categorias", "Categorias", "Carregando categorias…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/marcas", "Marcas", "Carregando marcas…"],
+    ["/lojas/00000000-0000-0000-0000-000000000000/conteudo", "Aparência e conteúdo", "Carregando conteúdo da loja…"],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/novo", "Novo produto", 'aria-label="Navegação da loja"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001", "Editar produto", 'aria-label="Trilha de navegação"'],
     ["/lojas/00000000-0000-0000-0000-000000000000/produtos/00000000-0000-0000-0000-000000000001/estoque", "Estoque do produto", 'aria-label="Trilha de navegação"'],

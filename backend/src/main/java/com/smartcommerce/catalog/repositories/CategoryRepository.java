@@ -3,6 +3,7 @@ package com.smartcommerce.catalog.repositories;
 import com.smartcommerce.catalog.domain.CategoryTree;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -55,11 +56,13 @@ public class CategoryRepository {
     return jdbc
         .query(
             """
-            SELECT c.id,c.name,c.slug,c.parent_id,c.position,c.published,count(p.id) AS products
+            SELECT c.id,c.name,c.slug,c.parent_id,c.position,c.published,
+              (SELECT count(*) FROM catalog_product p WHERE p.tenant_id=c.tenant_id
+                AND (p.category_id=c.id OR EXISTS (SELECT 1 FROM catalog_product_category pc
+                  WHERE pc.product_id=p.id AND pc.tenant_id=p.tenant_id AND pc.category_id=c.id)))
+                AS products
             FROM catalog_category c
-            LEFT JOIN catalog_product p ON p.category_id=c.id AND p.tenant_id=c.tenant_id
             WHERE c.tenant_id=?
-            GROUP BY c.id
             """,
             (row, index) ->
                 new Row(
@@ -170,16 +173,66 @@ public class CategoryRepository {
         == 1;
   }
 
+  /** Locks the product row; false when it is not a product of the tenant. */
+  public boolean lockProduct(UUID tenant, UUID product) {
+    return !jdbc.queryForList(
+            "SELECT id FROM catalog_product WHERE tenant_id=? AND id=? FOR UPDATE",
+            UUID.class,
+            tenant,
+            product)
+        .isEmpty();
+  }
+
+  /**
+   * Replaces the additional categories of a product (SC-043, V37). The composite foreign key
+   * refuses a category of another tenant (DataIntegrityViolationException).
+   */
+  public void replaceAdditional(UUID tenant, UUID product, List<UUID> categories) {
+    jdbc.update(
+        "DELETE FROM catalog_product_category WHERE tenant_id=? AND product_id=?", tenant, product);
+    for (UUID category : categories)
+      jdbc.update(
+          "INSERT INTO catalog_product_category(product_id,category_id,tenant_id) VALUES (?,?,?)",
+          product,
+          category,
+          tenant);
+  }
+
   /**
    * Sets ({@code category} present) or clears a product's category. The composite foreign key
    * refuses a category of another tenant (DataIntegrityViolationException).
    */
   public boolean assign(UUID tenant, UUID product, UUID category) {
-    return jdbc.update(
-            "UPDATE catalog_product SET category_id=? WHERE tenant_id=? AND id=?",
-            category,
-            tenant,
-            product)
-        == 1;
+    boolean assigned =
+        jdbc.update(
+                "UPDATE catalog_product SET category_id=? WHERE tenant_id=? AND id=?",
+                category,
+                tenant,
+                product)
+            == 1;
+    // The primary category is never also an additional one (SC-043).
+    if (assigned && category != null)
+      jdbc.update(
+          "DELETE FROM catalog_product_category WHERE tenant_id=? AND product_id=? AND category_id=?",
+          tenant,
+          product,
+          category);
+    return assigned;
+  }
+
+  /** Additional categories of each product (SC-043), in a stable order. */
+  public Map<UUID, List<UUID>> additional(UUID tenant, List<UUID> products) {
+    Map<UUID, List<UUID>> result = new java.util.HashMap<>();
+    if (products.isEmpty()) return result;
+    jdbc.query(
+        "SELECT product_id,category_id FROM catalog_product_category WHERE tenant_id=? AND product_id = ANY (?) ORDER BY category_id",
+        row -> {
+          result
+              .computeIfAbsent(row.getObject("product_id", UUID.class), key -> new ArrayList<>())
+              .add(row.getObject("category_id", UUID.class));
+        },
+        tenant,
+        products.toArray(new UUID[0]));
+    return result;
   }
 }

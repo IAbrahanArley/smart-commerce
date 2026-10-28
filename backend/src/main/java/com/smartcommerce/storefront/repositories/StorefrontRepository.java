@@ -96,7 +96,9 @@ public class StorefrontRepository {
                 JOIN catalog_category c ON c.store_id=s.id AND c.tenant_id=s.tenant_id
                 WHERE s.slug=:slug AND s.status='PUBLISHED' AND c.published AND EXISTS (
                   SELECT 1 FROM catalog_product p
-                  WHERE p.category_id=c.id AND p.tenant_id=c.tenant_id AND p.published)
+                  WHERE p.tenant_id=c.tenant_id AND p.published AND (p.category_id=c.id
+                    OR EXISTS (SELECT 1 FROM catalog_product_category pc
+                      WHERE pc.product_id=p.id AND pc.tenant_id=p.tenant_id AND pc.category_id=c.id)))
                 ORDER BY c.name_key
                 """)
             .setParameter("slug", slug)
@@ -118,8 +120,12 @@ public class StorefrontRepository {
                     + (category == null
                         ? ""
                         // A hidden category (SC-041) filters nothing in: its products stay public.
-                        : " AND p.category_id=:category AND EXISTS (SELECT 1 FROM catalog_category c"
-                            + " WHERE c.id=p.category_id AND c.tenant_id=p.tenant_id AND c.published)")
+                        // Primary or additional category (SC-043).
+                        : " AND (p.category_id=:category OR EXISTS (SELECT 1 FROM"
+                            + " catalog_product_category pc WHERE pc.product_id=p.id"
+                            + " AND pc.tenant_id=p.tenant_id AND pc.category_id=:category))"
+                            + " AND EXISTS (SELECT 1 FROM catalog_category c WHERE c.id=:category"
+                            + " AND c.tenant_id=p.tenant_id AND c.published)")
                     + " ORDER BY p.id")
             .setParameter("slug", slug)
             .setParameter("now", utc(now))

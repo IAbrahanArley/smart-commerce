@@ -69,8 +69,14 @@ public final class PublicCategoryTree {
     return path;
   }
 
-  /** Products of the category and its subcategories, from counts per category. */
-  public long total(UUID id, Map<UUID, Long> counts) {
-    return subtree(id).stream().mapToLong(each -> counts.getOrDefault(each, 0L)).sum();
+  /**
+   * Distinct products of the category and its subcategories, from the products of each category (a
+   * product may be in several of them, SC-043).
+   */
+  public long total(UUID id, Map<UUID, Set<UUID>> members) {
+    return subtree(id).stream()
+        .flatMap(each -> members.getOrDefault(each, Set.of()).stream())
+        .distinct()
+        .count();
   }
 }

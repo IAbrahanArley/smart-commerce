@@ -18,6 +18,7 @@ export default function ProductStorefront({ tenantId, product, onSaved }: {
   const [failed, setFailed] = useState(false);
   const [brandId, setBrandId] = useState(product.brandId ?? "");
   const [slug, setSlug] = useState(product.slug ?? "");
+  const [featured, setFeatured] = useState(product.featured === true);
   const [compareAt, setCompareAt] = useState<Record<string, string>>(() => initialCompareAt(product));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -53,7 +54,7 @@ export default function ProductStorefront({ tenantId, product, onSaved }: {
     submitting.current = true; setBusy(true); setMessage(null);
     try {
       const response = await apiRequest(`${tenantPath}/products/${encodeURIComponent(product.id)}/storefront`, {
-        method: "PUT", body: { brandId: brandId || null, slug: slug.trim() ? categorySlug(slug) : null, variants },
+        method: "PUT", body: { brandId: brandId || null, slug: slug.trim() ? categorySlug(slug) : null, variants, featured },
       });
       if (!response.ok) {
         const body: { code?: string } = await response.json().catch(() => ({}));
@@ -61,7 +62,7 @@ export default function ProductStorefront({ tenantId, product, onSaved }: {
       }
       const saved: Product = await response.json();
       onSaved(saved);
-      setSlug(saved.slug ?? ""); setCompareAt(initialCompareAt(saved));
+      setSlug(saved.slug ?? ""); setCompareAt(initialCompareAt(saved)); setFeatured(saved.featured === true);
       setMessage({ text: "Dados da vitrine salvos.", error: false });
     } catch { setMessage({ text: "Não foi possível confirmar. Recarregue o produto.", error: true }); }
     finally { submitting.current = false; setBusy(false); }
@@ -87,6 +88,13 @@ export default function ProductStorefront({ tenantId, product, onSaved }: {
           onChange={event => { setSlug(event.target.value); setErrors(current => ({ ...current, slug: "" })); }}
           aria-invalid={!!errors.slug} aria-describedby={`product-slug-help${errors.slug ? " product-slug-error" : ""}`} />
         {errors.slug ? <p id="product-slug-error" className="field-error">{errors.slug}</p> : null}
+      </div>
+      <div className="form-field">
+        <label className="check-field">
+          <input type="checkbox" checked={featured} disabled={busy} onChange={event => setFeatured(event.target.checked)} aria-describedby="product-featured-help" />
+          Destaque na vitrine
+        </label>
+        <p id="product-featured-help" className="field-help">Aparece na seção de destaques da página inicial, se a loja tiver essa seção em <Link href={`${storePath}/conteudo`}>Aparência e conteúdo</Link>.</p>
       </div>
       {product.variants.map(variant => {
         const label = product.kind === "SIMPLE" || !variant.options.length ? "Preço “de” (opcional)" : `Preço “de” · ${variant.options.map(option => option.value).join(" / ")}`;

@@ -121,6 +121,21 @@ V35 (SC-042, ADR-0018 V6 e V7, 2026-10-27), aditiva: extensão `unaccent` (contr
 
 V36 (SC-042, ADR-0018 V4, 2026-10-27), aditiva: `store.max_installments`, opcional, de 1 a 12. Nulo mantém o comportamento anterior: a preferência do Mercado Pago não leva limite e a vitrine não promete parcelas. Depende da V35.
 
+V37 (SC-043, ADR-0018 V1, 2026-10-27), aditiva: `catalog_product_category` liga um produto às categorias **adicionais**, além da principal em `catalog_product.category_id` (que segue definindo o caminho e os relacionados). Chave `(product_id, category_id)`; FKs compostas com o tenant para os dois lados, com `ON DELETE CASCADE`. A aplicação limita a 10 por produto e remove o vínculo quando a categoria vira a principal. O filtro e as contagens da vitrine consideram as duas, contando cada produto uma vez. Depende da V36.
+
+V38 (SC-043, ADR-0018 V8 e V13, 2026-10-27), aditiva:
+- `store_company`, uma linha opcional por loja: faixa de aviso, razão social, CNPJ (14 dígitos, verificadores conferidos na aplicação), telefone (E.164 brasileiro), endereço e Facebook, TikTok e YouTube guardados como nome de usuário, nunca como URL;
+- `store_page`, páginas institucionais de tipos fechados (`ABOUT`, `RETURNS`, `PRIVACY`, `TERMS`, `SHIPPING`), com o HTML já limpo pelo sanitizador da descrição de produto. Página sem texto é apagada.
+
+Ambas com FK composta `(store_id, tenant_id)`. Depende da V37.
+
+V39 (SC-043, ADR-0018 V8, 2026-10-27), aditiva:
+- `store_banner`: posição, texto alternativo obrigatório, título opcional, link interno (`NONE`, `CATEGORY`, `PRODUCT` ou `SEARCH`, com o alvo só quando há link), período opcional (`starts_at` antes de `ends_at`) e duas imagens normalizadas (principal e celular, JPEG/PNG até 5 MiB). A aplicação limita a 5 por loja. A vitrine só mostra banner com imagem principal e dentro do período;
+- `store_home_section`: seções da home em ordem (`NEW`, `BEST`, `FEATURED`, `CATEGORY`), com título; `category_id` só nas de categoria, por FK composta com o tenant, e apagar a categoria apaga a seção;
+- `catalog_product.featured`, `false` por padrão: produtos da seção "Destaques".
+
+Depende da V38.
+
 V27 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
 - **`DELETE`:** recusado sempre;
 - **`UPDATE`:** só para preencher `settled_at` uma única vez, a partir de nulo, que é o caminho da SC-018;

@@ -1,6 +1,7 @@
 package com.smartcommerce.storefront.controllers;
 
 import com.smartcommerce.storefront.domain.PublicLocator;
+import com.smartcommerce.storefront.dto.response.PublicPageView;
 import com.smartcommerce.storefront.dto.response.PublicProductBySlugView;
 import com.smartcommerce.storefront.dto.response.PublicProductDetailsView;
 import com.smartcommerce.storefront.dto.response.PublicStorefrontView;
@@ -48,6 +49,12 @@ public final class StorefrontController {
         .header("X-Content-Type-Options", "nosniff")
         .header("Content-Disposition", "inline; filename=\"store-logo\"")
         .body(logo.bytes());
+  }
+
+  /** An institutional page of the store (SC-043). */
+  @GetMapping("/pages/{page}")
+  public ResponseEntity<PublicPageView> page(@PathVariable String slug, @PathVariable String page) {
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(catalog.page(slug, page));
   }
 
   /** A product by its storefront address, or the address an old link moved to (SC-042). */

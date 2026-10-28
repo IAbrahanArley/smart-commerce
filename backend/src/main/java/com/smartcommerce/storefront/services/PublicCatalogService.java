@@ -1,13 +1,16 @@
 package com.smartcommerce.storefront.services;
 
+import com.smartcommerce.catalog.domain.ImageContent;
 import com.smartcommerce.catalog.domain.ProductDescription;
 import com.smartcommerce.catalog.domain.VariantValues;
+import com.smartcommerce.content.domain.StorePageKind;
 import com.smartcommerce.inventory.domain.ReservationPolicy;
 import com.smartcommerce.storefront.domain.CatalogQuery;
 import com.smartcommerce.storefront.domain.PublicCategoryTree;
 import com.smartcommerce.storefront.domain.PublicLocator;
 import com.smartcommerce.storefront.domain.StorefrontException;
 import com.smartcommerce.storefront.dto.response.PublicCatalogView;
+import com.smartcommerce.storefront.dto.response.PublicPageView;
 import com.smartcommerce.storefront.dto.response.PublicProductBySlugView;
 import com.smartcommerce.storefront.dto.response.PublicProductDetailsView;
 import com.smartcommerce.storefront.dto.response.PublicProductView;
@@ -66,8 +69,8 @@ public class PublicCatalogService {
         catalog.page(slug, query, scope, ReservationPolicy.now(clock)).stream()
             .map(PublicCatalogService::card)
             .toList();
-    Map<UUID, Long> filtered = catalog.categoryCounts(slug, query);
-    Map<UUID, Long> everything = catalog.categoryCounts(slug, EVERYTHING);
+    Map<UUID, Set<UUID>> filtered = catalog.categoryMembers(slug, query);
+    Map<UUID, Set<UUID>> everything = catalog.categoryMembers(slug, EVERYTHING);
 
     return new PublicCatalogView(
         new PublicStoreView(store.name(), store.slug(), profile(store)),
@@ -100,7 +103,72 @@ public class PublicCatalogService {
                 .toList(),
             prices(catalog.priceCounts(slug, query, scope)),
             options(catalog.optionCounts(slug, query, scope))),
-        store.maxInstallments());
+        store.maxInstallments(),
+        company(slug),
+        pages(slug),
+        catalog.banners(slug, clock.instant()).stream()
+            .map(
+                b ->
+                    new PublicCatalogView.Banner(
+                        b.id(), b.alt(), b.title(), b.linkKind(), b.linkTarget(), b.mobileImage()))
+            .toList(),
+        catalog.sections(slug).stream()
+            .map(s -> new PublicCatalogView.Section(s.kind(), s.title(), s.categorySlug()))
+            .toList());
+  }
+
+  /** The image of a banner the published store shows now (SC-043); any other is a 404. */
+  @Transactional(readOnly = true)
+  public ImageContent bannerImage(String rawSlug, UUID banner, boolean mobile) {
+    return catalog
+        .bannerImage(PublicLocator.slug(rawSlug), banner, mobile, clock.instant())
+        .orElseThrow(StorefrontException::new);
+  }
+
+  /** An institutional page the published store wrote (SC-043); any other is a 404. */
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+  public PublicPageView page(String rawSlug, String pageSlug) {
+    String slug = PublicLocator.slug(rawSlug);
+    var store = stores.store(slug).orElseThrow(StorefrontException::new);
+    StorePageKind kind;
+    try {
+      kind = StorePageKind.fromSlug(pageSlug);
+    } catch (IllegalArgumentException unknown) {
+      throw new StorefrontException();
+    }
+    String html = catalog.pages(slug).get(kind);
+    if (html == null) throw new StorefrontException();
+    return new PublicPageView(
+        new PublicStoreView(store.name(), store.slug(), profile(store)),
+        kind.title(),
+        kind.slug(),
+        ProductDescription.sanitize(html));
+  }
+
+  private PublicCatalogView.Company company(String slug) {
+    return catalog
+        .company(slug)
+        .map(
+            c ->
+                new PublicCatalogView.Company(
+                    c.announcement(),
+                    c.legalName(),
+                    c.cnpj(),
+                    c.phone(),
+                    c.address(),
+                    c.facebook(),
+                    c.tiktok(),
+                    c.youtube()))
+        .orElse(null);
+  }
+
+  /** Pages in footer order, only those the store wrote. */
+  private List<PublicCatalogView.Link> pages(String slug) {
+    var written = catalog.pages(slug);
+    return java.util.Arrays.stream(StorePageKind.values())
+        .filter(written::containsKey)
+        .map(kind -> new PublicCatalogView.Link(kind.title(), kind.slug()))
+        .toList();
   }
 
   /**
@@ -201,7 +269,7 @@ public class PublicCatalogService {
 
   /** Categories with at least one published product in their subtree, recursively. */
   private static List<PublicCatalogView.MenuItem> menu(
-      PublicCategoryTree tree, UUID parent, Map<UUID, Long> counts) {
+      PublicCategoryTree tree, UUID parent, Map<UUID, Set<UUID>> counts) {
     return tree.children(parent).stream()
         .filter(child -> tree.total(child.id(), counts) > 0)
         .map(

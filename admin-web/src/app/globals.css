@@ -382,6 +382,30 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .category-item .form-actions { margin-top: 0; }
 .category-name { display: grid; gap: var(--sc-space-1); font-weight: 700; overflow-wrap: anywhere; }
 .category-edit { flex: 1 1 18rem; display: grid; gap: var(--sc-space-2); }
+/* SC-043: "Aparência e conteúdo": company fields in two columns where there is room. */
+.content-card { display: grid; gap: var(--sc-space-4); max-width: 60rem; }
+.content-card + .content-card { margin-top: var(--sc-space-6); }
+.content-card > button { justify-self: start; }
+.content-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--sc-space-4) var(--sc-space-6); }
+/* SC-043: additional categories of a product, in its "Categoria" card. */
+/* SC-043: banners and sections of the store home. */
+.banner-admin-list, .section-admin-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sc-space-4); }
+.banner-admin-item, .section-admin-item { display: grid; gap: var(--sc-space-3); padding: var(--sc-space-4); border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-control); }
+.banner-admin-item { grid-template-columns: minmax(0, 20rem) 1fr; align-items: start; }
+@media (max-width: 40rem) { .banner-admin-item { grid-template-columns: 1fr; } }
+.banner-admin-preview { display: block; width: 100%; height: auto; aspect-ratio: 8 / 3; object-fit: cover; border-radius: var(--sc-radius-control); background: var(--sc-color-info-background); }
+.banner-admin-empty { display: grid; place-items: center; padding: var(--sc-space-4); text-align: center; font-size: .875rem; color: var(--sc-color-text-secondary); }
+.banner-admin-details { display: grid; gap: var(--sc-space-2); min-width: 0; }
+.banner-admin-details .cell-hint { overflow-wrap: anywhere; }
+.banner-admin-uploads { display: flex; flex-wrap: wrap; gap: var(--sc-space-2); }
+.file-button { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--sc-space-4); border-radius: var(--sc-radius-control); font-weight: 600; cursor: pointer; }
+.file-button:focus-within { outline: 3px solid var(--sc-color-focus); outline-offset: 2px; }
+.banner-form { display: grid; gap: var(--sc-space-4); margin-top: var(--sc-space-4); padding-top: var(--sc-space-4); border-top: 1px solid var(--sc-color-divider); }
+.banner-form h3 { margin: 0; }
+
+.category-extra { display: grid; gap: var(--sc-space-2); margin: var(--sc-space-4) 0 0; padding: var(--sc-space-4) 0 0; border: 0; border-top: 1px solid var(--sc-color-divider); }
+.category-extra legend { padding: 0; font-weight: 700; }
+.category-extra button { justify-self: start; }
 /* SC-041: subcategories are indented under their parent; the visible path is in the list order. */
 .category-depth-2 { margin-inline-start: var(--sc-space-6); }
 .category-depth-3 { margin-inline-start: calc(var(--sc-space-6) * 2); }

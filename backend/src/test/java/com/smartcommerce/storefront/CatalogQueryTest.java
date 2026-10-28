@@ -9,6 +9,7 @@ import com.smartcommerce.storefront.domain.PublicCategoryTree;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -93,6 +94,18 @@ class CatalogQueryTest {
     assertThat(tree.subtree(feminino)).containsExactly(feminino, camisetas);
     assertThat(tree.path(camisetas).stream().map(PublicCategoryTree.Node::slug))
         .containsExactly("feminino", "camisetas");
-    assertThat(tree.total(feminino, Map.of(feminino, 2L, camisetas, 3L, orphan, 9L))).isEqualTo(5);
+    UUID a = UUID.randomUUID(), b = UUID.randomUUID(), c = UUID.randomUUID();
+    // b is in Feminino and in Camisetas (an additional category, SC-043): counted once.
+    assertThat(
+            tree.total(
+                feminino,
+                Map.of(
+                    feminino,
+                    Set.of(a, b),
+                    camisetas,
+                    Set.of(b, c),
+                    orphan,
+                    Set.of(UUID.randomUUID()))))
+        .isEqualTo(3);
   }
 }

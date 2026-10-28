@@ -14,9 +14,10 @@ export default async function SearchPage({ params, searchParams }: Props) {
   const [{ slug }, query] = await Promise.all([params, searchParams]);
   const { store, catalog } = await loadStoreCatalog(slug, apiQuery(query));
   const storeUrl = `/lojas/${encodeURIComponent(store.slug)}`;
-  const title = catalog.search ? `Resultados para “${catalog.search}”` : "Todos os produtos";
-  return <StoreFrame store={store} menu={catalog.menu}>
+  const featured = query.destaque === "1";
+  const title = catalog.search ? `Resultados para “${catalog.search}”` : featured ? "Destaques" : "Todos os produtos";
+  return <StoreFrame store={store} frame={catalog.frame}>
     <CatalogListing store={store.slug} base={`${storeUrl}/busca`} params={query} catalog={catalog} title={title}
-      breadcrumb={[{ name: "Início", href: storeUrl }, { name: catalog.search ? "Busca" : "Todos os produtos", href: `${storeUrl}/busca` }]} />
+      breadcrumb={[{ name: "Início", href: storeUrl }, { name: catalog.search ? "Busca" : title, href: `${storeUrl}/busca${featured ? "?destaque=1" : ""}` }]} />
   </StoreFrame>;
 }

@@ -70,6 +70,14 @@ public class Product {
   @Column(name = "brand_id", insertable = false, updatable = false)
   private UUID brandId;
 
+  // SC-043: written only by ProductStorefrontRepository.
+  @Column(name = "featured", insertable = false, updatable = false)
+  private boolean featured;
+
+  public boolean featured() {
+    return featured;
+  }
+
   public String slug() {
     return slug;
   }

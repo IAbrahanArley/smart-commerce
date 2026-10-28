@@ -5,6 +5,7 @@ import com.smartcommerce.catalog.dto.request.CategoryPlacementRequest;
 import com.smartcommerce.catalog.dto.request.CategoryPublicationRequest;
 import com.smartcommerce.catalog.dto.request.CategoryRequest;
 import com.smartcommerce.catalog.dto.request.CategorySlugRequest;
+import com.smartcommerce.catalog.dto.request.ProductCategoriesRequest;
 import com.smartcommerce.catalog.dto.request.ProductCategoryRequest;
 import com.smartcommerce.catalog.dto.response.ProductView;
 import com.smartcommerce.catalog.services.CategoryService;
@@ -99,6 +100,16 @@ public final class CategoryController {
       @RequestBody ProductCategoryRequest request,
       Authentication actor) {
     return categories.assign(actor(actor), tenantId, productId, request.categoryId());
+  }
+
+  @SecurityRequirement(name = "csrf")
+  @PutMapping("/api/tenants/{tenantId}/products/{productId}/categories")
+  public ProductView assignAdditional(
+      @PathVariable UUID tenantId,
+      @PathVariable UUID productId,
+      @RequestBody ProductCategoriesRequest request,
+      Authentication actor) {
+    return categories.assignAdditional(actor(actor), tenantId, productId, request.value());
   }
 
   private static UUID actor(Authentication actor) {

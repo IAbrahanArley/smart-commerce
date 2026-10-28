@@ -292,6 +292,36 @@ class PublicCatalogIT {
   }
 
   @Test
+  void additionalCategoriesFilterAndCountEachProductOnce() throws Exception {
+    // The óculos (primary: Acessórios) also appears in Feminino and in Camisetas, inside Feminino.
+    for (String slug : new String[] {"feminino", "camisetas"})
+      jdbc.update(
+          """
+          INSERT INTO catalog_product_category(product_id,category_id,tenant_id)
+          SELECT ?,c.id,c.tenant_id FROM catalog_category c WHERE c.tenant_id=? AND c.slug=?
+          """,
+          oculos,
+          tenantA,
+          slug);
+    JsonNode feminino = catalog("catalogo-a", "categoria=feminino");
+    assertThat(names(feminino))
+        .containsExactlyInAnyOrder("Camiseta Técnica", "Regata Dry", "Óculos de Sol Esportivo");
+    assertThat(feminino.get("total").asLong()).isEqualTo(3);
+    assertThat(counts(feminino.get("facets").get("categories"))).containsExactly("camisetas=2");
+    // Counted once in Feminino although it is in two of its categories.
+    assertThat(counts(catalog("catalogo-a", "").get("facets").get("categories")))
+        .containsExactly("feminino=3", "acessorios=1");
+    // The original list (ADR-0010) also filters by additional categories.
+    UUID camisetas =
+        jdbc.queryForObject(
+            "SELECT id FROM catalog_category WHERE tenant_id=? AND slug='camisetas'",
+            UUID.class,
+            tenantA);
+    JsonNode legacy = json(get("/api/public/stores/catalogo-a?categoria=" + camisetas));
+    assertThat(legacy.get("products")).hasSize(2);
+  }
+
+  @Test
   void anUnpublishedStoreHasNoCatalog() throws Exception {
     jdbc.update("UPDATE store SET status='DRAFT' WHERE tenant_id=?", tenantA);
     assertThat(get("/api/public/stores/catalogo-a/catalog").statusCode()).isEqualTo(404);
