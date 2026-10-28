@@ -89,6 +89,33 @@ Regras comuns: loja resolvida só pelo slug publicado; toda consulta pública re
 - **Destaque do produto:** marcado no cartão "Vitrine" da edição do produto, junto com marca, endereço e preço "de".
 - **Resposta do catálogo:** banners e seções vêm em toda resposta de `/catalog`, como o menu e o rodapé. O custo extra fica para o cache da SC-047.
 
+**SC-047 (2026-10-28):**
+- **V9, o que fica em cache:**
+  - em cache ficam as **leituras do backend** feitas pela vitrine: 60 s, com a etiqueta `store:{loja}`, e a URL (que contém a loja) como chave;
+  - o **HTML** continua `no-store`, porque traz a contagem do carrinho do visitante;
+  - carrinho, checkout, pedido e "Acompanhar pedido" continuam sem cache nenhum.
+- **V9, invalidação:**
+  - depois do commit, os serviços que mudam a vitrine chamam `POST /interno/revalidar` da vitrine, em segundo plano;
+  - esses serviços são: produto, foto, cartão "Vitrine", categoria, marca, empresa, páginas, banners, seções, perfil da loja, entrega e publicação da loja;
+  - a chamada é assinada com HMAC sobre a loja e o horário, com segredo próprio;
+  - a vitrine descarta as leituras da loja sem servir conteúdo velho (`expire: 0`), então um produto ocultado some na próxima visita;
+  - sem o segredo, a rota não existe e vale só o prazo de 60 s;
+  - estoque, logo e parcelamento atualizam só pelo prazo de 60 s.
+- **V9, imagens:**
+  - o otimizador do Next gera os tamanhos, sem CDN paga;
+  - a foto pelo id fica em cache por 1 dia (`immutable`), porque um envio novo é um id novo; o card passou a receber o id da capa (`imageId`);
+  - `primary`, logo e banners, que mudam no mesmo endereço, ficam 60 s;
+  - uma foto de produto ocultado continua acessível pelo endereço por até 1 dia.
+- **V11, metadados:**
+  - título próprio da loja e descrição por página;
+  - `canonical` e Open Graph só com `STOREFRONT_PUBLIC_ORIGIN` configurada;
+  - JSON-LD `Product` com uma `Offer` por variante, `BreadcrumbList` e `Organization`;
+  - categoria filtrada e busca não são indexadas;
+  - o ambiente de teste (`hosted-test`) inteiro é `noindex`, e o `robots.txt` dele bloqueia tudo.
+- **V11, sitemap:** cada loja tem o seu em `/lojas/{loja}/sitemap.xml`, com até 5.000 produtos, categorias do menu e páginas escritas. Loja em rascunho dá 404. Não há índice de todas as lojas: o sitemap é enviado por loja.
+- **308 real:** o `proxy.ts` pergunta ao backend (`GET …/p/{endereço}/address`) se o endereço mudou e responde 308 antes da página, preservando a query. Em caso de erro, a página segue e faz o redirecionamento dentro do HTML.
+- **Rota original do produto** (`/produtos/{id}`): continua respondendo, com `canonical` para `/p/{endereço}`.
+
 **SC-046 (2026-10-28):**
 - **V10, limites:** 20 consultas por hora por endereço e 10 por hora por número de pedido da loja. A tentativa conta mesmo quando o pedido não existe, então o limite não revela quais números existem. O limite por pedido pode atrasar o próprio comprador se alguém insistir no número dele; a janela é de uma hora.
 - **V10, sem pagamento:** a consulta por número e e-mail mostra situação, itens, entrega e valores, mas não o botão de pagar. Pagar continua exigindo o token do navegador da compra; a página orienta a usar esse navegador ou falar com a loja.

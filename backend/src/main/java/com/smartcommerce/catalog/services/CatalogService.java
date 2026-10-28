@@ -6,6 +6,7 @@ import com.smartcommerce.catalog.dto.response.*;
 import com.smartcommerce.catalog.entities.*;
 import com.smartcommerce.catalog.exceptions.*;
 import com.smartcommerce.catalog.repositories.*;
+import com.smartcommerce.storefront.services.StorefrontChanges;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -24,13 +25,17 @@ public class CatalogService {
   private final ProductStorefrontRepository storefront;
   private final CategoryRepository categories;
 
+  private final StorefrontChanges changes;
+
   public CatalogService(
       CatalogRepository products,
       VariantRepository variants,
       ProductImageRepository images,
       BillingService billing,
       ProductStorefrontRepository storefront,
-      CategoryRepository categories) {
+      CategoryRepository categories,
+      StorefrontChanges changes) {
+    this.changes = changes;
     this.products = products;
     this.images = images;
     this.variants = variants;
@@ -67,11 +72,13 @@ public class CatalogService {
 
   @Transactional
   public ProductView create(UUID actor, UUID tenant, ProductValues input) {
+    changes.changed(tenant);
     return create(actor, tenant, input, new ProductDetails("", ProductKind.SIMPLE, null));
   }
 
   @Transactional
   public ProductView create(UUID actor, UUID tenant, ProductValues input, ProductDetails details) {
+    changes.changed(tenant);
     return execute(
         () -> {
           UUID store = products.requireAccess(actor, tenant);
@@ -141,6 +148,7 @@ public class CatalogService {
   @Transactional
   public ProductView update(
       UUID actor, UUID tenant, UUID product, ProductValues input, long version) {
+    changes.changed(tenant);
     return update(actor, tenant, product, input, version, new ProductDetails(null, null, null));
   }
 
@@ -152,6 +160,7 @@ public class CatalogService {
       ProductValues input,
       long version,
       ProductDetails details) {
+    changes.changed(tenant);
     return execute(
         () -> {
           products.requireAccess(actor, tenant);
@@ -191,6 +200,7 @@ public class CatalogService {
   @Transactional
   public ProductView addVariant(
       UUID actor, UUID tenant, UUID product, VariantValues input, long version) {
+    changes.changed(tenant);
     return execute(
         () -> {
           products.requireAccess(actor, tenant);
@@ -229,6 +239,7 @@ public class CatalogService {
   @Transactional
   public ProductView updateVariant(
       UUID actor, UUID tenant, UUID product, UUID variant, VariantValues input, long version) {
+    changes.changed(tenant);
     return execute(
         () -> {
           products.requireAccess(actor, tenant);
@@ -250,6 +261,7 @@ public class CatalogService {
   @Transactional
   public ProductView publish(
       UUID actor, UUID tenant, UUID product, boolean published, long version) {
+    changes.changed(tenant);
     return execute(
         () -> {
           products.requireAccess(actor, tenant);

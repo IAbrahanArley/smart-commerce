@@ -70,7 +70,9 @@ public class PublicCatalogRepository {
       BigDecimal price,
       BigDecimal compareAt,
       String currency,
-      boolean available) {}
+      boolean available,
+      // SC-047: the cover photo, so its address changes when the photo does.
+      UUID imageId) {}
 
   public record Count(String key, String label, long count) {}
 
@@ -246,6 +248,8 @@ public class PublicCatalogRepository {
         SELECT p.id,p.slug,p.name,b.name AS brand,%s AS price,p.currency,
           (SELECT v.compare_at_price FROM catalog_variant v WHERE v.product_id=p.id
             AND v.tenant_id=p.tenant_id ORDER BY v.price,v.id LIMIT 1) AS compare_at,
+          (SELECT i.id FROM catalog_product_image i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id
+            ORDER BY i.position,i.id LIMIT 1) AS image_id,
           EXISTS(SELECT 1 FROM catalog_variant v WHERE v.product_id=p.id AND v.tenant_id=p.tenant_id
             AND inventory_available_quantity(v.tenant_id,v.id,:now)>0) AS available
         """
@@ -267,7 +271,8 @@ public class PublicCatalogRepository {
                 row.getBigDecimal("price"),
                 row.getBigDecimal("compare_at"),
                 row.getString("currency"),
-                row.getBoolean("available")));
+                row.getBoolean("available"),
+                row.getObject("image_id", UUID.class)));
   }
 
   /** Storefront details of a published product: address, brand and primary category. */
@@ -348,6 +353,8 @@ public class PublicCatalogRepository {
         SELECT p.id,p.slug,p.name,b.name AS brand,%s AS price,p.currency,
           (SELECT v.compare_at_price FROM catalog_variant v WHERE v.product_id=p.id
             AND v.tenant_id=p.tenant_id ORDER BY v.price,v.id LIMIT 1) AS compare_at,
+          (SELECT i.id FROM catalog_product_image i WHERE i.product_id=p.id AND i.tenant_id=p.tenant_id
+            ORDER BY i.position,i.id LIMIT 1) AS image_id,
           true AS available
         """
                 .formatted(PRICE)
@@ -369,7 +376,25 @@ public class PublicCatalogRepository {
                 row.getBigDecimal("price"),
                 row.getBigDecimal("compare_at"),
                 row.getString("currency"),
-                row.getBoolean("available")));
+                row.getBoolean("available"),
+                row.getObject("image_id", UUID.class)));
+  }
+
+  /** A published product for the sitemap (SC-047): its address and last change. */
+  public record SitemapProduct(String slug, Instant updatedAt) {}
+
+  /** Published products of a published store with an address, newest change first. */
+  public List<SitemapProduct> sitemapProducts(String slug, int limit) {
+    return jdbc.query(
+        """
+        SELECT p.slug,p.updated_at FROM store s
+        JOIN catalog_product p ON p.store_id=s.id AND p.tenant_id=s.tenant_id AND p.published
+        WHERE s.slug=:slug AND s.status='PUBLISHED' AND p.slug IS NOT NULL
+        ORDER BY p.updated_at DESC,p.id LIMIT :limit
+        """,
+        new MapSqlParameterSource("slug", slug).addValue("limit", limit),
+        (row, index) ->
+            new SitemapProduct(row.getString("slug"), row.getTimestamp("updated_at").toInstant()));
   }
 
   /** "Compare at" price of each variant of a published product. */

@@ -80,7 +80,9 @@ public record PublicCatalogView(
       String compareAtPrice,
       Integer discountPercent,
       String currency,
-      boolean available) {}
+      boolean available,
+      // SC-047: id of the cover photo (immutable address, cached for a day), or null.
+      UUID imageId) {}
 
   public record Facets(
       List<Count> categories, List<Count> brands, List<PriceRange> prices, List<Option> options) {}

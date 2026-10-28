@@ -4,8 +4,10 @@ import { CatalogListing } from "@/components/catalog-listing";
 import { loadStoreCatalog } from "@/lib/public-store";
 import { type SearchParams, apiQuery } from "@/lib/catalog-page";
 
-export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Buscar produtos" };
+// SC-047: no "force-dynamic": it would force no-store on the backend reads, which are cached for
+// 60 s per store. The page still renders per request (it reads the cart cookie).
+// Search results are not indexed (endless combinations); their links are followed.
+export const metadata: Metadata = { title: "Buscar produtos", robots: { index: false, follow: true } };
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<SearchParams> };
 

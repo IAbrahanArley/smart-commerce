@@ -33,6 +33,17 @@ public class StorefrontRepository {
     this.entities = entities;
   }
 
+  /** The storefront address of the tenant's store, published or not (SC-047 revalidation). */
+  public Optional<String> slugOf(UUID tenant) {
+    return entities
+        .createNativeQuery("SELECT slug FROM store WHERE tenant_id=:tenant")
+        .setParameter("tenant", tenant)
+        .getResultList()
+        .stream()
+        .map(String.class::cast)
+        .findFirst();
+  }
+
   public Optional<PublicStore> store(String slug) {
     List<?> rows =
         entities

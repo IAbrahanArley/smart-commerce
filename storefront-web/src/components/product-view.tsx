@@ -7,6 +7,8 @@ import { StoreFrame } from "@/components/store-frame";
 import { ProductCard } from "@/components/product-card";
 import ProductGallery from "@/components/product-gallery";
 import ProductOffer from "@/components/product-offer";
+import { JsonLd } from "@/components/json-ld";
+import { productStructuredData } from "@/lib/product-seo";
 
 // SC-045: the product page, by its address (/p/{endereço}) or by the original id route. Breadcrumb
 // through published categories, gallery, brand, offer with "compare at" price and installments,
@@ -18,6 +20,7 @@ export function ProductView({ detail }: { detail: PublicProductDetail }) {
   return (
     <StoreFrame store={store} currentCategory={extras.categoryPath[0]?.slug}>
       <main id="conteudo" className="page-width product-detail" tabIndex={-1}>
+        {productStructuredData(detail).map((data, index) => <JsonLd key={index} data={data} />)}
         <nav className="breadcrumbs" aria-label="Você está em">
           <ol>
             <li><Link href={storeUrl} prefetch={false}>Início</Link></li>

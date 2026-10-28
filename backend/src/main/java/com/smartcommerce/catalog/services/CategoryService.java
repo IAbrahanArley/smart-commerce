@@ -9,6 +9,7 @@ import com.smartcommerce.catalog.exceptions.CatalogPersistenceException;
 import com.smartcommerce.catalog.exceptions.CategoryException;
 import com.smartcommerce.catalog.repositories.CatalogRepository;
 import com.smartcommerce.catalog.repositories.CategoryRepository;
+import com.smartcommerce.storefront.services.StorefrontChanges;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -37,8 +38,14 @@ public class CategoryService {
   private final CategoryRepository categories;
   private final CatalogService products;
 
+  private final StorefrontChanges changes;
+
   public CategoryService(
-      CatalogRepository catalog, CategoryRepository categories, CatalogService products) {
+      CatalogRepository catalog,
+      CategoryRepository categories,
+      CatalogService products,
+      StorefrontChanges changes) {
+    this.changes = changes;
     this.catalog = catalog;
     this.categories = categories;
     this.products = products;
@@ -53,6 +60,7 @@ public class CategoryService {
   /** Creates a root ({@code parent} null) or a subcategory, last among its siblings. */
   @Transactional
   public List<CategorySummary> create(UUID actor, UUID tenant, String rawName, UUID parent) {
+    changes.changed(tenant);
     CategoryName name = CategoryName.parse(rawName);
     return owned(
         actor,
@@ -92,6 +100,7 @@ public class CategoryService {
 
   @Transactional
   public List<CategorySummary> rename(UUID actor, UUID tenant, UUID category, String rawName) {
+    changes.changed(tenant);
     CategoryName name = CategoryName.parse(rawName);
     return owned(
         actor,
@@ -111,6 +120,7 @@ public class CategoryService {
   /** Changes the storefront address of the category; renaming never changes it by itself. */
   @Transactional
   public List<CategorySummary> changeSlug(UUID actor, UUID tenant, UUID category, String rawSlug) {
+    changes.changed(tenant);
     UrlSlug slug = UrlSlug.parse(rawSlug);
     return owned(
         actor,
@@ -132,6 +142,7 @@ public class CategoryService {
   /** Hides or shows the category in the storefront; its products are not affected. */
   @Transactional
   public List<CategorySummary> publish(UUID actor, UUID tenant, UUID category, boolean published) {
+    changes.changed(tenant);
     return owned(
         actor,
         tenant,
@@ -148,6 +159,7 @@ public class CategoryService {
   @Transactional
   public List<CategorySummary> place(
       UUID actor, UUID tenant, UUID category, UUID parent, int position) {
+    changes.changed(tenant);
     return owned(
         actor,
         tenant,
@@ -185,6 +197,7 @@ public class CategoryService {
    */
   @Transactional
   public List<CategorySummary> delete(UUID actor, UUID tenant, UUID category) {
+    changes.changed(tenant);
     return owned(
         actor,
         tenant,
@@ -206,6 +219,7 @@ public class CategoryService {
    */
   @Transactional
   public ProductView assignAdditional(UUID actor, UUID tenant, UUID product, List<UUID> wanted) {
+    changes.changed(tenant);
     owned(
         actor,
         tenant,
@@ -226,6 +240,7 @@ public class CategoryService {
   /** Sets ({@code category} present) or clears the category of one product. */
   @Transactional
   public ProductView assign(UUID actor, UUID tenant, UUID product, UUID category) {
+    changes.changed(tenant);
     owned(
         actor,
         tenant,

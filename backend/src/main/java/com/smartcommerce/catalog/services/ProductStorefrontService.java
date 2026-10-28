@@ -7,6 +7,7 @@ import com.smartcommerce.catalog.exceptions.CatalogPersistenceException;
 import com.smartcommerce.catalog.exceptions.ProductStorefrontException;
 import com.smartcommerce.catalog.repositories.CatalogRepository;
 import com.smartcommerce.catalog.repositories.ProductStorefrontRepository;
+import com.smartcommerce.storefront.services.StorefrontChanges;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -28,8 +29,14 @@ public class ProductStorefrontService {
   private final ProductStorefrontRepository storefront;
   private final CatalogService products;
 
+  private final StorefrontChanges changes;
+
   public ProductStorefrontService(
-      CatalogRepository catalog, ProductStorefrontRepository storefront, CatalogService products) {
+      CatalogRepository catalog,
+      ProductStorefrontRepository storefront,
+      CatalogService products,
+      StorefrontChanges changes) {
+    this.changes = changes;
     this.catalog = catalog;
     this.storefront = storefront;
     this.products = products;
@@ -38,6 +45,7 @@ public class ProductStorefrontService {
   @Transactional
   public ProductView update(
       UUID actor, UUID tenant, UUID product, ProductStorefrontRequest request) {
+    changes.changed(tenant);
     UrlSlug slug = request.slug() == null ? null : UrlSlug.parse(request.slug());
     Map<UUID, BigDecimal> compareAt = new LinkedHashMap<>();
     for (var variant : request.variantList()) compareAt.put(variant.id(), variant.value());

@@ -2,6 +2,7 @@ package com.smartcommerce.tenant.services;
 
 import com.smartcommerce.catalog.domain.ImageContent;
 import com.smartcommerce.catalog.domain.ImageNormalizer;
+import com.smartcommerce.storefront.services.StorefrontChanges;
 import com.smartcommerce.tenant.domain.StoreProfile;
 import com.smartcommerce.tenant.domain.StoreProfileSettings;
 import com.smartcommerce.tenant.dto.response.StoreProfileView;
@@ -31,10 +32,14 @@ public class StoreProfileService {
   private final ImageNormalizer normalizer;
   private final TransactionTemplate writes;
 
+  private final StorefrontChanges changes;
+
   public StoreProfileService(
       StoreProfileRepository profiles,
       ImageNormalizer normalizer,
-      PlatformTransactionManager transactions) {
+      PlatformTransactionManager transactions,
+      StorefrontChanges changes) {
+    this.changes = changes;
     this.profiles = profiles;
     this.normalizer = normalizer;
     this.writes = new TransactionTemplate(transactions);
@@ -48,6 +53,7 @@ public class StoreProfileService {
   @Transactional
   public StoreProfileView update(
       UUID actor, UUID tenant, StoreProfileSettings settings, long version) {
+    changes.changed(tenant);
     checkVersion(version);
     boolean saved;
     try {

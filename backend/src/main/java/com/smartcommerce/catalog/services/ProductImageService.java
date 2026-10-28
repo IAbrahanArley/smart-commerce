@@ -3,6 +3,7 @@ package com.smartcommerce.catalog.services;
 import com.smartcommerce.catalog.domain.*;
 import com.smartcommerce.catalog.dto.response.ProductImagesView;
 import com.smartcommerce.catalog.repositories.ProductImageRepository;
+import com.smartcommerce.storefront.services.StorefrontChanges;
 import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -14,8 +15,14 @@ public class ProductImageService {
   private final ProductImageRepository images;
   private final ImageNormalizer normalizer;
 
+  private final StorefrontChanges changes;
+
   public ProductImageService(
-      CatalogService catalog, ProductImageRepository images, ImageNormalizer normalizer) {
+      CatalogService catalog,
+      ProductImageRepository images,
+      ImageNormalizer normalizer,
+      StorefrontChanges changes) {
+    this.changes = changes;
     this.catalog = catalog;
     this.images = images;
     this.normalizer = normalizer;
@@ -38,6 +45,7 @@ public class ProductImageService {
       java.util.function.Supplier<byte[]> bytes,
       String filename,
       String type) {
+    changes.changed(tenant);
     authorizeVersion(actor, tenant, product, version);
     var current = images.list(tenant, product);
     if (current.size() >= 6)
@@ -60,6 +68,7 @@ public class ProductImageService {
   @Transactional
   public ProductImagesView reorder(
       UUID actor, UUID tenant, UUID product, long version, List<UUID> order) {
+    changes.changed(tenant);
     authorizeVersion(actor, tenant, product, version);
     var existing = images.list(tenant, product);
     if (order == null
@@ -78,6 +87,7 @@ public class ProductImageService {
 
   @Transactional
   public ProductImagesView remove(UUID actor, UUID tenant, UUID product, UUID image, long version) {
+    changes.changed(tenant);
     authorizeVersion(actor, tenant, product, version);
     images.remove(tenant, product, image);
     var current = images.list(tenant, product);

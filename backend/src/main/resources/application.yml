@@ -74,6 +74,12 @@ orders:
   client-ip:
     # D4: shared with the storefront-web server to sign the visitor IP (>= 32 characters).
     secret: ${STOREFRONT_FORWARDING_SECRET:}
+storefront:
+  revalidation:
+    # SC-047: internal origin of storefront-web (for example http://storefront:3001) and a secret
+    # of at least 32 characters shared only with it. Empty: pages refresh by time (60 s) only.
+    url: ${STOREFRONT_REVALIDATION_URL:}
+    secret: ${STOREFRONT_REVALIDATION_SECRET:}
 identity:
   public-origin: ${IDENTITY_PUBLIC_ORIGIN:http://127.0.0.1:3000}
   secure-cookies: ${IDENTITY_SECURE_COOKIES:false}

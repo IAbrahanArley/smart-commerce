@@ -10,6 +10,8 @@ export type Link = { name: string; slug: string };
 export type Card = {
   id: string; slug: string | null; name: string; brand: string | null; price: string;
   compareAtPrice: string | null; discountPercent: number | null; available: boolean;
+  /** SC-047: cover photo id (null: no photo); absent where the API does not send it. */
+  imageId?: string | null;
 };
 export type Count = { slug: string; name: string; count: number };
 export type PriceRange = { min: string; max: string | null; count: number };
@@ -82,6 +84,7 @@ export function parseCard(value: unknown): Card {
     brand: item.brand == null ? null : text(item.brand, 60), price: item.price,
     compareAtPrice: compare as string | null, discountPercent: compare === null ? null : percent as number | null,
     available: item.available,
+    ...(item.imageId === undefined ? {} : { imageId: item.imageId === null ? null : typeof item.imageId === "string" && UUID.test(item.imageId) ? item.imageId : fail() }),
   };
 }
 

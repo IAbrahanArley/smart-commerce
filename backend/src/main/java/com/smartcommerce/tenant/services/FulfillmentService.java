@@ -1,5 +1,6 @@
 package com.smartcommerce.tenant.services;
 
+import com.smartcommerce.storefront.services.StorefrontChanges;
 import com.smartcommerce.tenant.domain.FulfillmentSettings;
 import com.smartcommerce.tenant.domain.StoreFulfillment;
 import com.smartcommerce.tenant.dto.response.FulfillmentView;
@@ -16,7 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class FulfillmentService {
   private final FulfillmentRepository fulfillment;
 
-  public FulfillmentService(FulfillmentRepository fulfillment) {
+  private final StorefrontChanges changes;
+
+  public FulfillmentService(FulfillmentRepository fulfillment, StorefrontChanges changes) {
+    this.changes = changes;
     this.fulfillment = fulfillment;
   }
 
@@ -28,6 +32,7 @@ public class FulfillmentService {
   @Transactional
   public FulfillmentView update(
       UUID actor, UUID tenant, FulfillmentSettings settings, long version) {
+    changes.changed(tenant);
     if (version < 0 || version == Long.MAX_VALUE)
       throw new IllegalArgumentException("Invalid version");
     boolean saved;

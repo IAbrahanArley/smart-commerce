@@ -11,6 +11,8 @@ import { formatPhone, pagePath, parseFrame } from "../src/lib/frame.ts";
 import { bannerHref, parseHome, sectionHref, sectionQuery } from "../src/lib/home.ts";
 import { orderNumber, validateLookup } from "../src/lib/order-lookup.ts";
 import { parseOrder } from "../src/lib/orders-view.ts";
+import { indexable, jsonLd, parseSitemap, plainText, productLd, publicOrigin, sitemapXml, storeTag } from "../src/lib/seo.ts";
+import { verifyRevalidation } from "../src/lib/revalidation.ts";
 
 // Pure rules checked before any server starts.
 export const forwardingSecret = "synthetic-forwarding-secret-for-smoke-0001";
@@ -129,3 +131,23 @@ assert.equal(orderNumber("0"), null); assert.equal(orderNumber("7a"), null); ass
 assert.deepEqual(validateLookup({ number: "7", email: " Pessoa@Example.test " }), { number: 7, email: "Pessoa@Example.test" });
 assert.deepEqual(Object.keys(validateLookup({ number: "", email: "x" }).errors).sort(), ["email", "number"]);
 assert.equal(parseOrder({ id: "nao-e-id" }), null);
+
+// SC-047: SEO helpers and the signed revalidation check.
+assert.equal(plainText("<p>Camiseta <strong>leve</strong>.</p><ul><li>100% algodão</li></ul>"), "Camiseta leve. 100% algodão");
+assert.equal(plainText(`<p>${"palavra ".repeat(40)}</p>`, 30).length <= 30, true);
+assert.ok(!jsonLd({ name: "</script><script>alert(1)</script>" }).includes("<"), "JSON-LD não fecha a tag.");
+assert.equal(publicOrigin("https://vitrine.example/"), "https://vitrine.example"); assert.equal(publicOrigin("https://x.example/caminho"), null); assert.equal(publicOrigin(undefined), null);
+assert.equal(indexable("hosted-test"), false); assert.equal(indexable(undefined), true);
+assert.equal(storeTag("loja-a"), "store:loja-a");
+assert.ok(sitemapXml("https://v.example", "loja-a", { products: [], categories: [], pages: [] }).includes("<loc>https://v.example/lojas/loja-a</loc>"));
+assert.deepEqual(parseSitemap({ products: [{ slug: "ok", updatedAt: "2026-10-20T12:00:00Z" }, { slug: "<x>", updatedAt: "2026-10-20" }], categories: ["a", 1], pages: [] }),
+  { products: [{ slug: "ok", updatedAt: "2026-10-20T12:00:00.000Z" }], categories: ["a"], pages: [] });
+const offer = productLd("https://v.example", { name: "P", description: "", path: "/lojas/a/p/p", images: [], brand: null, currency: "BRL", variants: [{ name: "M", price: "10.00", available: false }, { name: "G", price: "12.00", available: true }] });
+assert.equal(offer.offers.length, 2); assert.equal(offer.offers[0].availability, "https://schema.org/OutOfStock");
+const secret = "s".repeat(32), now = Date.UTC(2026, 9, 28, 12), stamp = String(now / 1000);
+const signed = createHmac("sha256", secret).update(`loja-a\n${stamp}`).digest("hex");
+assert.deepEqual(verifyRevalidation(secret, '{"store":"loja-a"}', stamp, signed, now), { ok: true, store: "loja-a" });
+assert.equal(verifyRevalidation(secret, '{"store":"loja-b"}', stamp, signed, now).status, 401);
+assert.equal(verifyRevalidation(secret, '{"store":"loja-a"}', stamp, signed, now + 120000).status, 401);
+assert.equal(verifyRevalidation(undefined, '{"store":"loja-a"}', stamp, signed, now).status, 404);
+assert.equal(verifyRevalidation("curto", '{"store":"loja-a"}', stamp, signed, now).status, 404);
