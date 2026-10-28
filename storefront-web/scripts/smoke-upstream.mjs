@@ -29,6 +29,7 @@ const syntheticOrder = { id: orderId, number: 7, status: "PENDING_PAYMENT", curr
   fulfillment: { type: "PICKUP", text: "Rua Sintética, 10" }, reservationExpiresAt: "2026-10-18T15:30:00Z", createdAt: "2026-10-18T15:00:00Z", payable: true };
 // requestId -> payload fingerprint of the order the synthetic backend committed.
 const createdOrders = new Map();
+export const lookupRequests = [];
 
 function json(response, status, body) {
   response.statusCode = status;
@@ -124,6 +125,15 @@ export async function startUpstream() {
     const { method, url } = request;
     if (method === "POST" && url === "/api/public/stores/loja-teste/cart/quote") return json(response, 200, quote(body));
     if (method === "POST" && url === "/api/public/stores/loja-teste/orders") return checkout(JSON.parse(body), request.headers, response);
+    // SC-046: number 7 with this e-mail is found; "limitado@" is rate limited; anything else is the single 404.
+    if (method === "POST" && url === "/api/public/stores/loja-teste/orders/lookup") {
+      const { number, email } = JSON.parse(body);
+      lookupRequests.push({ number, email, ip: request.headers["x-sc-client-ip"] });
+      if (email === "limitado@example.test") return json(response, 429, { message: "Muitas tentativas." });
+      if (number === "7" && email === "pessoa@example.test")
+        return json(response, 200, { ...syntheticOrder, payable: true, buyerPhone: "PRIVATE_BUYER_FIXTURE", buyerEmail: "PRIVATE_BUYER_FIXTURE" });
+      return json(response, 404, { message: "Pedido ou loja não encontrado." });
+    }
     if (method === "GET" && url === `/api/public/stores/loja-teste/orders/${orderId}`) {
       orderReads.push(request.headers["x-order-token"]);
       if (request.headers["x-order-token"] !== orderToken) return json(response, 404, {});

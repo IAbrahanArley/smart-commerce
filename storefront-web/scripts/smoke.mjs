@@ -240,7 +240,7 @@ try {
   assert.ok([200, 500].includes(unavailable.response.status));
   assert.ok(upstreamRequests.length >= 6, "Fluxos públicos precisam consultar o upstream.");
   for (const request of upstreamRequests) {
-    assert.ok(request.method === "GET" || (request.method === "POST" && /^\/api\/public\/stores\/[a-z0-9-]+\/(?:cart\/quote|orders|orders\/[0-9a-f-]{36}\/payment)$/.test(request.url)), `${request.method} ${request.url}`);
+    assert.ok(request.method === "GET" || (request.method === "POST" && /^\/api\/public\/stores\/[a-z0-9-]+\/(?:cart\/quote|orders|orders\/lookup|orders\/[0-9a-f-]{36}\/payment)$/.test(request.url)), `${request.method} ${request.url}`);
     assert.ok(request.url.startsWith("/api/public/stores/"));
     assert.equal(request.cookie, undefined, "SSR não deve encaminhar cookies do visitante.");
     assert.equal(request.authorization, undefined, "SSR não deve encaminhar Authorization.");
@@ -259,6 +259,9 @@ try {
     assert.match(offCart, /A finalização da compra não está disponível no momento/);
     const offCheckout = (await (await fetch(`${offBase}/lojas/loja-teste/checkout`, { headers: { Cookie: buyable } })).text()).replaceAll("<!-- -->", "");
     assert.match(offCheckout, /Página não encontrada/);
+    // SC-046: "Acompanhar pedido" exists only with the checkout.
+    assert.ok(!offCart.includes("acompanhar-pedido"), "Sem checkout, sem atalho de acompanhar pedido.");
+    assert.match((await (await fetch(`${offBase}/lojas/loja-teste/acompanhar-pedido`)).text()).replaceAll("<!-- -->", ""), /Página não encontrada/);
     assert.ok(!offCheckout.includes("Confirmar pedido"));
     assert.ok(!offCart.includes("test-environment-banner"), "Fora do ambiente de teste não há aviso.");
   } finally {

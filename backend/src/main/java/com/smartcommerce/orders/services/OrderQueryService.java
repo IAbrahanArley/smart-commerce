@@ -23,10 +23,34 @@ public class OrderQueryService {
   private final PaymentCheckoutService payments;
   private final Clock clock;
 
-  public OrderQueryService(OrderRepository orders, PaymentCheckoutService payments, Clock clock) {
+  private final OrderAdmissionService admission;
+
+  public OrderQueryService(
+      OrderRepository orders,
+      PaymentCheckoutService payments,
+      Clock clock,
+      OrderAdmissionService admission) {
     this.orders = orders;
     this.payments = payments;
     this.clock = clock;
+    this.admission = admission;
+  }
+
+  /**
+   * "Acompanhar pedido" (SC-046, ADR-0018 V10): the order with this number and buyer e-mail in the
+   * store. Every attempt counts against the client address and the order number before the read; a
+   * wrong e-mail, a missing number and another store's order are one 404. The view never offers
+   * payment: paying still needs the token of the browser that placed the order.
+   */
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+  public OrderView lookup(String slug, long number, String emailKey, String clientIp) {
+    admission.admitLookup(clientIp, slug, number);
+    CheckoutRecords.Order order =
+        orders
+            .forLookup(slug, number, emailKey)
+            .orElseThrow(() -> new OrderException(OrderException.Reason.MISSING));
+    return OrderViews.view(
+        order, orders.items(order.tenantId(), order.id()), ReservationPolicy.now(clock), false);
   }
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
