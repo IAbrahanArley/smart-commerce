@@ -27,10 +27,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderAdmissionService {
   static final int MAX_ATTEMPTS = 20;
 
-  /** "Acompanhar pedido" (SC-046): attempts per client address and per order number, per hour. */
+  /**
+   * "Acompanhar pedido" (SC-046, SC-048 review): attempts per hour per client address, per store
+   * order number with the e-mail tried, and per store e-mail. Counting the number together with the
+   * e-mail keeps a stranger who knows only the number from locking the buyer out; the e-mail limit
+   * stops walking the sequential numbers of one buyer from many addresses.
+   */
   static final int MAX_LOOKUPS_PER_IP = 20;
 
   static final int MAX_LOOKUPS_PER_ORDER = 10;
+  static final int MAX_LOOKUPS_PER_EMAIL = 20;
   private static final Duration WINDOW = Duration.ofHours(1);
   private final OrderRateLimitRepository limits;
   private final Clock clock;
@@ -51,18 +57,22 @@ public class OrderAdmissionService {
   }
 
   /**
-   * Counts one order lookup for the client address and for the store order number, whether the
-   * order exists or not, so the limit itself never tells an existing number from a missing one.
+   * Counts one order lookup for the client address, the store order number with this e-mail and the
+   * store e-mail, whether the order exists or not, so the limits never tell an existing order from
+   * a missing one. Keys are HMACs: no address, number or e-mail is stored in clear.
    */
   @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public void admitLookup(String clientIp, String slug, long number) {
+  public void admitLookup(String clientIp, String slug, long number, String emailKey) {
     Instant now = ReservationPolicy.now(clock);
     limits.deleteExpired(now);
-    int byIp =
-        limits.increment(hash("lookup-ip:" + ClientIpBucket.of(clientIp)), now, now.plus(WINDOW));
+    Instant until = now.plus(WINDOW);
+    int byIp = limits.increment(hash("lookup-ip:" + ClientIpBucket.of(clientIp)), now, until);
     int byOrder =
-        limits.increment(hash("lookup-order:" + slug + ":" + number), now, now.plus(WINDOW));
-    if (byIp > MAX_LOOKUPS_PER_IP || byOrder > MAX_LOOKUPS_PER_ORDER)
+        limits.increment(hash("lookup-order:" + slug + ":" + number + ":" + emailKey), now, until);
+    int byEmail = limits.increment(hash("lookup-email:" + slug + ":" + emailKey), now, until);
+    if (byIp > MAX_LOOKUPS_PER_IP
+        || byOrder > MAX_LOOKUPS_PER_ORDER
+        || byEmail > MAX_LOOKUPS_PER_EMAIL)
       throw new OrderException(OrderException.Reason.RATE_LIMITED);
   }
 

@@ -64,11 +64,14 @@ export function BannerCarousel({ store, banners }: { store: string; banners: Ban
         {banners.map((banner, index) => {
           const href = bannerHref(store, banner);
           const picture = <picture>
-            {banner.mobileImage ? <source media="(max-width: 47.99rem)" srcSet={bannerImage(store, banner.id, "mobile")} /> : null}
+            {banner.mobileImage ? <source media="(max-width: 47.99rem)" srcSet={bannerImage(store, banner.id, "mobile")}
+              width={banner.mobileWidth ?? undefined} height={banner.mobileHeight ?? undefined} /> : null}
             {/* The phone variant needs <picture>, which next/image does not render. */}
             <img
               src={bannerImage(store, banner.id, "desktop")}
               alt={banner.alt}
+              width={banner.width ?? undefined}
+              height={banner.height ?? undefined}
               loading={index === 0 ? "eager" : "lazy"}
               fetchPriority={index === 0 ? "high" : "auto"}
               decoding="async"

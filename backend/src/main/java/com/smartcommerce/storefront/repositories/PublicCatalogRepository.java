@@ -136,7 +136,16 @@ public class PublicCatalogRepository {
 
   /** A home banner as the storefront shows it (SC-043). */
   public record Banner(
-      UUID id, String alt, String title, String linkKind, String linkTarget, boolean mobileImage) {}
+      UUID id,
+      String alt,
+      String title,
+      String linkKind,
+      String linkTarget,
+      boolean mobileImage,
+      int width,
+      int height,
+      Integer mobileWidth,
+      Integer mobileHeight) {}
 
   /** A home section; {@code categorySlug} only for a category section. */
   public record Section(String kind, String title, String categorySlug) {}
@@ -145,7 +154,10 @@ public class PublicCatalogRepository {
   public List<Banner> banners(String slug, Instant now) {
     return jdbc.query(
         """
-        SELECT b.id,b.alt,b.title,b.link_kind,b.link_target,b.mobile_content IS NOT NULL AS mobile
+        SELECT b.id,b.alt,b.title,b.link_kind,b.link_target,b.mobile_content IS NOT NULL AS mobile,
+          b.desktop_width,b.desktop_height,
+          CASE WHEN b.mobile_content IS NOT NULL THEN b.mobile_width END AS mobile_width,
+          CASE WHEN b.mobile_content IS NOT NULL THEN b.mobile_height END AS mobile_height
         FROM store s JOIN store_banner b ON b.store_id=s.id AND b.tenant_id=s.tenant_id
         WHERE s.slug=:slug AND s.status='PUBLISHED' AND b.desktop_content IS NOT NULL
           AND (b.starts_at IS NULL OR b.starts_at<=:now) AND (b.ends_at IS NULL OR b.ends_at>:now)
@@ -159,7 +171,11 @@ public class PublicCatalogRepository {
                 row.getString("title"),
                 row.getString("link_kind"),
                 row.getString("link_target"),
-                row.getBoolean("mobile")));
+                row.getBoolean("mobile"),
+                row.getInt("desktop_width"),
+                row.getInt("desktop_height"),
+                row.getObject("mobile_width", Integer.class),
+                row.getObject("mobile_height", Integer.class)));
   }
 
   /**

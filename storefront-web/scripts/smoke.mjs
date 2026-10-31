@@ -68,6 +68,7 @@ try {
   assert.ok(catalog.html.includes(`src="/midia/lojas/loja-teste/banners/${bannerId}/desktop"`), "Banner com imagem.");
   assert.ok(catalog.html.includes(`srcSet="/midia/lojas/loja-teste/banners/${bannerId}/mobile"`) || catalog.html.includes(`srcset="/midia/lojas/loja-teste/banners/${bannerId}/mobile"`), "Variante de celular.");
   assert.ok(catalog.html.includes('alt="Coleção de camisetas"'));
+  assert.match(catalog.html, /alt="Coleção de camisetas"[^>]*width="1600" height="600"/, "Banner reserva o espaço da imagem (CLS).");
   assert.match(catalog.html, /aria-roledescription="carrossel"/);
   assert.doesNotMatch(catalog.html, /evil\.example|>Hostil</);
   assert.match(catalog.html, /Destaques da semana/);

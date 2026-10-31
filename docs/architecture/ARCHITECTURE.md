@@ -97,7 +97,7 @@ Na SC-009, o storefront-web ganha `/lojas/{slug}/checkout` e `/lojas/{slug}/pedi
 
 Na SC-046, entra `/lojas/{slug}/acompanhar-pedido`, que existe só onde o checkout existe. O comprador consulta o pedido em qualquer aparelho com o número e o e-mail da compra:
 - a server action chama `POST /api/public/stores/{slug}/orders/lookup`, com número e e-mail no corpo, nunca na URL, e o IP assinado como no checkout;
-- o backend conta cada tentativa por endereço (20 por hora) e por número de pedido da loja (10 por hora), antes de ler o pedido, com chaves HMAC como as do checkout;
+- o backend conta cada tentativa por endereço (20 por hora), por número de pedido com o mesmo e-mail (10 por hora) e por e-mail na loja (20 por hora), antes de ler o pedido, com chaves HMAC como as do checkout;
 - e-mail errado, número inexistente e pedido de outra loja dão o mesmo 404;
 - a resposta não oferece pagamento, que continua exigindo o token do navegador da compra.
 

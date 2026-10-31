@@ -39,7 +39,17 @@ public record PublicCatalogView(
    * with the search text, or NONE. Images are served by the public banner image route.
    */
   public record Banner(
-      UUID id, String alt, String title, String linkKind, String linkTarget, boolean mobileImage) {}
+      UUID id,
+      String alt,
+      String title,
+      String linkKind,
+      String linkTarget,
+      boolean mobileImage,
+      // SC-048: image sizes, so the storefront reserves the space before the image loads (CLS).
+      int width,
+      int height,
+      Integer mobileWidth,
+      Integer mobileHeight) {}
 
   /** A home section: NEW, BEST, FEATURED or CATEGORY (with {@code categorySlug}). */
   public record Section(String kind, String title, String categorySlug) {}

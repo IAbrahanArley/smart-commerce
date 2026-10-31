@@ -111,7 +111,16 @@ public class PublicCatalogService {
             .map(
                 b ->
                     new PublicCatalogView.Banner(
-                        b.id(), b.alt(), b.title(), b.linkKind(), b.linkTarget(), b.mobileImage()))
+                        b.id(),
+                        b.alt(),
+                        b.title(),
+                        b.linkKind(),
+                        b.linkTarget(),
+                        b.mobileImage(),
+                        b.width(),
+                        b.height(),
+                        b.mobileWidth(),
+                        b.mobileHeight()))
             .toList(),
         catalog.sections(slug).stream()
             .map(s -> new PublicCatalogView.Section(s.kind(), s.title(), s.categorySlug()))

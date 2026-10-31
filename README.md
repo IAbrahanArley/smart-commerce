@@ -196,7 +196,18 @@ npm ci --no-fund --no-audit
 npm run dev
 ```
 
-Acesse http://localhost:3001/lojas/{slug}. Use localhost na vitrine e 127.0.0.1 no admin para manter os cookies host-only separados em desenvolvimento. O servidor da vitrine usa STOREFRONT_API_ORIGIN (padrão http://127.0.0.1:8080); não encaminha credenciais administrativas. Fora do desenvolvimento, definir origens separadas e HTTPS antes da disponibilização externa.
+Acesse http://localhost:3001/lojas/{slug}. Desde a Sprint 8, a vitrine padrão V1 tem estas rotas (decisões no [ADR-0018](docs/architecture/adr/0018-storefront-v1.md)):
+- home com banners e seções;
+- categoria em `/c/{categoria}`, busca em `/busca`, com filtros e paginação na URL;
+- produto em `/p/{endereço}`;
+- páginas institucionais em `/paginas/{página}`;
+- "Acompanhar pedido", `sitemap.xml` por loja e `robots.txt`.
+
+Variáveis da vitrine (todas em `storefront-web/.env.example`):
+- `STOREFRONT_PUBLIC_ORIGIN`: `canonical`, Open Graph e JSON-LD;
+- `STOREFRONT_REVALIDATION_SECRET`: o mesmo valor do backend, junto com `STOREFRONT_REVALIDATION_URL`.
+
+Sem elas, as leituras do backend se atualizam a cada 60 s. A revisão integrada está em [SC-048](docs/quality/SC-048-INTEGRATED-REVIEW.md). Use localhost na vitrine e 127.0.0.1 no admin para manter os cookies host-only separados em desenvolvimento. O servidor da vitrine usa STOREFRONT_API_ORIGIN (padrão http://127.0.0.1:8080); não encaminha credenciais administrativas. Fora do desenvolvimento, definir origens separadas e HTTPS antes da disponibilização externa.
 
 No admin, selecione Publicar produto na edição de cada item; depois Publicar loja nos detalhes da loja. Ambos precisam estar publicados. Ocultar produto ou loja remove o conteúdo de novas consultas públicas. A vitrine mostra nome, preço e disponibilidade, sem custos nem saldo exato. Esta entrega permite consulta: carrinho, pedidos e pagamentos são etapas posteriores.
 

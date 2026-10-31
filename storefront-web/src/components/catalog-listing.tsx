@@ -71,9 +71,11 @@ export function CatalogListing({ store, base, params, catalog, title, breadcrumb
           <div className="listing-filters-panel">{filters("compact")}</div>
         </details>
       </> : null}
-      <section className="listing-results" aria-label="Produtos">
+      <section className="listing-results" aria-labelledby="listing-results-title">
+        {/* SC-048: the product names (h3) sit under an h2, also when there are no filters above. */}
+        <h2 id="listing-results-title" className="visually-hidden">Produtos</h2>
         {catalog.products.length === 0 ? <div className="empty-state">
-          <h2>Nenhum produto encontrado</h2>
+          <h3>Nenhum produto encontrado</h3>
           <p>{hasFilters ? "Tente remover algum filtro." : catalog.search ? "Confira a grafia ou procure por outro termo." : "Os produtos aparecerão aqui quando forem publicados."}</p>
           {catalog.menu.length ? <ul className="empty-suggestions">{catalog.menu.map(item => <li key={item.slug}><Link href={categoryPath(store, item.slug)} prefetch={false}>{item.name}</Link></li>)}</ul> : null}
         </div> : <ul className="catalog-grid">

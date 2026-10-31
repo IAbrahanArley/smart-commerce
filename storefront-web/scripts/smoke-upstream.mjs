@@ -67,7 +67,7 @@ const pages = [{ name: "Trocas e devoluções", slug: "trocas-e-devolucoes" }];
 // and sections; "Mais vendidos" fails upstream and must just be left out.
 export const bannerId = "8c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5";
 const banners = [
-  { id: bannerId, alt: "Coleção de camisetas", title: "Camisetas novas", linkKind: "CATEGORY", linkTarget: "camisetas", mobileImage: true },
+  { id: bannerId, alt: "Coleção de camisetas", title: "Camisetas novas", linkKind: "CATEGORY", linkTarget: "camisetas", mobileImage: true, width: 1600, height: 600, mobileWidth: 800, mobileHeight: 800 },
   { id: "7b0c1d2e-3f4a-4b5c-9d6e-7f8091a2b3c4", alt: "Retirada grátis na loja", title: null, linkKind: "NONE", linkTarget: null, mobileImage: false },
   { id: "9d2e3f4a-5b6c-4d7e-8f90-a1b2c3d4e5f6", alt: "Hostil", title: null, linkKind: "PRODUCT", linkTarget: "https://evil.example", mobileImage: false },
 ];
