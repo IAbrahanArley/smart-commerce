@@ -32,7 +32,7 @@ Itens do PRD que ainda não existem ou estão incompletos, em ordem de execuçã
 | **1c. Categorias de produto** (implementada em 2026-10-26, [validação](../quality/MVP-1C-CATEGORIES.md)) | PRD item 3; o catálogo não tem categorias | categoria simples por loja e filtro na vitrine, sem hierarquia profunda |
 | **1d. Páginas legais** (estrutura e rascunho em 2026-10-26, [validação](../quality/MVP-1D-LEGAL.md); faltam razão social, CNPJ e validação do texto) | LGPD e termos (PRD, hipóteses e requisitos não funcionais) | termos de uso e política de privacidade da plataforma; aviso no cadastro e no checkout. **O texto precisa de validação do responsável**; a estrutura pode vir antes |
 | **1e. Planos de assinatura (SaaS)** (planos aprovados em 2026-10-26, [PRICING_PROPOSAL.md](PRICING_PROPOSAL.md); cards na landing) | PRD: assinatura paga pelo lojista; sem ela não há receita | **implementado, aguardando validação real** ([ADR-0017](../architecture/adr/0017-saas-billing-stripe.md), adotado): módulo `billing` (SC-031 a SC-033): teste grátis de 14 dias, limites por plano, cota de IA (Sonnet 5.5), assinatura pela Stripe e telas "Plano e cobrança". Falta o responsável criar a conta, os preços e o webhook na Stripe e validar em modo de teste. Pix Automático pela Asaas em cerca de 6 meses |
-| **1f. Vitrine padrão V1 (Sprint 8)** (incluída em 2026-10-27 por decisão do responsável, como exceção; [SPRINT_08.md](SPRINT_08.md), [ADR-0018](../architecture/adr/0018-storefront-v1.md)) | a vitrine é o que vende o produto, e a versão no padrão de loja grande tinha ficado de fora deste plano | SC-041 a SC-048; evolui os blocos 1b e 1c (dados da loja e categorias). Conta do cliente, loja de extensões e Sprint 7 ficam para depois da entrega |
+| **1f. Vitrine padrão V1 (Sprint 8)** (implementada e revisada em 2026-10-31, [SC-048](../quality/SC-048-INTEGRATED-REVIEW.md); incluída em 2026-10-27 por decisão do responsável, como exceção; [SPRINT_08.md](SPRINT_08.md), [ADR-0018](../architecture/adr/0018-storefront-v1.md)) | a vitrine é o que vende o produto, e a versão no padrão de loja grande tinha ficado de fora deste plano | SC-041 a SC-048; evolui os blocos 1b e 1c (dados da loja e categorias). Conta do cliente, loja de extensões e Sprint 7 ficam para depois da entrega |
 
 ## Bloco 2 — Remover o que é de teste e preparar a produção
 
@@ -42,7 +42,7 @@ Itens do PRD que ainda não existem ou estão incompletos, em ordem de execuçã
   - Mercado Pago com credenciais de produção (`MERCADO_PAGO_TEST_TOKEN=false`);
   - webhook com o evento "Pagamentos" e `MERCADO_PAGO_NOTIFICATION_URL`;
   - assistente desligado até a avaliação.
-- **Observabilidade mínima (requisito não funcional do PRD):** identificador de correlação por requisição nos logs e conferência de que nenhum log leva segredo ou dado pessoal.
+- **Observabilidade mínima (requisito não funcional do PRD)** (implementada em 2026-10-31, [validação](../quality/MVP-2-OBSERVABILITY.md)): identificador de correlação por requisição nos logs e conferência de que nenhum log leva segredo ou dado pessoal.
 - **Revisão completa da interface:** admin e vitrine nas larguras de referência, com as pendências de acessibilidade das sprints 5 e 6 (leitor de tela, zoom e espaçamento).
 
 ## Bloco 3 — Validações reais pendentes

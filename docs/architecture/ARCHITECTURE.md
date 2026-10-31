@@ -54,6 +54,14 @@ Guardar fatos auditáveis e separar data da venda, aprovação, liquidação e m
 ## Segurança
 RBAC, segregação de tenant, tokens cifrados em repouso, secrets fora do Git, auditoria, rate limiting futuro, proteção CSRF conforme estratégia de autenticação, validação de inputs, LGPD.
 
+## Observabilidade mínima (MVP, bloco 2)
+
+- **Id de correlação:** toda requisição ao backend recebe um id (`RequestIdFilter`, antes da cadeia de segurança).
+  - Um `X-Request-Id` recebido só é reaproveitado se tiver de 8 a 64 caracteres, entre letras, números e hífens; senão, o backend gera um UUID.
+  - O id vai no cabeçalho da resposta e em toda linha de log da requisição (`%X{requestId}` no padrão de log).
+  - Rotinas agendadas não têm id.
+- **Logs sem dados:** os logs do código registram só tipo de erro, status HTTP, códigos do provedor e ids, nunca dados de comprador, tokens ou corpos. O driver do PostgreSQL roda com `logServerErrorDetail=false`, para nenhuma exceção carregar a linha recusada ("Failing row contains", com e-mail, telefone e endereço). [Validação](../quality/MVP-2-OBSERVABILITY.md).
+
 ## Decisões em aberto
 Modelo de assinatura SaaS, expiração de reserva, frete, modelagem de variantes, arquitetura de deploy, RLS, armazenamento de imagens e estratégia de observabilidade. Registrar ADR antes de decisões irreversíveis.
 

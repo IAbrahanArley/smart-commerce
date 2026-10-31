@@ -14,6 +14,10 @@ spring:
     hikari:
       connection-timeout: 3000
       validation-timeout: 1000
+      data-source-properties:
+        # MVP block 2: PostgreSQL errors never carry the "Failing row contains (...)" detail, which
+        # holds whole rows (buyer e-mail, phone, address) and would reach logs with the exception.
+        logServerErrorDetail: false
   flyway:
     enabled: true
     clean-disabled: true
@@ -29,6 +33,9 @@ spring:
     jdbc:
       initialize-schema: never
 logging:
+  pattern:
+    # MVP block 2: every line of a request carries its correlation id (RequestIdFilter).
+    level: "%5p [%X{requestId:-}]"
   level:
     org.hibernate.engine.jdbc.spi.SqlExceptionHelper: "OFF"
     org.hibernate.orm.jdbc.error: "OFF"
