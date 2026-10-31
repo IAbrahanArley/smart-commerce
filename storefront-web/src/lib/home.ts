@@ -6,6 +6,8 @@ import { categoryPath } from "./menu.ts";
 export type Banner = {
   id: string; alt: string; title: string | null;
   linkKind: "NONE" | "CATEGORY" | "PRODUCT" | "SEARCH"; linkTarget: string | null; mobileImage: boolean;
+  /** SC-048: image sizes, so the page reserves the space before the image loads. */
+  width: number | null; height: number | null; mobileWidth: number | null; mobileHeight: number | null;
 };
 export type SectionKind = "NEW" | "BEST" | "FEATURED" | "CATEGORY";
 export type Section = { kind: SectionKind; title: string; categorySlug: string | null };
@@ -36,9 +38,12 @@ function banner(raw: unknown): Banner[] {
     target = line(value.linkTarget, 100);
     if (!target) return [];
   } else if (kind !== "NONE") return [];
+  const size = (entry: unknown) => Number.isInteger(entry) && (entry as number) >= 1 && (entry as number) <= 10000 ? entry as number : null;
+  const mobileImage = value.mobileImage === true;
   return [{
-    id: value.id, alt, title: line(value.title, 80), linkKind: kind, linkTarget: target,
-    mobileImage: value.mobileImage === true,
+    id: value.id, alt, title: line(value.title, 80), linkKind: kind, linkTarget: target, mobileImage,
+    width: size(value.width), height: size(value.height),
+    mobileWidth: mobileImage ? size(value.mobileWidth) : null, mobileHeight: mobileImage ? size(value.mobileHeight) : null,
   }];
 }
 

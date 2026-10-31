@@ -117,7 +117,8 @@ Regras comuns: loja resolvida só pelo slug publicado; toda consulta pública re
 - **Rota original do produto** (`/produtos/{id}`): continua respondendo, com `canonical` para `/p/{endereço}`.
 
 **SC-046 (2026-10-28):**
-- **V10, limites:** 20 consultas por hora por endereço e 10 por hora por número de pedido da loja. A tentativa conta mesmo quando o pedido não existe, então o limite não revela quais números existem. O limite por pedido pode atrasar o próprio comprador se alguém insistir no número dele; a janela é de uma hora.
+- **V10, limites:** por hora, 20 consultas por endereço, 10 por número de pedido com o mesmo e-mail e 20 por e-mail na loja. A tentativa conta mesmo quando o pedido não existe, então o limite não revela quais números existem.
+  - **Ajuste da SC-048:** a versão inicial contava só o número. Com isso, quem soubesse o número podia bloquear o comprador por uma hora. Contar o número junto com o e-mail evita esse bloqueio. O limite por e-mail impede percorrer, de vários endereços, os números sequenciais de um comprador conhecido.
 - **V10, sem pagamento:** a consulta por número e e-mail mostra situação, itens, entrega e valores, mas não o botão de pagar. Pagar continua exigindo o token do navegador da compra; a página orienta a usar esse navegador ou falar com a loja.
 - **Rota só com checkout:** "Acompanhar pedido", e o atalho no cabeçalho, só existem onde o checkout está ligado (D6), como o checkout.
 - **Pedido anonimizado:** sem e-mail guardado, nunca é encontrado.

@@ -44,7 +44,7 @@ public class OrderQueryService {
    */
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
   public OrderView lookup(String slug, long number, String emailKey, String clientIp) {
-    admission.admitLookup(clientIp, slug, number);
+    admission.admitLookup(clientIp, slug, number, emailKey);
     CheckoutRecords.Order order =
         orders
             .forLookup(slug, number, emailKey)

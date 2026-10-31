@@ -531,22 +531,48 @@ class OrderCheckoutIT {
   }
 
   @Test
-  void orderLookupsAreLimitedPerClientAddressAndPerOrderNumber() throws Exception {
-    // Per order number: ten attempts in the hour, from any address, existing order or not.
-    for (int i = 0; i < 10; i++)
+  void orderLookupsAreLimitedWithoutLettingStrangersLockTheBuyerOut() throws Exception {
+    assertThat(
+            post(
+                    "pedido-a",
+                    body(UUID.randomUUID(), lines(simpleA, 1), Map.of("type", "PICKUP"), "15.90"))
+                .statusCode())
+        .isEqualTo(201);
+    // SC-048 review: someone who knows only the number cannot lock the buyer out.
+    for (int i = 0; i < 12; i++)
       assertThat(
-              lookup("pedido-a", "7", "x" + i + "@example.test", "198.51.100." + (i + 1))
+              lookup("pedido-a", "1", "x" + i + "@example.test", "198.51.100." + (i + 1))
                   .statusCode())
           .isEqualTo(404);
-    var byOrder = lookup("pedido-a", "7", EMAIL, "198.51.100.50");
+    assertThat(lookup("pedido-a", "1", EMAIL, "198.51.100.60").statusCode()).isEqualTo(200);
+
+    // Per number and e-mail: ten attempts in the hour, from any address.
+    for (int i = 0; i < 10; i++)
+      assertThat(lookup("pedido-a", "7", "y@example.test", "198.51.100." + (100 + i)).statusCode())
+          .isEqualTo(404);
+    var byOrder = lookup("pedido-a", "7", "y@example.test", "198.51.100.150");
     assertThat(byOrder.statusCode()).isEqualTo(429);
     assertThat(byOrder.headers().firstValue("Retry-After")).contains("3600");
-    // Per signed client address: twenty attempts in the hour across numbers.
+
+    // Per store e-mail: walking the sequential numbers of one buyer stops at twenty.
     for (int i = 0; i < 20; i++)
-      assertThat(lookup("pedido-a", String.valueOf(100 + i), EMAIL, "203.0.113.9").statusCode())
+      assertThat(
+              lookup("pedido-a", String.valueOf(300 + i), "walk@example.test", "192.0.2." + (i + 1))
+                  .statusCode())
           .isEqualTo(404);
-    assertThat(lookup("pedido-a", "200", EMAIL, "203.0.113.9").statusCode()).isEqualTo(429);
-    assertThat(lookup("pedido-a", "200", EMAIL, "203.0.113.10").statusCode()).isEqualTo(404);
+    assertThat(lookup("pedido-a", "400", "walk@example.test", "192.0.2.99").statusCode())
+        .isEqualTo(429);
+
+    // Per signed client address: twenty attempts in the hour across numbers and e-mails.
+    for (int i = 0; i < 20; i++)
+      assertThat(
+              lookup("pedido-a", String.valueOf(100 + i), "z" + i + "@example.test", "203.0.113.9")
+                  .statusCode())
+          .isEqualTo(404);
+    assertThat(lookup("pedido-a", "200", "z@example.test", "203.0.113.9").statusCode())
+        .isEqualTo(429);
+    assertThat(lookup("pedido-a", "200", "z@example.test", "203.0.113.10").statusCode())
+        .isEqualTo(404);
     assertThat(jdbc.queryForList("SELECT bucket_key FROM order_rate_limit", String.class))
         .allSatisfy(key -> assertThat(key).matches("[0-9a-f]{64}"));
   }

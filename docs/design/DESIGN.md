@@ -364,7 +364,28 @@ A proposta começou com `#A9B0BA` nas bordas de controle (2,2:1, abaixo do 3:1 e
 - **Card:** foto 4:5, selo de desconto ou "Esgotado", marca em versalete, nome, preço "de" riscado, preço e "em até N× no Mercado Pago".
 - **Categoria/busca:** caminho, título e contagem, ordenação em formulário GET com botão "Aplicar". Filtros como links (lateral a partir de 54rem, painel "Filtrar produtos" abaixo), chips para opções de variante, "Limpar filtros" e paginação numerada em pílula.
 - **Produto:** caminho pelas categorias, marca, preço "de" com selo, parcelamento, notas de entrega e pagamento, descrição e "Você também pode gostar".
-- **Ainda não entrou:** a faixa de aviso da loja, os banners e as seções configuráveis da home e o link "Acompanhar pedido" (SC-043 e SC-046). As vantagens da home também esperam a SC-043, porque o texto delas vem da configuração da loja.
+- **Conteúdo da loja (SC-043):**
+  - faixa de aviso no topo;
+  - carrossel de banners: um slide por vez, anterior, próximo e "Pausar"; troca sozinho a cada 7 s, mas nunca com `prefers-reduced-motion` nem com o ponteiro ou o foco dentro dele;
+  - seções configuráveis da home;
+  - páginas institucionais em "Ajuda" e dados legais no rodapé.
+
+  As vantagens da home continuam fora: o texto delas viria de uma configuração que não existe.
+- **Checkout e pedido (SC-046):**
+  - atalho "Acompanhar pedido" no cabeçalho, só com o ícone no celular;
+  - checkout com moldura reduzida (nome da loja e contato, sem busca nem menu) e resumo lateral fixo no desktop;
+  - foto de cada item no carrinho.
+
+**Revisão de acessibilidade (SC-048, 2026-10-31):**
+- **Tokens:** contrastes recalculados (texto de 4,94:1 a 18,47:1; borda de controle 3,89:1; foco 6,5:1).
+- **Navegador, com backend sintético:**
+  - ordem do teclado e foco visível no cabeçalho, no menu e no carrinho;
+  - árvore de acessibilidade com região, grupos e nomes;
+  - sem rolagem horizontal em 320 px, equivalente a zoom de 400%.
+- **Corrigido:**
+  - título oculto "Produtos" nas listagens, para os títulos dos cards (h3) não virem logo após o h1;
+  - dimensões da imagem do banner, para evitar deslocamento de layout.
+- **Sem cobertura:** sem Axe, sem leitor de tela real e sem Lighthouse, ferramentas que não estão instaladas. Registro em [SC-048](../quality/SC-048-INTEGRATED-REVIEW.md).
 
 ## Conteúdo do produto autorizado
 

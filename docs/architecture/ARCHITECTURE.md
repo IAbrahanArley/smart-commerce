@@ -54,6 +54,14 @@ Guardar fatos auditáveis e separar data da venda, aprovação, liquidação e m
 ## Segurança
 RBAC, segregação de tenant, tokens cifrados em repouso, secrets fora do Git, auditoria, rate limiting futuro, proteção CSRF conforme estratégia de autenticação, validação de inputs, LGPD.
 
+## Observabilidade mínima (MVP, bloco 2)
+
+- **Id de correlação:** toda requisição ao backend recebe um id (`RequestIdFilter`, antes da cadeia de segurança).
+  - Um `X-Request-Id` recebido só é reaproveitado se tiver de 8 a 64 caracteres, entre letras, números e hífens; senão, o backend gera um UUID.
+  - O id vai no cabeçalho da resposta e em toda linha de log da requisição (`%X{requestId}` no padrão de log).
+  - Rotinas agendadas não têm id.
+- **Logs sem dados:** os logs do código registram só tipo de erro, status HTTP, códigos do provedor e ids, nunca dados de comprador, tokens ou corpos. O driver do PostgreSQL roda com `logServerErrorDetail=false`, para nenhuma exceção carregar a linha recusada ("Failing row contains", com e-mail, telefone e endereço). [Validação](../quality/MVP-2-OBSERVABILITY.md).
+
 ## Decisões em aberto
 Modelo de assinatura SaaS, expiração de reserva, frete, modelagem de variantes, arquitetura de deploy, RLS, armazenamento de imagens e estratégia de observabilidade. Registrar ADR antes de decisões irreversíveis.
 
@@ -97,7 +105,7 @@ Na SC-009, o storefront-web ganha `/lojas/{slug}/checkout` e `/lojas/{slug}/pedi
 
 Na SC-046, entra `/lojas/{slug}/acompanhar-pedido`, que existe só onde o checkout existe. O comprador consulta o pedido em qualquer aparelho com o número e o e-mail da compra:
 - a server action chama `POST /api/public/stores/{slug}/orders/lookup`, com número e e-mail no corpo, nunca na URL, e o IP assinado como no checkout;
-- o backend conta cada tentativa por endereço (20 por hora) e por número de pedido da loja (10 por hora), antes de ler o pedido, com chaves HMAC como as do checkout;
+- o backend conta cada tentativa por endereço (20 por hora), por número de pedido com o mesmo e-mail (10 por hora) e por e-mail na loja (20 por hora), antes de ler o pedido, com chaves HMAC como as do checkout;
 - e-mail errado, número inexistente e pedido de outra loja dão o mesmo 404;
 - a resposta não oferece pagamento, que continua exigindo o token do navegador da compra.
 

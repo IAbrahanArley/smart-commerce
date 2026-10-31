@@ -62,7 +62,10 @@ export function apiOrigin(): string {
  */
 function cached(path: string): RequestInit {
   const store = /^\/api\/public\/stores\/([a-z0-9-]+)/.exec(path)?.[1];
-  return store ? { next: { revalidate: 60, tags: [storeTag(store)] } } : { cache: "no-store" };
+  // SC-048 review: free-text searches are endless keys that would only fill the cache; they go
+  // straight to the backend like before.
+  const search = /[?&]q=/.test(path);
+  return store && !search ? { next: { revalidate: 60, tags: [storeTag(store)] } } : { cache: "no-store" };
 }
 
 async function publicGet(path: string): Promise<unknown> {

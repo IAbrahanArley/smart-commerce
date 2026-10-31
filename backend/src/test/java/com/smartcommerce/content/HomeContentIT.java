@@ -163,6 +163,11 @@ class HomeContentIT {
     assertThat(banner.get("linkKind").asText()).isEqualTo("CATEGORY");
     assertThat(banner.get("linkTarget").asText()).isEqualTo("casacos");
     assertThat(banner.get("mobileImage").asBoolean()).isTrue();
+    // SC-048: sizes of both images, so the storefront reserves the space (no layout shift).
+    assertThat(banner.get("width").asInt()).isEqualTo(1200);
+    assertThat(banner.get("height").asInt()).isEqualTo(400);
+    assertThat(banner.get("mobileWidth").asInt()).isEqualTo(600);
+    assertThat(banner.get("mobileHeight").asInt()).isEqualTo(600);
     var served = buyer.bytes(image);
     assertThat(served.statusCode()).isEqualTo(200);
     assertThat(served.headers().firstValue("X-Content-Type-Options")).hasValue("nosniff");

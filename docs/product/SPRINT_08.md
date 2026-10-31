@@ -124,6 +124,8 @@ SC-041 e SC-044 podem andar em paralelo (backend × base visual). SC-043 e SC-04
 
 ## SC-048 — Revisão integrada
 
+**Estado (2026-10-31):** concluída. Houve revisão de segurança independente, revisão de UI e acessibilidade e medição de desempenho, com 5 correções. A Sprint 8 está fechada, com as pendências registradas. Registro: [SC-048](../quality/SC-048-INTEGRATED-REVIEW.md).
+
 - Revisão de segurança multi-tenant da API pública nova (facetas, busca, mais vendidos, conteúdo, acompanhar pedido, cache).
 - Revisão de UI/UX com `web-design-guidelines` e acessibilidade (teclado, leitor de tela, zoom 200%, contraste) nas páginas novas.
 - Medição de desempenho (Lighthouse local) da home, categoria e produto, sem metas inventadas: registrar o resultado.
