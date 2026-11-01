@@ -50,7 +50,7 @@ public class StorefrontRepository {
             .createNativeQuery(
                 """
                 SELECT s.name,s.slug,p.contact_email,p.whatsapp,p.instagram,
-                  p.logo_content IS NOT NULL,
+                  p.logo_content IS NOT NULL,p.logo_width,p.logo_height,
                   CASE WHEN EXISTS(SELECT 1 FROM payment_account a
                     WHERE a.tenant_id=s.tenant_id AND a.status='CONNECTED') THEN s.max_installments END
                 FROM store s LEFT JOIN store_profile p ON p.store_id=s.id AND p.tenant_id=s.tenant_id
@@ -69,7 +69,9 @@ public class StorefrontRepository {
                   (String) row[3],
                   (String) row[4],
                   Boolean.TRUE.equals(row[5]),
-                  row[6] == null ? null : ((Number) row[6]).intValue());
+                  row[6] == null ? null : ((Number) row[6]).intValue(),
+                  row[7] == null ? null : ((Number) row[7]).intValue(),
+                  row[8] == null ? null : ((Number) row[8]).intValue());
             })
         .findFirst();
   }

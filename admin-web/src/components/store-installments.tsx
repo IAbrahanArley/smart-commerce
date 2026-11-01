@@ -11,6 +11,7 @@ import { Loading } from "@/components/ui/loading";
 export default function StoreInstallments({ tenantId }: { tenantId: string }) {
   const [value, setValue] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const submitting = useRef(false);
@@ -24,7 +25,7 @@ export default function StoreInstallments({ tenantId }: { tenantId: string }) {
       if (!controller.signal.aborted) setValue(parsed === null ? "" : String(parsed));
     }).catch(() => { if (!controller.signal.aborted) setFailed(true); });
     return () => controller.abort();
-  }, [api]);
+  }, [api, attempt]);
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,7 +43,8 @@ export default function StoreInstallments({ tenantId }: { tenantId: string }) {
 
   return <section className="variant-definition" aria-labelledby="installments-title">
     <h2 id="installments-title">Parcelamento</h2>
-    {failed ? <p role="alert" className="feedback feedback-error">Não foi possível consultar o parcelamento.</p> : null}
+    {failed ? <div><p role="alert" className="feedback feedback-error">Não foi possível consultar o parcelamento.</p>
+      <button type="button" className="button-secondary" onClick={() => { setFailed(false); setAttempt(current => current + 1); }}>Consultar novamente</button></div> : null}
     {value === null && !failed ? <Loading context="parcelamento" className="py-4" /> : null}
     {value !== null ? <form onSubmit={event => void save(event)} noValidate className="category-edit">
       <div className="form-field">

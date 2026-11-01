@@ -22,6 +22,7 @@ export default function ProductImages({ tenantId, productId, version, locked, on
   const [attempt, setAttempt] = useState(0);
   const [alt, setAlt] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<{ file?: string; alt?: string }>({});
   const form = useRef<HTMLFormElement>(null);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
   const submitting = useRef(false);
@@ -65,9 +66,11 @@ export default function ProductImages({ tenantId, productId, version, locked, on
   }
   function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!file || !["image/jpeg", "image/png"].includes(file.type) || file.size > 5 * 1024 * 1024 || file.size === 0 || !alt.trim() || [...alt.trim()].length > 200 || /[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(alt)) {
-      setFeedback({ text: "Selecione JPEG ou PNG de até 5 MiB e informe um texto alternativo de 1 a 200 caracteres, sem quebras de linha.", error: true }); return;
-    }
+    const found: { file?: string; alt?: string } = {};
+    if (!file || !["image/jpeg", "image/png"].includes(file.type) || file.size > 5 * 1024 * 1024 || file.size === 0) found.file = "Selecione uma foto JPEG ou PNG de até 5 MiB.";
+    if (!alt.trim() || [...alt.trim()].length > 200 || /[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(alt)) found.alt = "Descreva a foto em 1 a 200 caracteres, sem quebras de linha.";
+    setUploadErrors(found);
+    if (found.file || found.alt || !file) { document.getElementById(found.file ? "product-photo-file" : "product-photo-alt")?.focus(); return; }
     const body = new FormData(); body.set("file", file); body.set("alt", alt.trim()); body.set("version", String(version));
     void mutate(() => apiRequest(path, { method: "POST", body }));
   }
@@ -90,9 +93,13 @@ export default function ProductImages({ tenantId, productId, version, locked, on
         <button type="button" disabled={disabled} onClick={() => void (async () => { if (await confirm({ title: `Remover a foto ${index + 1}?`, message: "A foto sai do produto e da vitrine. Para usá-la de novo, envie o arquivo outra vez.", confirmLabel: "Remover foto", tone: "danger" })) void mutate(() => apiRequest(`${path}/${encodeURIComponent(photo.id)}?version=${version}`, { method: "DELETE" })); })()} aria-label={`Remover foto ${index + 1}`}>Remover foto</button>
       </div>
     </li>)}</ol>}
-    {data && data.images.length < 6 ? <form ref={form} onSubmit={upload} aria-busy={busy}>
-      <div className="form-field"><label htmlFor="product-photo-file">Nova foto</label><input id="product-photo-file" name="file" type="file" accept="image/jpeg,image/png" required disabled={disabled} onChange={event => setFile(event.target.files?.[0] ?? null)} aria-describedby="photo-upload-help" /><p id="photo-upload-help" className="field-help">JPEG ou PNG de até 5 MiB. O arquivo é validado pelo servidor.</p></div>
-      <div className="form-field"><label htmlFor="product-photo-alt">Texto alternativo</label><input id="product-photo-alt" name="alt" value={alt} onChange={event => setAlt(event.target.value)} maxLength={400} required disabled={disabled} autoComplete="off" /></div>
+    {data && data.images.length < 6 ? <form ref={form} onSubmit={upload} aria-busy={busy} noValidate>
+      <div className="form-field"><label htmlFor="product-photo-file">Nova foto</label><input id="product-photo-file" name="file" type="file" accept="image/jpeg,image/png" required disabled={disabled} onChange={event => { setFile(event.target.files?.[0] ?? null); setUploadErrors(current => ({ ...current, file: undefined })); }}
+        aria-invalid={uploadErrors.file ? true : undefined} aria-describedby={`photo-upload-help${uploadErrors.file ? " photo-file-error" : ""}`} /><p id="photo-upload-help" className="field-help">JPEG ou PNG de até 5 MiB. O arquivo é validado pelo servidor.</p>
+        {uploadErrors.file ? <p id="photo-file-error" className="field-error">{uploadErrors.file}</p> : null}</div>
+      <div className="form-field"><label htmlFor="product-photo-alt">Texto alternativo</label><input id="product-photo-alt" name="alt" value={alt} onChange={event => { setAlt(event.target.value); setUploadErrors(current => ({ ...current, alt: undefined })); }} maxLength={400} required disabled={disabled} autoComplete="off"
+        aria-invalid={uploadErrors.alt ? true : undefined} aria-describedby={uploadErrors.alt ? "photo-alt-error" : undefined} />
+        {uploadErrors.alt ? <p id="photo-alt-error" className="field-error">{uploadErrors.alt}</p> : null}</div>
       <button type="submit" disabled={disabled}>{busy ? "Atualizando fotos…" : "Enviar foto"}</button>
     </form> : null}
   </section>;

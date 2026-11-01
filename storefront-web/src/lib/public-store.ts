@@ -18,7 +18,10 @@ export type PublicVariant = { id: string; price: string; currency: "BRL"; availa
 export type PublicImage = { id: string; alt: string; width: number; height: number };
 
 // MVP block 1b: public contacts and logo the store chose to show; null contacts are not shown.
-export type StoreProfile = { contactEmail: string | null; whatsapp: string | null; instagram: string | null; logo: boolean };
+export type StoreProfile = {
+  contactEmail: string | null; whatsapp: string | null; instagram: string | null; logo: boolean;
+  logoWidth: number | null; logoHeight: number | null;
+};
 export type PublicStore = { name: string; slug: string; profile: StoreProfile };
 export type PublicCategory = { id: string; name: string };
 export type PublicCatalog = PublicStore & { categories: PublicCategory[]; category: string | null; products: PublicProduct[]; nextCursor: string | null };
@@ -114,7 +117,9 @@ export function storeProfile(value: unknown): StoreProfile {
     && /^[^@\s<>"]{1,64}@[^@\s.<>"]+(\.[^@\s.<>"]+)+$/.test(input.contactEmail) ? input.contactEmail : null;
   const whatsapp = typeof input.whatsapp === "string" && /^55[1-9]\d{9,10}$/.test(input.whatsapp) ? input.whatsapp : null;
   const instagram = typeof input.instagram === "string" && /^[A-Za-z0-9._]{1,30}$/.test(input.instagram) ? input.instagram : null;
-  return { contactEmail: email, whatsapp, instagram, logo: input.logo === true };
+  const size = (raw: unknown) => Number.isInteger(raw) && (raw as number) > 0 && (raw as number) <= 10000 ? raw as number : null;
+  const width = size(input.logoWidth), height = size(input.logoHeight);
+  return { contactEmail: email, whatsapp, instagram, logo: input.logo === true, logoWidth: width && height ? width : null, logoHeight: width && height ? height : null };
 }
 
 /** "5511988887777" → "(11) 98888-7777". */

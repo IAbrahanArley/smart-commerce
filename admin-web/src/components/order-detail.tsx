@@ -99,7 +99,7 @@ export default function OrderDetail({ tenantId, orderId }: { tenantId: string; o
             <td role="cell" data-label="SKU"><span translate="no">{item.sku}</span></td>
             <td role="cell" data-label="Preço" className="numeric">{formatBRL(item.unitPrice)}</td>
             <td role="cell" data-label="Custo" className="numeric">{item.unitCost ? formatBRL(item.unitCost) : "Não informado"}</td>
-            <td role="cell" data-label="Quantidade" className="numeric">{item.quantity}</td>
+            <td role="cell" data-label="Quantidade" className="numeric">{new Intl.NumberFormat("pt-BR").format(item.quantity)}</td>
             <td role="cell" data-label="Total" className="numeric">{formatBRL(item.lineTotal)}</td>
           </tr>)}</tbody>
         </table></div>

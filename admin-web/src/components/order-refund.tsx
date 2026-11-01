@@ -118,8 +118,8 @@ export default function OrderRefund({ order, path, onChange, onReload, onNotice 
       <fieldset aria-describedby={errors.restock ? "refund-restock-help refund-restock-error" : "refund-restock-help"}>
         <legend>Estoque</legend>
         <p id="refund-restock-help" className="field-help">{stockless ? "Este pedido foi pago sem estoque: nada foi baixado, então nada volta ao estoque." : "Escolha se as unidades vendidas voltam ao estoque disponível."}</p>
-        <label><input id="refund-restock-yes" type="radio" name="restock" value="yes" checked={restock === "yes"} aria-describedby={errors.restock ? "refund-restock-error" : undefined} onChange={() => { setRestock("yes"); setErrors(current => ({ ...current, restock: undefined })); }} /> Devolver as unidades ao estoque</label>
-        <label><input type="radio" name="restock" value="no" checked={restock === "no"} aria-describedby={errors.restock ? "refund-restock-error" : undefined} onChange={() => { setRestock("no"); setErrors(current => ({ ...current, restock: undefined })); }} /> Não devolver as unidades ao estoque</label>
+        <label className="check-field"><input id="refund-restock-yes" type="radio" name="restock" value="yes" checked={restock === "yes"} aria-describedby={errors.restock ? "refund-restock-error" : undefined} onChange={() => { setRestock("yes"); setErrors(current => ({ ...current, restock: undefined })); }} /> Devolver as unidades ao estoque</label>
+        <label className="check-field"><input type="radio" name="restock" value="no" checked={restock === "no"} aria-describedby={errors.restock ? "refund-restock-error" : undefined} onChange={() => { setRestock("no"); setErrors(current => ({ ...current, restock: undefined })); }} /> Não devolver as unidades ao estoque</label>
         {errors.restock ? <p id="refund-restock-error" className="field-error" role="alert">{errors.restock}</p> : null}
       </fieldset>
       <div className="form-actions">

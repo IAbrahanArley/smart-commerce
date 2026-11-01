@@ -17,6 +17,7 @@ export default function StoresPanel() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [slugError, setSlugError] = useState("");
+  const [nameErrors, setNameErrors] = useState<{ companyName?: string; storeName?: string }>({});
   const [created, setCreated] = useState<TenantStore | null>(null);
   const submitting = useRef(false);
   const slugField = useRef<HTMLInputElement>(null);
@@ -43,14 +44,17 @@ export default function StoresPanel() {
     const values = new FormData(form);
     const body = { companyName: String(values.get("companyName") ?? "").trim(),
       storeName: String(values.get("storeName") ?? "").trim(), slug: String(values.get("slug") ?? "") };
-    setError(""); setSlugError(""); setCreated(null);
+    setError(""); setCreated(null);
+    // Persistent errors next to each field, in the form order, instead of the browser's bubble.
+    const names: { companyName?: string; storeName?: string } = {};
     for (const field of ["companyName", "storeName"] as const) {
-      if ([...body[field]].length < 1 || [...body[field]].length > 120) {
-        const input = form.elements.namedItem(field) as HTMLInputElement;
-        input.setCustomValidity("Use de 1 a 120 caracteres para o nome.");
-        input.reportValidity(); input.focus(); return;
-      }
+      if ([...body[field]].length < 1 || [...body[field]].length > 120) names[field] = "Use de 1 a 120 caracteres para o nome.";
     }
+    const slugProblem = /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(body.slug) && body.slug.length >= 3 && body.slug.length <= 63
+      ? "" : "Use de 3 a 63 letras minúsculas sem acentos, números e hífens, começando e terminando com letra ou número.";
+    setNameErrors(names); setSlugError(slugProblem);
+    const first = names.companyName ? "company-name" : names.storeName ? "store-name" : slugProblem ? "store-slug" : null;
+    if (first) { document.getElementById(first)?.focus(); return; }
     submitting.current = true; setPending(true);
     try {
       const response = await apiRequest("/api/tenants", { method: "POST", body });
@@ -85,7 +89,7 @@ export default function StoresPanel() {
       <button type="button" onClick={() => { setLoading(true); setLoadError(""); setAttempt(current => current + 1); }}>Consultar lojas novamente</button>
     </div> : stores.length === 0 ? <p>Você ainda não tem uma loja. Preencha os dados abaixo para criar a primeira.</p> : <ul className="store-list">
       {stores.map(tenant => <li key={tenant.id} className="store-card">
-        <h3><Link href={`/lojas/${encodeURIComponent(tenant.id)}`}>{tenant.store.name}</Link></h3>
+        <h2><Link href={`/lojas/${encodeURIComponent(tenant.id)}`}>{tenant.store.name}</Link></h2>
         <p>{tenant.companyName}</p><p className="store-status">{tenant.store.status === "PUBLISHED" ? "Vitrine publicada" : "Em configuração · Vitrine oculta"} · Proprietário</p>
       </li>)}
     </ul>}
@@ -96,14 +100,18 @@ export default function StoresPanel() {
         className={error ? "feedback feedback-error" : created ? "feedback feedback-success" : "feedback-empty"}>
         {error || (created ? <>Loja criada. <Link href={`/lojas/${encodeURIComponent(created.id)}`}>Visualizar {created.store.name}</Link></> : "")}
       </p>
-      <form onSubmit={(event) => void createStore(event)} aria-busy={pending}>
+      <form onSubmit={(event) => void createStore(event)} aria-busy={pending} noValidate>
         <div className="form-field"><label htmlFor="company-name">Nome da empresa</label>
-          <input id="company-name" name="companyName" autoComplete="organization" required maxLength={240} pattern=".*\S.*"
-            onInput={event => event.currentTarget.setCustomValidity("")} />
+          <input id="company-name" name="companyName" autoComplete="organization" required maxLength={240}
+            aria-invalid={nameErrors.companyName ? true : undefined} aria-describedby={nameErrors.companyName ? "company-name-error" : undefined}
+            onInput={() => { if (nameErrors.companyName) setNameErrors(current => ({ ...current, companyName: undefined })); }} />
+          {nameErrors.companyName ? <p id="company-name-error" className="field-error">{nameErrors.companyName}</p> : null}
         </div>
         <div className="form-field"><label htmlFor="store-name">Nome da loja</label>
-          <input id="store-name" name="storeName" autoComplete="off" required maxLength={240} pattern=".*\S.*"
-            onInput={event => event.currentTarget.setCustomValidity("")} />
+          <input id="store-name" name="storeName" autoComplete="off" required maxLength={240}
+            aria-invalid={nameErrors.storeName ? true : undefined} aria-describedby={nameErrors.storeName ? "store-name-error" : undefined}
+            onInput={() => { if (nameErrors.storeName) setNameErrors(current => ({ ...current, storeName: undefined })); }} />
+          {nameErrors.storeName ? <p id="store-name-error" className="field-error">{nameErrors.storeName}</p> : null}
         </div>
         <div className="form-field"><label htmlFor="store-slug">Identificador da loja</label>
           <p id="slug-help" className="field-help">Use de 3 a 63 letras minúsculas sem acentos, números e hífens. Comece e termine com letra ou número. Exemplo: minha-loja.</p>

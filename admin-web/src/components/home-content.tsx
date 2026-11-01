@@ -9,6 +9,7 @@ import {
   bannerBody, bannerDraft, bannerErrors, homeError, move, parseBanners, parseSections, sectionError,
 } from "@/lib/home-content";
 import { useConfirm } from "@/components/confirm-dialog";
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 import { Loading } from "@/components/ui/loading";
 
 type Feedback = { text: string; error: boolean } | null;
@@ -18,6 +19,7 @@ type Feedback = { text: string; error: boolean } | null;
 export default function HomeContent({ tenantId }: { tenantId: string }) {
   const [banners, setBanners] = useState<Banner[] | null>(null);
   const [sections, setSections] = useState<Section[] | null>(null);
+  const [savedSections, setSavedSections] = useState<Section[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -32,6 +34,9 @@ export default function HomeContent({ tenantId }: { tenantId: string }) {
   const { confirm, dialog } = useConfirm();
   const tenantPath = `/api/tenants/${encodeURIComponent(tenantId)}`;
   const api = `${tenantPath}/content`;
+  const editedBanner = banners?.find(banner => banner.id === editing);
+  const bannerDirty = JSON.stringify(draft) !== JSON.stringify(editedBanner ? bannerDraft(editedBanner) : EMPTY_BANNER);
+  useUnsavedChanges(bannerDirty || JSON.stringify(sections) !== JSON.stringify(savedSections));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -43,7 +48,7 @@ export default function HomeContent({ tenantId }: { tenantId: string }) {
         const parsedCategories = categoryResponse.ok ? parseCategories(await categoryResponse.json()) : null;
         if (!parsedBanners || !parsedSections) throw new Error();
         if (signal.aborted) return;
-        setBanners(parsedBanners); setSections(parsedSections); setCategories(parsedCategories ?? []);
+        setBanners(parsedBanners); setSections(parsedSections); setSavedSections(parsedSections); setCategories(parsedCategories ?? []);
       }).catch(() => { if (!signal.aborted) setFailed(true); });
     return () => controller.abort();
   }, [api, tenantPath]);
@@ -64,7 +69,7 @@ export default function HomeContent({ tenantId }: { tenantId: string }) {
       if (path.startsWith("/sections")) {
         const parsed = parseSections(value);
         if (!parsed) throw new Error();
-        setSections(parsed);
+        setSections(parsed); setSavedSections(parsed);
       } else {
         const parsed = parseBanners(value);
         if (!parsed) throw new Error();
@@ -141,12 +146,12 @@ export default function HomeContent({ tenantId }: { tenantId: string }) {
               {banner.startsAt || banner.endsAt ? ` · ${periodText(banner)}` : ""}{banner.mobileImage ? " · com imagem para celular" : ""}</span>
             <div className="banner-admin-uploads">
               <label className="button-secondary file-button">
-                {banner.desktopImage ? "Trocar imagem principal" : "Enviar imagem principal"}
+                {banner.desktopImage ? "Trocar imagem principal" : "Enviar imagem principal"}<span className="visually-hidden"> do banner “{banner.alt}”</span>
                 <input type="file" accept="image/jpeg,image/png" className="visually-hidden" disabled={busy}
                   onChange={event => { upload(banner, "desktop", event.target.files?.[0]); event.target.value = ""; }} />
               </label>
               <label className="button-secondary file-button">
-                {banner.mobileImage ? "Trocar imagem de celular" : "Enviar imagem de celular"}
+                {banner.mobileImage ? "Trocar imagem de celular" : "Enviar imagem de celular"}<span className="visually-hidden"> do banner “{banner.alt}”</span>
                 <input type="file" accept="image/jpeg,image/png" className="visually-hidden" disabled={busy}
                   onChange={event => { upload(banner, "mobile", event.target.files?.[0]); event.target.value = ""; }} />
               </label>
@@ -196,10 +201,10 @@ export default function HomeContent({ tenantId }: { tenantId: string }) {
               onChange={event => { setDraft({ ...draft, linkTarget: event.target.value }); setErrors({ ...errors, linkTarget: undefined }); }}
               aria-invalid={!!errors.linkTarget} aria-describedby={describedBy("banner-linkTarget", errors.linkTarget, draft.linkKind === "PRODUCT")} />
           </Field> : null}
-          <Field id="banner-startsAt" label="Início (opcional)" error={errors.startsAt}>
+          <Field id="banner-startsAt" label="Início (opcional)" help="Início e fim seguem o horário deste computador." error={errors.startsAt}>
             <input id="banner-startsAt" type="datetime-local" value={draft.startsAt} disabled={busy || (full && !editing)}
               onChange={event => { setDraft({ ...draft, startsAt: event.target.value }); setErrors({ ...errors, startsAt: undefined }); }}
-              aria-invalid={!!errors.startsAt} aria-describedby={describedBy("banner-startsAt", errors.startsAt, false)} />
+              aria-invalid={!!errors.startsAt} aria-describedby={describedBy("banner-startsAt", errors.startsAt)} />
           </Field>
           <Field id="banner-endsAt" label="Fim (opcional)" error={errors.endsAt}>
             <input id="banner-endsAt" type="datetime-local" value={draft.endsAt} disabled={busy || (full && !editing)}

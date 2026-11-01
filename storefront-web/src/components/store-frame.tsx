@@ -27,7 +27,7 @@ export async function StoreFrame({ store, currentCategory, frame: loaded, varian
       <div className="page-width header-main">
         <Link href={storeUrl} className="store-name" translate="no" prefetch={false}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {store.profile.logo ? <img className="store-logo" src={`/midia/lojas/${encodeURIComponent(store.slug)}/logo`} alt="" /> : null}
+          {store.profile.logo ? <img className="store-logo" src={`/midia/lojas/${encodeURIComponent(store.slug)}/logo`} alt="" width={store.profile.logoWidth ?? undefined} height={store.profile.logoHeight ?? undefined} /> : null}
           <span>{store.name}</span>
         </Link>
         {whatsapp || company?.phone || contactEmail ? <p className="checkout-header-contact">
@@ -55,7 +55,7 @@ export async function StoreFrame({ store, currentCategory, frame: loaded, varian
         <Link href={storeUrl} className="store-name" translate="no" prefetch={false}>
           {/* The name stays as text next to the logo, so the image is decorative. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {store.profile.logo ? <img className="store-logo" src={`/midia/lojas/${encodeURIComponent(store.slug)}/logo`} alt="" /> : null}
+          {store.profile.logo ? <img className="store-logo" src={`/midia/lojas/${encodeURIComponent(store.slug)}/logo`} alt="" width={store.profile.logoWidth ?? undefined} height={store.profile.logoHeight ?? undefined} /> : null}
           <span>{store.name}</span>
         </Link>
         <form className="header-search" role="search" action={`${storeUrl}/busca`} method="get">

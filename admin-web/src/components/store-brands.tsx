@@ -8,6 +8,7 @@ import { categoryName, categoryNameError, productCountText } from "@/lib/categor
 import PageHeader from "@/components/page-header";
 import PageState from "@/components/page-state";
 import { useConfirm } from "@/components/confirm-dialog";
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 import { Loading } from "@/components/ui/loading";
 
 // Sprint 8 (SC-041): brands of the store, chosen per product in its "Vitrine" card. Removing a
@@ -22,6 +23,7 @@ export default function StoreBrands({ tenantId }: { tenantId: string }) {
   const [editError, setEditError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
+  useUnsavedChanges(!!name.trim() || (!!editing && editing.name !== list?.find(brand => brand.id === editing.id)?.name));
   const submitting = useRef(false);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
   const editRef = useRef<HTMLInputElement>(null);

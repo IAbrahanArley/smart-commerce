@@ -8,6 +8,7 @@ import { CATEGORIES, CATEGORY_LABELS, KIND_LABELS, type Expense, type ExpenseCat
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 import { useConfirm } from "@/components/confirm-dialog";
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 import PageState from "@/components/page-state";
 import { Loading } from "@/components/ui/loading";
 
@@ -62,17 +63,7 @@ export default function StoreExpenses({ tenantId, month }: { tenantId: string; m
     else feedbackRef.current?.focus();
   }, [feedback]);
   useEffect(() => { if (cancelling) reasonRef.current?.focus(); }, [cancelling]);
-  useEffect(() => {
-    if (!dirty) return;
-    const leave = (event: BeforeUnloadEvent) => event.preventDefault();
-    const navigate = (event: MouseEvent) => {
-      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
-      if (link && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey
-        && !window.confirm("Há alterações não salvas. Deseja sair sem salvar?")) { event.preventDefault(); event.stopPropagation(); }
-    };
-    window.addEventListener("beforeunload", leave); document.addEventListener("click", navigate, true);
-    return () => { window.removeEventListener("beforeunload", leave); document.removeEventListener("click", navigate, true); };
-  }, [dirty]);
+  useUnsavedChanges(dirty);
 
   function set<K extends keyof Draft>(name: K, value: Draft[K]) {
     setDraft(current => ({ ...current, [name]: value }));
@@ -91,7 +82,8 @@ export default function StoreExpenses({ tenantId, month }: { tenantId: string; m
     if ("error" in amount) next.amount = amount.error;
     Object.assign(next, expenseDateErrors(draft.competenceDate, draft.paidOn, new Date()));
     setErrors(next);
-    const first = (Object.keys(next) as (keyof Draft)[])[0];
+    // Focus follows the form order, not the order the checks ran in.
+    const first = (["description", "category", "kind", "amount", "competenceDate", "paidOn"] as const).find(field => next[field]);
     if (first) { document.getElementById(`expense-${first}`)?.focus(); return; }
     submitting.current = true; setBusy(true); setFeedback(null);
     try {
@@ -154,7 +146,7 @@ export default function StoreExpenses({ tenantId, month }: { tenantId: string; m
     <PageHeader id="expenses-title" title="Despesas" description="Despesas da loja por mês de competência. Para corrigir, cancele com um motivo e registre de novo: nada é apagado." />
     <nav className="period-navigation" aria-label="Mês das despesas">
       <Link className="button-link button-secondary" href={`${storePath}/despesas?mes=${shiftMonth(month, -1)}`} prefetch={false}><span aria-hidden="true">‹</span> Mês anterior</Link>
-      <div className="period-navigation-current"><span className="field-help">Competência</span><strong aria-current="page">{monthLabel(month)}</strong></div>
+      <div className="period-navigation-current"><span className="field-help">Competência</span><strong>{monthLabel(month)}</strong></div>
       <Link className="button-link button-secondary" href={`${storePath}/despesas?mes=${shiftMonth(month, 1)}`} prefetch={false}>Próximo mês <span aria-hidden="true">›</span></Link>
     </nav>
     {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback ${feedback.error ? "feedback-error" : "feedback-success"}`}>{feedback.text}</p> : null}

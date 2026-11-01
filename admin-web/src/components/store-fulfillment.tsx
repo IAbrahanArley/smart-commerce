@@ -6,6 +6,7 @@ import { apiRequest, requestError } from "@/lib/auth-api";
 import { formatBRL } from "@/lib/catalog";
 import PageHeader from "@/components/page-header";
 import { useConfirm } from "@/components/confirm-dialog";
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 import { type Fulfillment, type FulfillmentErrors, type FulfillmentFields, FULFILLMENT_TEXT_LIMIT, fulfillmentFields, fulfillmentPayload } from "@/lib/fulfillment";
 import { Loading } from "@/components/ui/loading";
 
@@ -27,6 +28,7 @@ export default function StoreFulfillment({ tenantId }: { tenantId: string }) {
   const feedbackRef = useRef<HTMLParagraphElement>(null);
   const path = `/api/tenants/${encodeURIComponent(tenantId)}/fulfillment`;
   const dirty = !!saved && !!fields && JSON.stringify(fields) !== JSON.stringify(fulfillmentFields(saved));
+  useUnsavedChanges(dirty);
 
   useEffect(() => {
     const controller = new AbortController();

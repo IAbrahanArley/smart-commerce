@@ -8,6 +8,8 @@ import PageHeader from "@/components/page-header";
 import PageState from "@/components/page-state";
 import DescriptionEditor from "@/components/description-editor";
 import HomeContent from "@/components/home-content";
+import { useConfirm } from "@/components/confirm-dialog";
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 import { Loading } from "@/components/ui/loading";
 
 type Field = { name: keyof Company; label: string; help?: string; max: number };
@@ -27,6 +29,7 @@ const COMPANY_FIELDS: Field[] = [
 // the logo stay in "Dados da loja".
 export default function StoreContent({ tenantId }: { tenantId: string }) {
   const [company, setCompany] = useState<Company | null>(null);
+  const [savedCompany, setSavedCompany] = useState<Company | null>(null);
   const [pages, setPages] = useState<StorePage[] | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "signed-out" | "missing" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
@@ -39,6 +42,9 @@ export default function StoreContent({ tenantId }: { tenantId: string }) {
   const feedbackRef = useRef<HTMLParagraphElement>(null);
   const api = `/api/tenants/${encodeURIComponent(tenantId)}/content`;
   const storePath = `/lojas/${encodeURIComponent(tenantId)}`;
+  const { confirm, dialog } = useConfirm();
+  const pageDirty = !!pages && draft !== (pages.find(item => item.slug === page)?.bodyHtml ?? "");
+  useUnsavedChanges(pageDirty || JSON.stringify(company) !== JSON.stringify(savedCompany));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -49,7 +55,7 @@ export default function StoreContent({ tenantId }: { tenantId: string }) {
       const parsedCompany = parseCompany(await companyResponse.json()), parsedPages = parsePages(await pagesResponse.json());
       if (!parsedCompany || !parsedPages) throw new Error();
       if (controller.signal.aborted) return;
-      setCompany(parsedCompany); setPages(parsedPages);
+      setCompany(parsedCompany); setSavedCompany(parsedCompany); setPages(parsedPages);
       setDraft(parsedPages.find(item => item.slug === "sobre")?.bodyHtml ?? "");
       setState("ready");
     }).catch(() => { if (!controller.signal.aborted) setState("error"); });
@@ -76,10 +82,11 @@ export default function StoreContent({ tenantId }: { tenantId: string }) {
     const problem = cnpjError(company.cnpj);
     setErrors(problem ? { cnpj: problem } : {});
     if (problem) { document.getElementById("company-cnpj")?.focus(); return; }
-    void send("/company", company, "Dados da empresa salvos.", value => { const parsed = parseCompany(value); if (parsed) setCompany(parsed); return !!parsed; });
+    void send("/company", company, "Dados da empresa salvos.", value => { const parsed = parseCompany(value); if (parsed) { setCompany(parsed); setSavedCompany(parsed); } return !!parsed; });
   }
 
-  function choosePage(slug: string) {
+  async function choosePage(slug: string) {
+    if (pageDirty && !(await confirm({ title: "Trocar de página?", message: "O texto não salvo desta página será descartado.", confirmLabel: "Descartar e trocar", tone: "danger" }))) return;
     setPage(slug);
     setDraft(pages?.find(item => item.slug === slug)?.bodyHtml ?? "");
   }
@@ -126,7 +133,7 @@ export default function StoreContent({ tenantId }: { tenantId: string }) {
         <p className="field-help">Aparecem no rodapé da vitrine. Uma página em branco não aparece.</p>
         <div className="form-field">
           <label htmlFor="content-page">Página</label>
-          <select id="content-page" value={page} disabled={busy} onChange={event => choosePage(event.target.value)}>
+          <select id="content-page" value={page} disabled={busy} onChange={event => void choosePage(event.target.value)}>
             {pages.map(item => <option key={item.slug} value={item.slug}>{item.title}{item.bodyHtml ? "" : " (em branco)"}</option>)}
           </select>
         </div>
@@ -135,5 +142,6 @@ export default function StoreContent({ tenantId }: { tenantId: string }) {
       </form>
       <HomeContent tenantId={tenantId} />
     </> : null}
+    {dialog}
   </section>;
 }

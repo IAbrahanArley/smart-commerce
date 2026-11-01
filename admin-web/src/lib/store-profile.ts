@@ -4,7 +4,7 @@
 
 export type StoreProfile = {
   name: string; contactEmail: string | null; whatsapp: string | null; instagram: string | null;
-  hasLogo: boolean; version: number;
+  hasLogo: boolean; logoWidth?: number | null; logoHeight?: number | null; version: number;
 };
 export type ProfileFields = { name: string; contactEmail: string; whatsapp: string; instagram: string };
 export type ProfileErrors = Partial<Record<keyof ProfileFields, string>>;

@@ -74,8 +74,8 @@ Data: 2026-10-31. Alvo: diff `main...feat/sc-048-integrated-review`, com os comm
 | --- | --- |
 | A `<img>` do banner saía sem `width`/`height`, deslocando o layout | **Corrigido:** a API pública manda as dimensões das duas imagens (`HomeContentIT`) e a vitrine as usa (smoke) |
 | Na busca, os títulos dos cards (h3) vinham logo depois do h1 | **Corrigido:** título oculto "Produtos" (h2) nas listagens; o estado vazio virou h3 |
-| A logo sai sem `width`/`height` (do MVP) | **Pendente:** as dimensões da logo não são expostas; o deslocamento fica limitado pela altura máxima do CSS |
-| O admin não avisa sobre alterações não salvas ao sair da página | **Pendente:** o admin nunca teve esse aviso; fica para outra tarefa |
+| A logo sai sem `width`/`height` (do MVP) | **Pendente:** as dimensões da logo não são expostas; o deslocamento fica limitado pela altura máxima do CSS. **Resolvido em 2026-10-31** na [revisão de interface do bloco 2](MVP-2-INTERFACE-REVIEW.md) |
+| O admin não avisa sobre alterações não salvas ao sair da página | **Pendente:** fica para outra tarefa. **Resolvido em 2026-10-31** na [revisão de interface do bloco 2](MVP-2-INTERFACE-REVIEW.md): quatro formulários já avisavam, os demais não |
 | Dois `main#conteudo` no HTML transmitido | **Não é achado:** é o *fallback* do `loading.tsx` antes da troca por streaming; o DOM final tem um só |
 
 ## 3. Desempenho
@@ -113,6 +113,6 @@ DATA_MODEL (V33 a V39) e ADR-0010 já vinham atualizados das tarefas anteriores.
 - **Ferramentas não executadas:** Axe, leitor de tela real (NVDA ou VoiceOver) e Lighthouse, porque não estão instaladas; a instalação depende de aprovação.
 - **Validador de dados estruturados do Google:** só depois do deploy.
 - **Limite de taxa no catálogo público:** fica para a borda/CDN.
-- **Dimensões da logo e aviso de alterações não salvas no admin.**
+- **Dimensões da logo e aviso de alterações não salvas no admin** (resolvidos em 2026-10-31, [MVP-2-INTERFACE-REVIEW.md](MVP-2-INTERFACE-REVIEW.md)).
 - **Validação real do Mercado Pago:** confirmação, webhook e reembolso, já pendente desde o MVP.
 - **Antes do deploy:** confirmar a extensão `unaccent` no PostgreSQL hospedado e configurar `STOREFRONT_PUBLIC_ORIGIN` e os segredos de revalidação.

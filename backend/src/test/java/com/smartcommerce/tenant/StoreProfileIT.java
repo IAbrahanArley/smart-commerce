@@ -127,7 +127,12 @@ class StoreProfileIT {
     var preview = a.bytes(path(tenantA) + "/logo");
     assertThat(preview.statusCode()).isEqualTo(200);
     assertThat(preview.headers().firstValue("Content-Type").orElse("")).isEqualTo("image/png");
-    assertThat(ImageIO.read(new ByteArrayInputStream(preview.body())).getWidth()).isEqualTo(240);
+    var stored = ImageIO.read(new ByteArrayInputStream(preview.body()));
+    assertThat(stored.getWidth()).isEqualTo(240);
+    // The size goes with the profile, so pages reserve the logo's space before it loads.
+    JsonNode owned = JSON.readTree(uploaded.body());
+    assertThat(owned.get("logoWidth").asInt()).isEqualTo(stored.getWidth());
+    assertThat(owned.get("logoHeight").asInt()).isEqualTo(stored.getHeight());
     Browser b = login("perfil-b@example.test");
     assertThat(b.bytes(path(tenantA) + "/logo").statusCode()).isEqualTo(404);
 
@@ -144,6 +149,8 @@ class StoreProfileIT {
     assertThat(profile.get("whatsapp").asText()).isEqualTo("5511988887777");
     assertThat(profile.get("instagram").asText()).isEqualTo("loja.ana");
     assertThat(profile.get("logo").asBoolean()).isTrue();
+    assertThat(profile.get("logoWidth").asInt()).isEqualTo(stored.getWidth());
+    assertThat(profile.get("logoHeight").asInt()).isEqualTo(stored.getHeight());
     var logo = buyer.bytes("/api/public/stores/perfil-a/logo");
     assertThat(logo.statusCode()).isEqualTo(200);
     assertThat(logo.headers().firstValue("X-Content-Type-Options").orElse("")).isEqualTo("nosniff");
@@ -163,6 +170,7 @@ class StoreProfileIT {
     JsonNode bare = JSON.readTree(buyer.get("/api/public/stores/perfil-b").body()).get("profile");
     assertThat(bare.get("contactEmail").isNull()).isTrue();
     assertThat(bare.get("logo").asBoolean()).isFalse();
+    assertThat(bare.get("logoWidth").isNull()).isTrue();
   }
 
   // --- helpers -----------------------------------------------------------------------------

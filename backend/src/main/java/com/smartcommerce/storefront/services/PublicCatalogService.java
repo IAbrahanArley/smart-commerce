@@ -325,7 +325,12 @@ public class PublicCatalogService {
   private static PublicStoreProfileView profile(
       com.smartcommerce.storefront.domain.PublicStore store) {
     return new PublicStoreProfileView(
-        store.contactEmail(), store.whatsapp(), store.instagram(), store.logo());
+        store.contactEmail(),
+        store.whatsapp(),
+        store.instagram(),
+        store.logo(),
+        store.logoWidth(),
+        store.logoHeight());
   }
 
   /** Categories with at least one published product in their subtree, recursively. */

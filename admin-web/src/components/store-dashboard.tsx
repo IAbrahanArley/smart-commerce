@@ -73,7 +73,7 @@ export default function StoreDashboard({ tenantId, period, explain = false }: { 
           <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Dia</th><th role="columnheader" scope="col" className="numeric">Pedidos</th><th role="columnheader" scope="col" className="numeric">Receita</th></tr></thead>
           <tbody role="rowgroup">{data.salesByDay.map(day => <tr role="row" key={day.day}>
             <th role="rowheader" scope="row">{shortDay(day.day)}</th>
-            <td role="cell" data-label="Pedidos" className="numeric">{day.orders}</td>
+            <td role="cell" data-label="Pedidos" className="numeric">{new Intl.NumberFormat("pt-BR").format(day.orders)}</td>
             <td role="cell" data-label="Receita" className="numeric">{formatBRL(day.revenue)}</td>
           </tr>)}</tbody>
         </table></div>
