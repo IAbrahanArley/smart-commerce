@@ -158,11 +158,21 @@ public class BootstrapSecurityConfiguration {
                     .requestMatchers(HttpMethod.GET, "/api/tenants", "/api/tenants/*")
                     .authenticated()
                     // SC-031: the signed-in owner's plan and limits (ADR-0017).
-                    .requestMatchers(HttpMethod.GET, "/api/billing/account")
-                    .authenticated()
-                    // SC-032: hosted Checkout and customer portal of the owner's own account.
                     .requestMatchers(
-                        HttpMethod.POST, "/api/billing/checkout", "/api/billing/portal")
+                        HttpMethod.GET, "/api/billing/account", "/api/billing/subscription")
+                    .authenticated()
+                    // SC-032: hosted Checkout and customer portal of the owner's own account;
+                    // ADR-0017 B13: plan changes, cancellation and resumption in the panel.
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/billing/checkout",
+                        "/api/billing/portal",
+                        "/api/billing/change/preview",
+                        "/api/billing/change",
+                        "/api/billing/cancel",
+                        "/api/billing/resume")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/billing/change")
                     .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/tenants")
                     .authenticated()

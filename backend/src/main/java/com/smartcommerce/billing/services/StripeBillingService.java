@@ -25,10 +25,11 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The paid side of the platform subscription over Stripe (SC-032, ADR-0017 B3–B6). The owner pays
- * on Stripe's hosted Checkout and manages the card, plan, cycle and cancellation on the customer
- * portal; the panel never sees card data. The account only changes on a signed webhook, and then
- * from the subscription that the Stripe API reports at that moment, never from the event body or
- * the browser's return: redeliveries, out-of-order events and a forged return change nothing.
+ * on Stripe's hosted Checkout and manages the card and receipts on the customer portal; plan, cycle
+ * and cancellation are handled by {@link SubscriptionChangeService} (B13). The panel never sees
+ * card data. The account only changes on a signed webhook, and then from the subscription that the
+ * Stripe API reports at that moment, never from the event body or the browser's return:
+ * redeliveries, out-of-order events and a forged return change nothing.
  */
 @Service
 public class StripeBillingService {
@@ -87,8 +88,8 @@ public class StripeBillingService {
             .isPresent())
       throw new BillingException(
           BillingException.Reason.SUBSCRIPTION_EXISTS,
-          "Você já tem uma assinatura. Para mudar de plano ou de ciclo, use \"Gerenciar"
-              + " assinatura\".");
+          "Você já tem uma assinatura. Para mudar de plano ou de ciclo, escolha o novo plano"
+              + " nesta página.");
     String price =
         stripe
             .priceId(BillingCycle.lookupKey(plan, cycle))
@@ -162,7 +163,13 @@ public class StripeBillingService {
     reconcile(owner.get(), customer);
   }
 
-  private void reconcile(UUID owner, String customer) {
+  /**
+   * Brings the owner's account in line with the subscription the Stripe API reports now; used by
+   * the webhook and right after an upgrade the API has confirmed (ADR-0017 B13).
+   */
+  // Public on purpose: a non-public method called through the transactional proxy would run on the
+  // proxy instance, whose fields are empty.
+  public void reconcile(UUID owner, String customer) {
     var current = stripe.currentSubscription(customer);
     if (current.isEmpty()) return;
     var subscription = current.get();

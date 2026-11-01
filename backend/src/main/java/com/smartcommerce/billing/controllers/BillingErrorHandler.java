@@ -23,10 +23,15 @@ public final class BillingErrorHandler {
   ResponseEntity<Map<String, String>> billing(BillingException exception) {
     int status =
         switch (exception.reason()) {
-          case PLAN_INACTIVE -> 402;
+          case PLAN_INACTIVE, PAYMENT_DECLINED -> 402;
           case INVALID_EVENT -> 400;
           case DISABLED -> 404;
-          case PLAN_LIMIT, SUBSCRIPTION_EXISTS, NO_SUBSCRIPTION -> 409;
+          case PLAN_LIMIT,
+              SUBSCRIPTION_EXISTS,
+              NO_SUBSCRIPTION,
+              CHANGE_NOT_ALLOWED,
+              PREVIEW_EXPIRED ->
+              409;
         };
     return ResponseEntity.status(status)
         .cacheControl(CacheControl.noStore())

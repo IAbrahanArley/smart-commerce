@@ -1,10 +1,16 @@
 package com.smartcommerce.billing.provider;
 
 import com.stripe.StripeClient;
+import com.stripe.exception.CardException;
 import com.stripe.exception.StripeException;
 import com.stripe.param.CustomerCreateParams;
+import com.stripe.param.InvoiceCreatePreviewParams;
 import com.stripe.param.PriceListParams;
 import com.stripe.param.SubscriptionListParams;
+import com.stripe.param.SubscriptionScheduleCreateParams;
+import com.stripe.param.SubscriptionScheduleRetrieveParams;
+import com.stripe.param.SubscriptionScheduleUpdateParams;
+import com.stripe.param.SubscriptionUpdateParams;
 import com.stripe.param.billingportal.SessionCreateParams;
 import java.time.Instant;
 import java.util.Comparator;
@@ -18,6 +24,8 @@ import java.util.UUID;
  */
 public final class StripeSdkGateway implements StripeGateway {
   private static final Set<String> NEVER_STARTED = Set.of("incomplete", "incomplete_expired");
+  // Schedule statuses that can still hold a change ahead (released or canceled ones cannot).
+  private static final Set<String> SCHEDULED = Set.of("not_started", "active");
   private final StripeClient stripe;
 
   /** {@code stripe} is null when no key is configured: every call then fails as unavailable. */
@@ -120,6 +128,166 @@ public final class StripeSdkGateway implements StripeGateway {
                 .map(StripeSdkGateway::snapshot));
   }
 
+  @Override
+  public Optional<PendingChange> pendingChange(String schedule) {
+    return call(
+        () -> {
+          var found =
+              stripe
+                  .v1()
+                  .subscriptionSchedules()
+                  .retrieve(
+                      schedule,
+                      SubscriptionScheduleRetrieveParams.builder()
+                          .addExpand("phases.items.price")
+                          .build());
+          if (!SCHEDULED.contains(found.getStatus()) || found.getCurrentPhase() == null)
+            return Optional.empty();
+          Long currentEnd = found.getCurrentPhase().getEndDate();
+          return found.getPhases().stream()
+              .filter(
+                  phase -> phase.getStartDate() != null && phase.getStartDate().equals(currentEnd))
+              .findFirst()
+              .filter(phase -> !phase.getItems().isEmpty())
+              .map(
+                  phase ->
+                      new PendingChange(
+                          phase.getItems().getFirst().getPriceObject().getLookupKey(),
+                          Instant.ofEpochSecond(phase.getStartDate())));
+        });
+  }
+
+  @Override
+  public Preview previewChange(
+      String customer, Subscription subscription, String price, long prorationDate) {
+    var params =
+        InvoiceCreatePreviewParams.builder()
+            .setCustomer(customer)
+            .setSubscription(subscription.id())
+            .setSubscriptionDetails(
+                InvoiceCreatePreviewParams.SubscriptionDetails.builder()
+                    .addItem(
+                        InvoiceCreatePreviewParams.SubscriptionDetails.Item.builder()
+                            .setId(subscription.itemId())
+                            .setPrice(price)
+                            .build())
+                    .setProrationBehavior(
+                        InvoiceCreatePreviewParams.SubscriptionDetails.ProrationBehavior
+                            .ALWAYS_INVOICE)
+                    .setProrationDate(prorationDate)
+                    .build())
+            .build();
+    return call(
+        () -> {
+          var invoice = stripe.v1().invoices().createPreview(params);
+          return new Preview(invoice.getAmountDue(), invoice.getCurrency());
+        });
+  }
+
+  @Override
+  public boolean changeNow(Subscription subscription, String price, long prorationDate) {
+    var params =
+        SubscriptionUpdateParams.builder()
+            .addItem(
+                SubscriptionUpdateParams.Item.builder()
+                    .setId(subscription.itemId())
+                    .setPrice(price)
+                    .build())
+            .setProrationBehavior(SubscriptionUpdateParams.ProrationBehavior.ALWAYS_INVOICE)
+            .setProrationDate(prorationDate)
+            // A declined charge leaves the old price in place instead of an unpaid upgrade.
+            .setPaymentBehavior(SubscriptionUpdateParams.PaymentBehavior.PENDING_IF_INCOMPLETE)
+            .build();
+    return call(
+        () -> {
+          com.stripe.model.Subscription updated;
+          try {
+            updated = stripe.v1().subscriptions().update(subscription.id(), params);
+          } catch (CardException declined) {
+            return false;
+          }
+          if (updated.getPendingUpdate() == null) return true;
+          // Declined or waiting for authentication: void the open invoice, so it can never be paid
+          // later and apply the upgrade after the owner was told it failed (or charge twice when
+          // he tries again). The pending update then expires on its own.
+          if (updated.getLatestInvoice() != null)
+            stripe.v1().invoices().voidInvoice(updated.getLatestInvoice());
+          return false;
+        });
+  }
+
+  @Override
+  public void scheduleChange(Subscription subscription, String price, int months) {
+    call(
+        () -> {
+          var schedule =
+              stripe
+                  .v1()
+                  .subscriptionSchedules()
+                  .create(
+                      SubscriptionScheduleCreateParams.builder()
+                          .setFromSubscription(subscription.id())
+                          .build());
+          var current = schedule.getPhases().getFirst();
+          var params =
+              SubscriptionScheduleUpdateParams.builder()
+                  .addPhase(
+                      SubscriptionScheduleUpdateParams.Phase.builder()
+                          .addItem(
+                              SubscriptionScheduleUpdateParams.Phase.Item.builder()
+                                  .setPrice(current.getItems().getFirst().getPrice())
+                                  .setQuantity(1L)
+                                  .build())
+                          .setStartDate(current.getStartDate())
+                          .setEndDate(current.getEndDate())
+                          .build())
+                  .addPhase(
+                      SubscriptionScheduleUpdateParams.Phase.builder()
+                          .addItem(
+                              SubscriptionScheduleUpdateParams.Phase.Item.builder()
+                                  .setPrice(price)
+                                  .setQuantity(1L)
+                                  .build())
+                          .setDuration(
+                              SubscriptionScheduleUpdateParams.Phase.Duration.builder()
+                                  .setInterval(
+                                      SubscriptionScheduleUpdateParams.Phase.Duration.Interval
+                                          .MONTH)
+                                  .setIntervalCount((long) months)
+                                  .build())
+                          .setProrationBehavior(
+                              SubscriptionScheduleUpdateParams.Phase.ProrationBehavior.NONE)
+                          .build())
+                  // After the new phase the subscription runs on its own again, renewing as usual.
+                  .setEndBehavior(SubscriptionScheduleUpdateParams.EndBehavior.RELEASE)
+                  .build();
+          try {
+            return stripe.v1().subscriptionSchedules().update(schedule.getId(), params);
+          } catch (StripeException failure) {
+            // Never leave a half-built schedule holding the subscription.
+            stripe.v1().subscriptionSchedules().release(schedule.getId());
+            throw failure;
+          }
+        });
+  }
+
+  @Override
+  public void releaseSchedule(String schedule) {
+    call(() -> stripe.v1().subscriptionSchedules().release(schedule));
+  }
+
+  @Override
+  public void setCancelAtPeriodEnd(String subscription, boolean cancel) {
+    call(
+        () ->
+            stripe
+                .v1()
+                .subscriptions()
+                .update(
+                    subscription,
+                    SubscriptionUpdateParams.builder().setCancelAtPeriodEnd(cancel).build()));
+  }
+
   private static StripeGateway.Subscription snapshot(com.stripe.model.Subscription subscription) {
     var item = subscription.getItems().getData().getFirst();
     Long end = item.getCurrentPeriodEnd();
@@ -128,7 +296,9 @@ public final class StripeSdkGateway implements StripeGateway {
         subscription.getStatus(),
         item.getPrice().getLookupKey(),
         end == null ? null : Instant.ofEpochSecond(end),
-        Boolean.TRUE.equals(subscription.getCancelAtPeriodEnd()));
+        Boolean.TRUE.equals(subscription.getCancelAtPeriodEnd()),
+        item.getId(),
+        subscription.getSchedule());
   }
 
   private interface Call<T> {

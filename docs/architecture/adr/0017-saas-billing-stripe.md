@@ -55,11 +55,47 @@ Status: **adotado** em 2026-10-27 para B1–B12, conforme as recomendações aba
 | B5 | Fonte da verdade | **Tabela própria `billing_subscription`**, atualizada **só pelo webhook**, com o objeto conferido por consulta à API (`GET /v1/subscriptions/{id}`) antes de mudar o estado. O retorno do Checkout (`success_url`) só mostra "Confirmando sua assinatura…" | Confiar no redirecionamento (proibido pelas regras de pagamento) | todas |
 | B6 | Webhook | Rota pública `POST /api/public/webhooks/stripe`, com o seguinte tratamento:<ul><li>verificação de `Stripe-Signature` pelo SDK sobre o corpo bruto, com tolerância de 5 minutos;</li><li>tabela `billing_event` com o id do evento único (idempotência);</li><li>resposta 2xx depois de gravar, com processamento curto na mesma transação, porque o volume é baixo;</li><li>sem CSRF;</li><li>limite de corpo de **64 KB** só nessa rota (o filtro atual corta em 8 KB);</li><li>eventos assinados: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid` e `invoice.payment_failed`.</li></ul>A ordem não é garantida, por isso cada evento relê a assinatura na API | Processar só pelo conteúdo do evento (frágil diante de eventos fora de ordem) | B5 |
 | B7 | Estados no Smart Commerce | Os estados são:<ul><li>`TRIAL`: teste ativo;</li><li>`TRIAL_EXPIRED`: teste vencido sem assinar;</li><li>`ACTIVE`: Stripe `active`;</li><li>`PAST_DUE`: falha de cobrança, com **carência de 7 dias** desde a primeira falha;</li><li>`SUSPENDED`: carência vencida ou Stripe `unpaid`;</li><li>`CANCELED`: fim do período depois do cancelamento.</li></ul>Em `TRIAL_EXPIRED`, `SUSPENDED` e `CANCELED`, **a vitrine sai do ar** (página "loja indisponível"), **o painel fica só leitura** (escritas bloqueadas, exceto plano e cobrança) e **nada é apagado** | Bloquear tudo ao primeiro atraso (agressivo) ou nunca bloquear (sem receita) | telas, limites |
-| B8 | Troca de plano, ciclo e cartão; cancelamento | **Portal do cliente da Stripe**, configurado com os 3 planos e 3 ciclos e valor proporcional (proration):<ul><li>a subida vale na hora;</li><li>a descida vale no fim do período;</li><li>o cancelamento vale no fim do período.</li></ul>Se o uso passar do limite depois de uma descida, **nada é apagado**: só a criação de novas lojas, produtos ou fotos fica bloqueada até voltar ao limite | Telas próprias de troca (muito mais código) | B4 |
+| B8 | Troca de plano, ciclo e cartão; cancelamento (**substituída pela B13 em 2026-11-01** para plano, ciclo e cancelamento; o portal ficou só para cartão e recibos) | **Portal do cliente da Stripe**, configurado com os 3 planos e 3 ciclos e valor proporcional (proration):<ul><li>a subida vale na hora;</li><li>a descida vale no fim do período;</li><li>o cancelamento vale no fim do período.</li></ul>Se o uso passar do limite depois de uma descida, **nada é apagado**: só a criação de novas lojas, produtos ou fotos fica bloqueada até voltar ao limite | Telas próprias de troca (muito mais código) | B4 |
 | B9 | Aplicação dos limites | **No backend**, nos serviços de criação:<ul><li>empresas por conta (1, 2 e 5);</li><li>produtos por loja (150, 2.000 e sem limite, com teto técnico);</li><li>fotos por produto (5, 10 e 10);</li><li>cota mensal de IA por conta (0, 60 e 200), que substitui a cota por loja do ADR-0016.</li></ul>A resposta é 402 ou 409 com um código legível (`PLAN_LIMIT`), e a tela mostra o limite e um botão "Mudar de plano" | Limites só na interface (contornáveis) | B7 |
 | B10 | Arrependimento e reembolso | **CDC, art. 49:** o lojista pode desistir em até 7 dias da contratação ou da renovação anual ou semestral, com reembolso integral. O reembolso é feito **por uma pessoa no painel da Stripe**, nunca automático nem por agente. Depois disso, o cancelamento vale no fim do período, sem reembolso proporcional. O texto entra nos Termos de uso | Reembolso proporcional automático | Termos |
 | B11 | Dependência e segredos | **Adotar `com.stripe:stripe-java`** (versão fixa, aprovação de dependência necessária), pela verificação de assinatura e pelos tipos. Segredos:<ul><li>`STRIPE_SECRET_KEY`, uma **chave restrita** com permissão só para Checkout, Customers, Subscriptions, Billing Portal e leitura de Events;</li><li>`STRIPE_WEBHOOK_SECRET` (`whsec_`).</li></ul>No ambiente de teste hospedado, chaves de **modo de teste**; em produção, as chaves live, com aprovação separada | Chamar a API REST à mão (mais código e verificação de assinatura própria) | B6 |
 | B12 | Ambientes e travas | **Ambientes:**<ul><li>DEV e `hosted-test` usam só o modo de teste da Stripe; a Stripe CLI encaminha webhooks no ambiente local;</li><li>em produção, o backend **recusa iniciar** com chave `sk_test_` ou sem o segredo do webhook (como a trava D6 do bloco 2b);</li><li>sem as chaves, a cobrança fica desligada e as contas continuam em `TRIAL`, para não travar o desenvolvimento.</li></ul> | — | deploy |
+
+### B13 — Troca de plano e cancelamento no painel (aprovada em 2026-11-01)
+
+Pedido do responsável depois da validação real em modo de teste: o lojista muda de plano, de ciclo e cancela dentro da plataforma, sem sair para o portal. Decisões dele, entre as alternativas apresentadas:
+
+| Tema | Decisão | Alternativa recusada |
+| --- | --- | --- |
+| Subida (plano maior **e** ciclo igual ou mais longo) | **Vale na hora e cobra a diferença proporcional no ato** (`proration_behavior=always_invoice`). O lojista vê o valor exato antes de confirmar, tirado da prévia de fatura da Stripe. Com `payment_behavior=pending_if_incomplete`, um cartão recusado deixa o plano como estava | somar a diferença à próxima fatura (limites maiores antes de pagar) |
+| Descida (plano menor, ciclo mais curto ou os dois misturados) | **Vale no fim do período pago**, sem crédito nem reembolso, por um *subscription schedule* criado da assinatura (`from_subscription`) com duas fases e `end_behavior=release`. Pode ser desfeita até lá | trocar na hora com crédito |
+| Cancelamento | **No fim do período** (`cancel_at_period_end`), reversível com "Manter assinatura"; cancelar descarta uma descida agendada. O cancelamento imediato com reembolso continua sendo feito por uma pessoa (B10) | — |
+| Portal | **Só cartão e recibos.** A plataforma continua sem tocar em dado de cartão (B3) | remover o portal |
+
+Regras de segurança da B13:
+- o dono vem sempre da sessão; a assinatura é a do `stripe_customer_id` dele, lida na API a cada pedido;
+- a subida só é confirmada com o `prorationDate` e o `amountDue` devolvidos pela prévia (data de no máximo 10 minutos e nunca no futuro). O backend pede à Stripe a prévia de novo para essa data e só cobra se o valor for o mesmo; outro plano, outra data ou outro valor dão **409 `PREVIEW_EXPIRED`** sem cobrança. O valor enviado só confere, nunca decide a cobrança;
+- uma mudança por vez: com uma descida agendada, outra mudança ou o cancelamento são recusados (**409 `CHANGE_NOT_ALLOWED`**) até o lojista desfazê-la. Assim nenhuma chamada que falhe no meio apaga a descida agendada;
+- cobrança recusada ou à espera de autenticação (3DS) deixa o plano como estava e **anula a fatura aberta**, para ela não ser paga depois e aplicar a subida sem o lojista saber; um `CardException` da Stripe também vira **402 `PAYMENT_DECLINED`**;
+- um *schedule* criado cuja atualização falhe é liberado na hora;
+- mudança, desfazer, cancelar e manter passam pela mesma trava por dono (`lockOwner`) da SC-031;
+- depois de uma subida confirmada pela API, a conta é conciliada na hora pelo mesmo `reconcile` do webhook (a fonte continua sendo a assinatura lida na API, nunca o navegador); o webhook seguinte é idempotente.
+
+## Implementação da B13 (2026-11-01)
+
+- **Domínio:** `PlanChange.of(...)` decide `NOW` ou `AT_PERIOD_END`; `BillingCycle.months()`.
+- **Gateway:** `pendingChange`, `previewChange` (`POST /v1/invoices/create_preview`), `changeNow`, `scheduleChange`, `releaseSchedule` e `setCancelAtPeriodEnd`. A assinatura lida agora traz o id do item e o do *schedule*.
+- **Serviço `SubscriptionChangeService`:** a Stripe não altera itens de uma assinatura presa a um *schedule*; por isso, e para nunca perder uma descida agendada numa falha no meio do caminho, só uma mudança por vez é aceita. Se a leitura da Stripe falhar depois de uma subida já cobrada, a resposta mostra o novo plano em vez de um erro, e o webhook concilia a conta.
+- **API (sessão obrigatória, CSRF nos métodos de escrita):**
+  - `GET /api/billing/subscription`: plano, ciclo, fim do período, `cancelAtPeriodEnd` e `pendingChange`;
+  - `POST /api/billing/change/preview` `{plan, cycle}`: `timing`, `amountDue` em `BigDecimal` com `currency` (nulos quando nada é cobrado agora), `effectiveAt`, `prorationDate` e `exceedsCompanies`;
+  - `POST /api/billing/change` `{plan, cycle, prorationDate, amountDue}`; `DELETE /api/billing/change` desfaz a descida agendada;
+  - `POST /api/billing/cancel` e `POST /api/billing/resume`.
+  - Novos códigos: `CHANGE_NOT_ALLOWED` (409: mesmo plano, assinatura não ativa, cancelamento marcado, nada agendado), `PREVIEW_EXPIRED` (409) e `PAYMENT_DECLINED` (402).
+- **Painel (`/conta/plano`):** card "Seu plano" com uso, aviso de descida agendada ("Desfazer mudança") e de cancelamento ("Manter assinatura"); seletor de ciclo e cards dos três planos com "Plano atual"; diálogo de confirmação com o valor da prévia ("Pagar R$ X e mudar" ou "Agendar mudança") e aviso quando o novo plano tem menos lojas que as atuais; card "Pagamento" com "Cartão e recibos" (portal); seção "Cancelar assinatura" com diálogo destrutivo.
+- **Configuração na Stripe:** a chave restrita precisa também de **Subscriptions (gravação)**, **Subscription schedules (gravação)** e **Invoices (gravação)**, esta para a prévia e para anular a fatura de uma subida recusada; no portal, desligar troca de plano e cancelamento, para não haver dois caminhos.
+- **Testes:** `PlanChangeTest` (regra de tempo) e `StripePlanChangeIT` (Postgres real e Stripe falsa: prévia e cobrança da subida; confirmação sem data ou valor, com data velha ou futura, com outro valor ou com outro plano recusada sem cobrança; segundo clique sem nova cobrança; ciclo mais longo no mesmo plano; assinatura com pagamento pendente recusada; cartão recusado sem mudar o plano e com a fatura anulada; descida agendada, outra mudança e cancelamento recusados até desfazer; cancelamento e retomada; isolamento entre donos e acesso anônimo).
+- **Revisão de segurança independente** (só leitura): nenhum problema de isolamento. Os achados de valor não amarrado à prévia, perda da descida agendada numa falha no meio, recusa e 3DS, prévia com *schedule*, erro depois de cobrança e *schedule* incompleto foram corrigidos como descrito acima. As fases do *schedule* recriam só preço e quantidade (cupons e impostos não são usados hoje; registrado).
 
 ## Implementação da SC-031 (2026-10-27)
 
@@ -145,8 +181,8 @@ Status: **adotado** em 2026-10-27 para B1–B12, conforme as recomendações aba
    - `invoice.payment_failed` coloca a conta em `PAST_DUE`, com aviso por e-mail e no painel;
    - a Stripe tenta de novo (Smart Retries);
    - depois de 7 dias sem pagamento, a conta vai para `SUSPENDED`.
-6. **Gerenciar:** o botão "Gerenciar assinatura" abre uma sessão do portal do cliente.
-7. **Cancelar:** pelo portal, no fim do período; `customer.subscription.deleted` leva a conta a `CANCELED`.
+6. **Mudar de plano (B13):** o painel pede a prévia, mostra o valor e, confirmado, aplica na hora (subida) ou agenda para o fim do período (descida). "Cartão e recibos" abre o portal só para cartão e recibos.
+7. **Cancelar (B13):** pelo painel, no fim do período e reversível até lá; `customer.subscription.deleted` leva a conta a `CANCELED`.
 
 ## Consequências e riscos
 
