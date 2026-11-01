@@ -297,6 +297,19 @@ public class BootstrapSecurityConfiguration {
                         "/api/tenants/*/expenses",
                         "/api/tenants/*/expenses/*/cancel")
                     .authenticated()
+                    // SC-050: accounts, statements, adjustments and transfers (OWNER checked in
+                    // the service).
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/tenants/*/finance/accounts",
+                        "/api/tenants/*/finance/accounts/*/statement")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/tenants/*/finance/accounts",
+                        "/api/tenants/*/finance/accounts/*/adjustments",
+                        "/api/tenants/*/finance/transfers")
+                    .authenticated()
                     .requestMatchers(
                         HttpMethod.GET, "/api/tenants/*/products", "/api/tenants/*/products/*")
                     .authenticated()

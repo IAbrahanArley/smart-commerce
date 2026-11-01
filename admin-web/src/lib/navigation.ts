@@ -1,7 +1,7 @@
 // Admin navigation shared by the sidebar and the global search. Pure, imported by the smoke test.
 // Links never prove authorization: the backend checks every request.
 
-export type NavIcon = "home" | "box" | "tags" | "award" | "palette" | "receipt" | "store" | "truck" | "card" | "chart" | "wallet" | "spark" | "stores" | "user" | "users";
+export type NavIcon = "home" | "box" | "tags" | "award" | "palette" | "receipt" | "store" | "truck" | "card" | "chart" | "wallet" | "spark" | "stores" | "user" | "users" | "landmark";
 export type NavItem = { href: string; label: string; icon: NavIcon; current: boolean; keywords?: string };
 export type NavGroup = { label: string; items: NavItem[] };
 
@@ -24,6 +24,7 @@ export function storeItems(tenantId: string, pathname: string): NavItem[] {
     { href: `${base}/entrega`, label: "Entrega", icon: "truck", current: at("/entrega"), keywords: "frete retirada" },
     { href: `${base}/pagamentos`, label: "Pagamentos", icon: "card", current: at("/pagamentos"), keywords: "mercado pago conectar" },
     { href: `${base}/financeiro`, label: "Financeiro", icon: "chart", current: at("/financeiro"), keywords: "receita margem relatorio" },
+    { href: `${base}/contas`, label: "Contas", icon: "landmark", current: under("/contas"), keywords: "caixa banco saldo extrato transferencia dinheiro" },
     { href: `${base}/despesas`, label: "Despesas", icon: "wallet", current: at("/despesas"), keywords: "custos gastos" },
     { href: `${base}/funcionarios`, label: "Funcionários", icon: "users", current: at("/funcionarios"), keywords: "equipe caixa operador convite staff" },
     { href: `${base}/assistente`, label: "Assistente", icon: "spark", current: at("/assistente"), keywords: "ia perguntas explicar" },

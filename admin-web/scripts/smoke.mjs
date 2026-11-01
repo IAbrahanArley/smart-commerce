@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import "./smoke-ui.mjs";
 import "./smoke-billing.mjs";
 import "./smoke-staff.mjs";
+import "./smoke-accounts.mjs";
 import "./smoke-sprint8.mjs";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
