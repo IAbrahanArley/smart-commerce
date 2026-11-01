@@ -141,6 +141,11 @@ V40 (SC-049, ADR-0019 C1, 2026-11-01), aditiva:
 - `staff_invitation`: um convite por linha, com todo o ciclo de vida (enviado, aceito ou cancelado, acesso revogado). Guarda só o hash SHA-256 do token de uso único, o e-mail convidado (chave de comparação e grafia original, o mínimo para casar com a conta e mostrar ao OWNER), quem convidou, validade de 7 dias, quem aceitou e quem revogou. Um índice único parcial deixa no máximo um convite em aberto por e-mail e empresa.
 - **Dado pessoal:** o e-mail do convite fica guardado também depois de aceito, cancelado ou expirado, para o histórico da equipe. A retenção segue a mesma validação jurídica pendente do D2.
 
+V41 (SC-050, ADR-0019 C2 e C3, 2026-11-01), aditiva. O `finance_entry` continua sendo o resultado por competência; o dinheiro real fica nestas tabelas:
+- `finance_account`: contas da loja dos tipos `CASH` (gaveta), `BANK` e `PAYMENT_PROVIDER`, com nome de 3 a 60 caracteres. Contas nunca são apagadas. `system_key` marca as que a plataforma mantém sozinha, uma de cada por loja: `DEFAULT_CASH` ("Caixa da loja") e `MERCADO_PAGO`, que só existe para o tipo `PAYMENT_PROVIDER`. As contas criadas pelo OWNER levam `request_id` (idempotência) e `created_by`.
+- `account_movement`: movimento assinado de BRL com 2 casas, nunca zero, com dia de calendário (`occurred_on`), descrição e tipo (`ADJUSTMENT` exige motivo; `TRANSFER_OUT` é negativo e `TRANSFER_IN` positivo, e os dois compartilham `transfer_id`). A FK composta `(account_id, tenant_id)` impede referenciar a conta de outra loja, e `movement_key`, única por loja, torna uma repetição o mesmo movimento. **Só de acréscimo:** um trigger recusa `UPDATE` e `DELETE`; uma correção é um novo ajuste.
+- **Saldo** = soma dos movimentos da conta. Não existe campo de saldo.
+
 V27 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
 - **`DELETE`:** recusado sempre;
 - **`UPDATE`:** só para preencher `settled_at` uma única vez, a partir de nulo, que é o caminho da SC-018;

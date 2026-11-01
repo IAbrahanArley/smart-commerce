@@ -66,6 +66,33 @@ Regras comuns a todas as decisões: tenant derivado da sessão e conferido no SQ
   - a prévia de descida de plano ainda não avisa quando os funcionários passam do novo limite (nada é removido).
 - **Testes:** `StaffIT`, com Postgres real. Inclui uma matriz que percorre todas as rotas mapeadas sob `/api/tenants/{tenantId}` e falha se alguma responder com sucesso a um STAFF; ela protege também as rotas futuras.
 
+## Implementação da SC-050 — contas e movimentos (2026-11-01)
+
+- **Banco (V41):** `finance_account` e `account_movement` ([DATA_MODEL.md](../DATA_MODEL.md)). O trigger torna os movimentos só de acréscimo, como a V27 fez com o livro.
+- **Contas padrão:** "Caixa da loja" e, depois que o Mercado Pago é conectado, "Mercado Pago" aparecem no primeiro uso das contas, sem mexer no módulo de pagamentos. O OWNER cria gavetas e contas de banco, até 20 por loja.
+- **Movimentos:**
+  - ajuste assinado com motivo, inclusive o saldo inicial;
+  - transferência entre duas contas da loja, com os dois movimentos na mesma transação.
+
+  O `requestId` torna uma repetição o mesmo lançamento; o mesmo pedido com outro conteúdo dá 409. As escritas de uma loja passam pela trava da loja (`FOR UPDATE`), então duas transferências iguais ao mesmo tempo gravam uma só vez.
+- **Extrato:** período de até 366 dias (padrão: últimos 90), com saldo antes e depois e o saldo logo após cada movimento, calculado sobre todo o histórico. Uma transferência mostra a conta do outro lado. Até 500 movimentos por consulta, com aviso quando há mais.
+- **API (só o OWNER, os demais recebem 404):**
+  - `GET` e `POST /api/tenants/{id}/finance/accounts`;
+  - `GET /api/tenants/{id}/finance/accounts/{accountId}/statement?from=&to=`;
+  - `POST /api/tenants/{id}/finance/accounts/{accountId}/adjustments`;
+  - `POST /api/tenants/{id}/finance/transfers`.
+
+  Valores chegam como texto decimal, nunca como número.
+- **Admin:** "Contas" no menu da loja, com cards de saldo (negativo em destaque), "Transferir entre contas" e "Nova conta". O extrato de cada conta tem período, tabela e "Registrar ajuste".
+- **Revisão independente (2026-11-01):** nenhum achado crítico ou alto, e o isolamento entre lojas foi confirmado, inclusive pela FK composta. Correções aplicadas:
+  - leitura de valores em reais no admin;
+  - saldos grandes;
+  - limites de data do extrato;
+  - pedido novo depois de um conflito.
+- **Conta do Mercado Pago só para leitura (decisão do responsável em 2026-11-01):** ela não aceita ajuste nem transferência manual, de entrada ou de saída (409 `PROVIDER_READ_ONLY`). O dinheiro dela vai se mover só com os fatos do próprio Mercado Pago e com a conciliação (SC-018). No admin, ela não aparece nos formulários de transferência e o extrato dela não tem "Registrar ajuste".
+- **Fora desta tarefa:** o relatório financeiro ainda não lê os movimentos (C3), e as vendas e despesas ainda não geram movimentos. Isso chega com as contas a pagar (SC-051), a venda presencial (SC-053) e a SC-018 (liberação do Mercado Pago).
+- **Testes:** `AccountIT`, com Postgres real: saldo igual à soma dos movimentos, idempotência e conflito, extrato que fecha, trigger recusando `UPDATE` e `DELETE`, transferências concorrentes inteiras, validação de dinheiro, datas e limite de contas, e nenhum acesso de outro dono nem de funcionário. A matriz de papéis do `StaffIT` cobre as rotas novas automaticamente.
+
 ## Consequências e riscos
 
 - **Escopo:** é a maior ampliação desde o MVP (funcionário, venda presencial, crediário). Fatiado em tarefas independentes para poder parar em qualquer ponto com algo útil.

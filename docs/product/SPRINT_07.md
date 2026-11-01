@@ -47,6 +47,8 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 ## SC-050 — Contas financeiras e movimentos
 
+**Estado (2026-11-01):** autorizada e implementada ([validação](../quality/SC-050-VALIDATION.md)). O relatório e as vendas e despesas passam a usar os movimentos nas tarefas seguintes.
+
 - **Migração aditiva:** `finance_account` (CASH, BANK, PAYMENT_PROVIDER) e `account_movement` só de acréscimo, com trigger como a V27.
 - Conta Mercado Pago criada automaticamente quando a loja conecta o provedor; uma conta CASH padrão "Caixa da loja".
 - Saldo por conta = soma dos movimentos; transferência entre contas com dois movimentos na mesma transação; ajuste de saldo inicial com motivo.
