@@ -9,14 +9,20 @@ import java.util.Optional;
  * B4); the amounts live in Stripe and on the landing ({@code admin-web/src/lib/plans.ts}).
  */
 public enum BillingCycle {
-  MONTHLY("mensal"),
-  SEMIANNUAL("semestral"),
-  ANNUAL("anual");
+  MONTHLY("mensal", 1),
+  SEMIANNUAL("semestral", 6),
+  ANNUAL("anual", 12);
 
   private final String suffix;
+  private final int months;
 
-  BillingCycle(String suffix) {
+  BillingCycle(String suffix, int months) {
     this.suffix = suffix;
+    this.months = months;
+  }
+
+  public int months() {
+    return months;
   }
 
   public static String lookupKey(Plan plan, BillingCycle cycle) {

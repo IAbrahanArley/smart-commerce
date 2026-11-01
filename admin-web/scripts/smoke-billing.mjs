@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import {
-  backendCycle, backendPlan, billingNotice, billingRefusal, canSubscribe, checkoutMessage, checkoutTarget, dateText,
-  parseAccount, portalTarget, trialDaysLeft,
+  backendCycle, backendPlan, billingNotice, billingRefusal, canSubscribe, checkoutMessage, checkoutTarget, cycleId, dateText,
+  moneyText, parseAccount, parsePreview, parseSubscription, planId, portalTarget, trialDaysLeft,
 } from "../src/lib/billing.ts";
+import { cycleTotalText, planById } from "../src/lib/plans.ts";
 import { accountItems } from "../src/lib/navigation.ts";
 import { isProtectedPath } from "../src/lib/session-events.ts";
 
@@ -50,6 +51,29 @@ assert.equal(billingRefusal(409, { code: "PLAN_LIMIT", message: "Seu plano permi
 assert.match(billingRefusal(402, null) ?? "", /não está ativa/);
 assert.equal(billingRefusal(409, { code: "SKU_CONFLICT" }), null, "Outros conflitos seguem para a tela");
 assert.equal(billingRefusal(409, null), null);
+
+// ADR-0017 B13: the running subscription and the preview of a plan change, read defensively.
+assert.deepEqual(parseSubscription({ status: null, plan: null, cycle: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, pendingChange: null }),
+  { plan: null, cycle: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, pendingChange: null });
+const running = parseSubscription({ status: "active", plan: "ESCALA", cycle: "ANNUAL", currentPeriodEnd: "2027-11-01T10:00:00Z", cancelAtPeriodEnd: false,
+  pendingChange: { plan: "ESSENCIAL", cycle: "MONTHLY", startsAt: "2027-11-01T10:00:00Z" } });
+assert.deepEqual(running?.pendingChange, { plan: "ESSENCIAL", cycle: "MONTHLY", startsAt: "2027-11-01T10:00:00Z" });
+assert.equal(parseSubscription({ plan: "ESCALA" }), null, "Sem cancelAtPeriodEnd não é uma assinatura");
+assert.equal(parseSubscription({ cancelAtPeriodEnd: false, pendingChange: { plan: "PREMIUM", cycle: "MONTHLY", startsAt: "2027-11-01T10:00:00Z" } })?.pendingChange, null);
+const upgrade = { timing: "NOW", plan: "PROFISSIONAL", cycle: "MONTHLY", amountDue: 70.12, currency: "BRL", effectiveAt: "2026-11-01T10:00:00Z", prorationDate: 1793532456, exceedsCompanies: false };
+assert.equal(parsePreview(upgrade)?.amountDue, 70.12);
+assert.equal(parsePreview({ ...upgrade, prorationDate: null }), null, "Upgrade sem data de rateio não pode ser confirmado");
+assert.equal(parsePreview({ ...upgrade, amountDue: -1 }), null);
+assert.equal(parsePreview({ ...upgrade, currency: "real" }), null);
+const downgrade = parsePreview({ ...upgrade, timing: "AT_PERIOD_END", amountDue: null, currency: null, prorationDate: null, exceedsCompanies: true });
+assert.equal(downgrade?.amountDue, null); assert.equal(downgrade?.exceedsCompanies, true);
+assert.equal(moneyText(70.12, "BRL").replace(/\s/g, " "), "R$ 70,12");
+assert.equal(planId("ESCALA"), "escala"); assert.equal(cycleId("SEMIANNUAL"), "semiannual");
+assert.equal(billingRefusal(402, { code: "PAYMENT_DECLINED", message: "O cartão recusou." }), "O cartão recusou.");
+assert.equal(billingRefusal(409, { code: "PREVIEW_EXPIRED" }), "O valor da mudança precisa ser conferido de novo.");
+assert.equal(billingRefusal(409, { code: "CHANGE_NOT_ALLOWED", message: "Esse já é o seu plano atual." }), "Esse já é o seu plano atual.");
+assert.equal(cycleTotalText(planById("essencial"), "semiannual").replace(/\s/g, " "), "R$ 318 a cada 6 meses");
+assert.equal(cycleTotalText(planById("escala"), "annual").replace(/\s/g, " "), "R$ 2.868 por ano");
 
 assert.deepEqual(accountItems("/conta/plano").filter(item => item.current).map(item => item.href), ["/conta/plano"]);
 assert.equal(isProtectedPath("/conta/plano"), true);

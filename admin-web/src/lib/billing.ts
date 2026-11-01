@@ -72,7 +72,68 @@ export function backendCycle(cycle: Cycle): BackendCycle {
   return cycle === "monthly" ? "MONTHLY" : cycle === "semiannual" ? "SEMIANNUAL" : "ANNUAL";
 }
 
-/** Whether a new Checkout makes sense: no subscription is running for this owner. */
+export function planId(plan: BackendPlan): PlanId {
+  return plan.toLowerCase() as PlanId;
+}
+
+export function cycleId(cycle: BackendCycle): Cycle {
+  return cycle === "MONTHLY" ? "monthly" : cycle === "SEMIANNUAL" ? "semiannual" : "annual";
+}
+
+// ADR-0017 B13: the running subscription as Stripe reports it, and the preview of a plan change.
+export type PendingChange = { plan: BackendPlan; cycle: BackendCycle; startsAt: string };
+export type SubscriptionState = {
+  plan: BackendPlan | null;
+  cycle: BackendCycle | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  pendingChange: PendingChange | null;
+};
+
+export function parseSubscription(raw: unknown): SubscriptionState | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.cancelAtPeriodEnd !== "boolean") return null;
+  const next = value.pendingChange && typeof value.pendingChange === "object" ? value.pendingChange as Record<string, unknown> : null;
+  const plan = oneOf(next?.plan, PLANS), cycle = oneOf(next?.cycle, CYCLES), startsAt = date(next?.startsAt);
+  return {
+    plan: oneOf(value.plan, PLANS), cycle: oneOf(value.cycle, CYCLES), currentPeriodEnd: date(value.currentPeriodEnd),
+    cancelAtPeriodEnd: value.cancelAtPeriodEnd, pendingChange: plan && cycle && startsAt ? { plan, cycle, startsAt } : null,
+  };
+}
+
+export type ChangePreview = {
+  timing: "NOW" | "AT_PERIOD_END";
+  plan: BackendPlan;
+  cycle: BackendCycle;
+  /** Charged now, as the backend's decimal; null when nothing is charged now. Display only. */
+  amountDue: number | null;
+  currency: string | null;
+  effectiveAt: string;
+  prorationDate: number | null;
+  exceedsCompanies: boolean;
+};
+
+export function parsePreview(raw: unknown): ChangePreview | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  const timing = oneOf(value.timing, ["NOW", "AT_PERIOD_END"] as const);
+  const plan = oneOf(value.plan, PLANS), cycle = oneOf(value.cycle, CYCLES), effectiveAt = date(value.effectiveAt);
+  if (!timing || !plan || !cycle || !effectiveAt || typeof value.exceedsCompanies !== "boolean") return null;
+  const now = timing === "NOW";
+  const amountDue = typeof value.amountDue === "number" && value.amountDue >= 0 ? value.amountDue : null;
+  const currency = typeof value.currency === "string" && /^[A-Z]{3}$/.test(value.currency) ? value.currency : null;
+  const prorationDate = typeof value.prorationDate === "number" && Number.isInteger(value.prorationDate) ? value.prorationDate : null;
+  // An immediate change without its amount or date cannot be confirmed safely.
+  if (now && (amountDue === null || !currency || prorationDate === null)) return null;
+  return { timing, plan, cycle, amountDue: now ? amountDue : null, currency: now ? currency : null, effectiveAt, prorationDate: now ? prorationDate : null, exceedsCompanies: value.exceedsCompanies };
+}
+
+export function moneyText(amount: number, currency: string): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(amount);
+}
+
+/** Whether a new Checkout makes sense: no subscription is running for this owner (otherwise plan changes). */
 export function canSubscribe(account: BillingAccount): boolean {
   return account.status === "TRIAL" || account.status === "TRIAL_EXPIRED" || account.status === "CANCELED";
 }
@@ -146,8 +207,11 @@ export function billingRefusal(status: number, body: unknown): string | null {
   switch (value.code) {
     case "PLAN_LIMIT": return message ?? "Seu plano chegou ao limite. Mude de plano em Plano e cobrança.";
     case "PLAN_INACTIVE": return message ?? "Sua assinatura não está ativa. Regularize em Plano e cobrança.";
-    case "SUBSCRIPTION_EXISTS": return message ?? "Você já tem uma assinatura. Use “Gerenciar assinatura”.";
+    case "SUBSCRIPTION_EXISTS": return message ?? "Você já tem uma assinatura. Escolha o novo plano nesta página.";
     case "NO_SUBSCRIPTION": return message ?? "Você ainda não tem assinatura. Escolha um plano.";
+    case "CHANGE_NOT_ALLOWED": return message ?? "Essa mudança não é possível agora.";
+    case "PREVIEW_EXPIRED": return message ?? "O valor da mudança precisa ser conferido de novo.";
+    case "PAYMENT_DECLINED": return message ?? "O cartão recusou a cobrança e seu plano não mudou.";
     case "STRIPE_UNAVAILABLE": return "Não foi possível falar com o processador de pagamentos. Tente novamente em instantes.";
     default: return status === 402 ? "Sua assinatura não está ativa. Regularize em Plano e cobrança." : null;
   }

@@ -57,6 +57,16 @@ export function priceText(value: number): string {
   return brl.format(value);
 }
 
+/** The cycle's total and how often it is charged, such as "R$ 318 a cada 6 meses". */
+export function cycleTotalText(plan: Plan, cycle: Cycle): string {
+  const every = cycle === "monthly" ? "por mês" : cycle === "annual" ? "por ano" : `a cada ${cycleOf(cycle).months} meses`;
+  return `${priceText(plan.prices[cycle])} ${every}`;
+}
+
+export function planById(id: PlanId): Plan {
+  return PLANS.find(plan => plan.id === id) ?? PLANS[0];
+}
+
 /** The line under the price: what is charged and how often. */
 export function billingText(plan: Plan, cycle: Cycle): string {
   if (cycle === "monthly") return "cobrado todo mês";
