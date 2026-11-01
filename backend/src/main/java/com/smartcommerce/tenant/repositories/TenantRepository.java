@@ -50,6 +50,14 @@ public class TenantRepository {
     return tenants.findOwned(actor, tenant).map(this::details);
   }
 
+  public List<TenantDetails> listStaffed(UUID actor) {
+    return tenants.listStaffed(actor).stream().map(this::details).toList();
+  }
+
+  public Optional<TenantDetails> findStaffed(UUID actor, UUID tenant) {
+    return tenants.findStaffed(actor, tenant).map(this::details);
+  }
+
   public TenantDetails publish(UUID actor, UUID tenant, boolean published) {
     UUID storeId =
         access

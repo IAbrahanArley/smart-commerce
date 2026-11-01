@@ -13,6 +13,7 @@ import StoreAlerts from "@/components/store-alerts";
 import { parseStatus } from "@/lib/advisor";
 import type { ReportPeriodKey } from "@/lib/finance";
 import PageState from "@/components/page-state";
+import StaffHome from "@/components/staff-home";
 import { Loading } from "@/components/ui/loading";
 
 export default function StoreDetail({ tenantId, period }: { tenantId: string; period: ReportPeriodKey }) {
@@ -67,6 +68,8 @@ export default function StoreDetail({ tenantId, period }: { tenantId: string; pe
     return () => controller.abort();
   }, [tenantId, attempt]);
 
+  // SC-049: an employee sees the store without the OWNER's figures or actions.
+  if (state === "ready" && store?.role === "STAFF") return <StaffHome storeName={store.store.name} />;
   return <section className="page" aria-labelledby="store-title">{dialog}
     <PageHeader id="store-title" title={state === "ready" && store ? <span translate="no">{store.store.name}</span> : "Minha loja"}
       description={state === "ready" && store ? store.store.status === "PUBLISHED" ? <StatusBadge tone="positive">Vitrine publicada</StatusBadge> : <StatusBadge tone="neutral">Vitrine oculta</StatusBadge> : undefined}

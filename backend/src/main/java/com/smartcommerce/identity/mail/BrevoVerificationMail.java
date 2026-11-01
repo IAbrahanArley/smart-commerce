@@ -55,6 +55,11 @@ public final class BrevoVerificationMail implements VerificationMail {
     deliver(resetBody(recipient, resetLink));
   }
 
+  @Override
+  public void sendStaffInvitation(String recipient, String storeName, String invitationLink) {
+    deliver(invitationBody(recipient, storeName, invitationLink));
+  }
+
   private void deliver(String json) {
     HttpResponse<Void> response;
     try {
@@ -115,6 +120,33 @@ public final class BrevoVerificationMail implements VerificationMail {
             + "\">Escolher uma nova senha</a></p>"
             + "<p>O link expira em 30 minutos e só pode ser usado uma vez. Se não pediu, ignore"
             + " esta mensagem: sua senha atual continua valendo.</p>");
+    return JSON.writeValueAsString(body);
+  }
+
+  String invitationBody(String recipient, String storeName, String invitationLink) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("sender", Map.of("email", senderEmail, "name", senderName));
+    body.put("to", List.of(Map.of("email", recipient)));
+    // The store name is chosen by its owner: kept out of the subject, escaped in the body.
+    body.put("subject", "Convite para a equipe de uma loja — Smart Commerce");
+    body.put(
+        "textContent",
+        "Você foi convidado para a equipe da loja "
+            + storeName
+            + " no Smart Commerce, para operar o caixa e registrar vendas. Entre com este e-mail e"
+            + " aceite o convite:\n"
+            + invitationLink
+            + "\n\nO convite expira em 7 dias e só pode ser usado uma vez. Se não esperava este"
+            + " convite, ignore esta mensagem.\n");
+    body.put(
+        "htmlContent",
+        "<p>Você foi convidado para a equipe da loja <strong>"
+            + html(storeName)
+            + "</strong> no Smart Commerce, para operar o caixa e registrar vendas.</p><p><a href=\""
+            + html(invitationLink)
+            + "\">Aceitar o convite</a></p>"
+            + "<p>Entre com este e-mail para aceitar. O convite expira em 7 dias e só pode ser usado"
+            + " uma vez. Se não esperava este convite, ignore esta mensagem.</p>");
     return JSON.writeValueAsString(body);
   }
 

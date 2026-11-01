@@ -174,6 +174,20 @@ public class BootstrapSecurityConfiguration {
                     .authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/billing/change")
                     .authenticated()
+                    // SC-049: store employees (OWNER checked in the service) and acceptance of
+                    // an invitation by the signed-in account it was sent to.
+                    .requestMatchers(HttpMethod.GET, "/api/tenants/*/staff")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/tenants/*/staff/invitations",
+                        "/api/staff-invitations/acceptance")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.DELETE,
+                        "/api/tenants/*/staff/invitations/*",
+                        "/api/tenants/*/staff/*")
+                    .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/tenants")
                     .authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/tenants/*/fulfillment")
