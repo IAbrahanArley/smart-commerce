@@ -7,6 +7,7 @@ import { type Product, formatBRL } from "@/lib/catalog";
 import { type Brand, compareAtInput, parseBrands, storefrontError } from "@/lib/brands";
 import { categorySlug, categorySlugError } from "@/lib/categories";
 import { Loading } from "@/components/ui/loading";
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 
 // Sprint 8 (SC-041): how the product appears in the storefront besides name, price and photos:
 // brand, address and the "compare at" price of each variant. Saved apart from the product form, so
@@ -26,6 +27,8 @@ export default function ProductStorefront({ tenantId, product, onSaved }: {
   const submitting = useRef(false);
   const tenantPath = `/api/tenants/${encodeURIComponent(tenantId)}`;
   const storePath = `/lojas/${encodeURIComponent(tenantId)}`;
+  useUnsavedChanges(brandId !== (product.brandId ?? "") || slug !== (product.slug ?? "") || featured !== (product.featured === true)
+    || JSON.stringify(compareAt) !== JSON.stringify(initialCompareAt(product)));
 
   useEffect(() => {
     const controller = new AbortController();

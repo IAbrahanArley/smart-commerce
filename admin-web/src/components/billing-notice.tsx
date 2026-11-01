@@ -30,7 +30,8 @@ export default function BillingNotice() {
 
   const notice = account ? billingNotice(account, new Date()) : null;
   if (!notice || pathname === "/conta/plano") return null;
-  return <p role="status" className={notice.tone === "danger" ? "billing-notice feedback feedback-error" : "billing-notice notice"}>
+  // Static on purpose: it is on almost every page, and a live region would repeat it on each navigation.
+  return <p className={notice.tone === "danger" ? "billing-notice feedback feedback-error" : "billing-notice notice"}>
     {notice.text} <Link href="/conta/plano">Ver plano e cobrança</Link>
   </p>;
 }

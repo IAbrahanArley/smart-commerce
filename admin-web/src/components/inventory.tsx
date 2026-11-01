@@ -7,6 +7,7 @@ import type { Product } from "@/lib/catalog";
 import { MOVEMENT_LABELS, reservedStockMessage, wholeQuantity, type InventorySnapshot, type MovementRequest } from "@/lib/inventory";
 import { variantLabel } from "@/components/variant-builder";
 import PageHeader from "@/components/page-header";
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 import { Loading } from "@/components/ui/loading";
 
 const integer = new Intl.NumberFormat("pt-BR");
@@ -61,16 +62,7 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
     return () => controller.abort();
   }, [productApi, inventoryApi, variantId, attempt]);
 
-  useEffect(() => {
-    if (!dirty) return;
-    const warning = pending ? "Há uma movimentação sem confirmação. Sair perde a chave de repetição segura. Permaneça nesta tela e confirme o resultado antes de sair." : "Há uma movimentação não salva. Deseja sair sem registrar?";
-    const leave = (event: BeforeUnloadEvent) => event.preventDefault();
-    const navigate = (event: MouseEvent) => {
-      if (event.target instanceof Element && event.target.closest("a[href]") && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !window.confirm(warning)) event.preventDefault();
-    };
-    window.addEventListener("beforeunload", leave); document.addEventListener("click", navigate, true);
-    return () => { window.removeEventListener("beforeunload", leave); document.removeEventListener("click", navigate, true); };
-  }, [dirty, pending]);
+  useUnsavedChanges(dirty, pending ? "Há uma movimentação sem confirmação. Sair perde a chave de repetição segura. Permaneça nesta tela e confirme o resultado antes de sair." : "Há uma movimentação não salva. Deseja sair sem registrar?");
 
   useEffect(() => { if (feedback) feedbackRef.current?.focus(); }, [feedback]);
   useEffect(() => {

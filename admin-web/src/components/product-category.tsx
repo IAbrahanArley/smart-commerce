@@ -6,11 +6,13 @@ import { apiRequest } from "@/lib/auth-api";
 import type { Product } from "@/lib/catalog";
 import { type Category, categoryError, categoryPath, parseCategories } from "@/lib/categories";
 import { Loading } from "@/components/ui/loading";
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 
 const MAX_ADDITIONAL = 10;
 
-// MVP block 1c: the category of one product, saved as soon as it is chosen. It does not touch the
-// product version, so it never conflicts with unsaved edits in the main form. SC-043: the other
+// MVP block 1c: the category of one product, saved with its own button (saving on change would send
+// one request per arrow key in a closed select). It does not touch the product version, so it never
+// conflicts with unsaved edits in the main form. SC-043: the other
 // categories it also appears in ("Promoções", "Outlet"), saved together with their own button.
 export default function ProductCategory({ tenantId, product, onSaved }: {
   tenantId: string; product: Product; onSaved: (product: Product, notice?: string) => void;
@@ -20,9 +22,11 @@ export default function ProductCategory({ tenantId, product, onSaved }: {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [extra, setExtra] = useState<string[]>(product.additionalCategoryIds ?? []);
+  const [chosen, setChosen] = useState(product.categoryId ?? "");
   const submitting = useRef(false);
   const tenantPath = `/api/tenants/${encodeURIComponent(tenantId)}`;
   const storePath = `/lojas/${encodeURIComponent(tenantId)}`;
+  useUnsavedChanges(chosen !== (product.categoryId ?? "") || [...extra].sort().join() !== [...(product.additionalCategoryIds ?? [])].sort().join());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -45,6 +49,7 @@ export default function ProductCategory({ tenantId, product, onSaved }: {
       }
       const saved: Product = await response.json();
       onSaved(saved);
+      setChosen(saved.categoryId ?? "");
       const name = categories && value ? categoryPath(categories, value) : "";
       setMessage({ text: name ? `Categoria “${name}” salva.` : "Produto sem categoria.", error: false });
     } catch { setMessage({ text: "Não foi possível confirmar a categoria. Recarregue o produto.", error: true }); }
@@ -78,11 +83,12 @@ export default function ProductCategory({ tenantId, product, onSaved }: {
       ? <p>A loja ainda não tem categorias. <Link href={`${storePath}/categorias`}>Criar categorias</Link></p>
       : <div className="form-field">
         <label htmlFor="product-category">Categoria do produto</label>
-        <select id="product-category" value={product.categoryId ?? ""} disabled={busy} onChange={event => void choose(event.target.value)} aria-describedby="product-category-help">
+        <select id="product-category" value={chosen} onChange={event => setChosen(event.target.value)} aria-describedby="product-category-help">
           <option value="">Sem categoria</option>
           {categories.map(category => <option key={category.id} value={category.id}>{categoryPath(categories, category.id)}</option>)}
         </select>
-        <p id="product-category-help" className="field-help">Salva ao escolher. Define o caminho do produto na vitrine. <Link href={`${storePath}/categorias`}>Gerenciar categorias</Link></p>
+        <p id="product-category-help" className="field-help">Define o caminho do produto na vitrine. <Link href={`${storePath}/categorias`}>Gerenciar categorias</Link></p>
+        <button type="button" className="button-secondary" disabled={busy || chosen === (product.categoryId ?? "")} onClick={() => void choose(chosen)}>{busy ? "Salvando…" : "Salvar categoria"}</button>
       </div> : null}
     {categories && others.length ? <fieldset className="category-extra" disabled={busy}>
       <legend>Também aparece em</legend>

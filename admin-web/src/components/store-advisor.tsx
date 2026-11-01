@@ -153,7 +153,7 @@ export default function StoreAdvisor({ tenantId, initialQuestion = null }: { ten
         <h2 id="advisor-form-title">{exchanges.length ? "Continuar a conversa" : "Sua pergunta"}</h2>
         <div className="form-field">
           <label htmlFor="advisor-question">Pergunta</label>
-          <p id="advisor-question-help" className="field-help">Até {MAX_QUESTION} caracteres. {quotaText(status)}</p>
+          <p id="advisor-question-help" className="field-help">Até {MAX_QUESTION} caracteres. Enter envia; Shift+Enter quebra a linha. {quotaText(status)}</p>
           <textarea ref={inputRef} id="advisor-question" name="question" rows={3} maxLength={MAX_QUESTION * 2} autoComplete="off" value={question}
             disabled={busy || outOfQuestions} aria-invalid={error ? true : undefined}
             aria-describedby={`advisor-question-help advisor-question-count${error ? " advisor-question-error" : ""}`}

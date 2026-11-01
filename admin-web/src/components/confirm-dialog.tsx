@@ -38,7 +38,7 @@ export function useConfirm() {
     opener.current?.focus();
   }
 
-  const element = <dialog ref={dialog} className="confirm-dialog" aria-labelledby={`${id}-title`} aria-describedby={`${id}-message`} onClose={closed}>
+  const element = <dialog ref={dialog} className="confirm-dialog" aria-labelledby={options ? `${id}-title` : undefined} aria-describedby={options ? `${id}-message` : undefined} onClose={closed}>
     {options ? <>
       <h2 id={`${id}-title`}>{options.title}</h2>
       <div id={`${id}-message`} className="confirm-dialog-message">{options.message}</div>

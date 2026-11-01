@@ -21,7 +21,7 @@ export const checkoutUrl = "https://sandbox.mercadopago.com.br/checkout/v1/redir
 export const paymentReply = { status: 200, body: { checkoutUrl } };
 
 // MVP block 1b: public contacts and logo; the hostile e-mail must be dropped by the storefront.
-const store = { name: "Loja de teste da vitrine", slug: "loja-teste", profile: { contactEmail: "contato@loja.example", whatsapp: "5511988887777", instagram: "loja.teste", logo: true } };
+const store = { name: "Loja de teste da vitrine", slug: "loja-teste", profile: { contactEmail: "contato@loja.example", whatsapp: "5511988887777", instagram: "loja.teste", logo: true, logoWidth: 240, logoHeight: 80 } };
 const item = { id, name: "Produto público de teste", price: "49.90", currency: "BRL", available: true, kind: "SIMPLE", descriptionHtml: "<p>Descrição <strong>segura</strong>.</p>", variants: [{ id, price: "49.90", currency: "BRL", available: true, options: [] }] };
 const variantItem = { ...item, id: nextId, name: "Camiseta com opções", kind: "VARIABLE", variants: [{ id, price: "59.90", currency: "BRL", available: false, options: [{ name: "Cor", value: "Azul" }, { name: "Tamanho", value: "M" }], sku: "PRIVATE_SKU_FIXTURE", cost: "PRIVATE_COST_FIXTURE", quantity: 784321 }] };
 const syntheticOrder = { id: orderId, number: 7, status: "PENDING_PAYMENT", currency: "BRL", subtotal: "99.80", shipping: "0.00", total: "99.80",
@@ -99,7 +99,7 @@ const ROUTES = {
   "/api/public/stores/loja-teste/p/produto-publico/address": () => ({ movedTo: null, product: null }),
   "/api/public/stores/loja-teste/sitemap": () => ({ products: [{ slug: "produto-publico", updatedAt: "2026-10-20T12:00:00Z" }, { slug: "../fora", updatedAt: "2026-10-20T12:00:00Z" }], categories: ["camisetas", "manga-longa"], pages: ["trocas-e-devolucoes"] }),
   "/api/public/stores/loja-vazia/catalog?ordem=recentes": () => ({ ...catalog({ menu: [], total: 0, products: [], facets: noFacets, maxInstallments: null, company: null, pages: [], banners: [], sections: [] }),
-    store: { name: "Loja vazia de teste", slug: "loja-vazia", profile: { contactEmail: "x@y.example\"><script>alert(1)</script>", whatsapp: "123", instagram: "a b", logo: false } } }),
+    store: { name: "Loja vazia de teste", slug: "loja-vazia", profile: { contactEmail: "x@y.example\"><script>alert(1)</script>", whatsapp: "123", instagram: "a b", logo: false, logoWidth: -1, logoHeight: "80" } } }),
   "/api/public/stores/loja-teste": () => ({ ...store, products: [{ ...item, descriptionHtml: "", variants: [], cost: "PRIVATE_COST_FIXTURE", sku: "PRIVATE_SKU_FIXTURE", quantity: 784321 }], categories, category: null, nextCursor: id }),
   [`/api/public/stores/loja-teste/products/${id}/images`]: () => ({ images: [{ id, alt: "Foto de teste", width: 300, height: 300 }] }),
   [`/api/public/stores/loja-teste/products/${id}`]: () => ({ store, product: item }),

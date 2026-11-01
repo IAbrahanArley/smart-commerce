@@ -8,6 +8,7 @@ import DescriptionEditor from "@/components/description-editor";
 import VariantBuilder from "@/components/variant-builder";
 import StatusBadge from "@/components/status-badge";
 import { useConfirm } from "@/components/confirm-dialog";
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 import ProductCategory from "@/components/product-category";
 import ProductStorefront from "@/components/product-storefront";
 
@@ -37,18 +38,7 @@ export default function ProductForm({ tenantId, product, storePublished = false,
     && !savedDescription.replace(/<\/?(?:p|strong|em|ul|ol|li)>|<br\s*\/?>/g, "").includes("<");
   useEffect(() => { onDirtyChange?.(dirty || busy); }, [dirty, busy, onDirtyChange]);
 
-  useEffect(() => {
-    if (!dirty) return;
-    const leave = (event: BeforeUnloadEvent) => event.preventDefault();
-    const navigate = (event: MouseEvent) => {
-      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
-      if (link && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0
-        && !window.confirm("Há alterações não salvas. Deseja sair sem salvar?")) event.preventDefault();
-    };
-    window.addEventListener("beforeunload", leave);
-    document.addEventListener("click", navigate, true);
-    return () => { window.removeEventListener("beforeunload", leave); document.removeEventListener("click", navigate, true); };
-  }, [dirty]);
+  useUnsavedChanges(dirty);
 
   function update(field: keyof Fields, value: string) {
     setFields(current => ({ ...current, [field]: value }));

@@ -101,7 +101,7 @@ input[aria-invalid="true"] { border-color: var(--sc-color-danger); border-width:
 .account-summary, .stores-panel { width: 100%; max-width: none; padding: clamp(1rem, 4vw, 2rem); background: var(--sc-color-surface); border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-surface); }
 .account-summary h1 { font-size: 1.5rem; }
 .stores-panel h2 { font-size: 1.5rem; line-height: 1.2; margin-block: 0 var(--sc-space-4); }
-.stores-panel h3 { font-size: 1.125rem; margin: 0; }
+.stores-panel .store-card h2 { font-size: 1.125rem; margin: 0; }
 .store-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--sc-space-4); margin: var(--sc-space-6) 0; padding: 0; }
 .store-card { min-width: 0; border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-control); padding: var(--sc-space-4); overflow-wrap: anywhere; }
 .store-card a, .back-link { display: inline-flex; align-items: center; min-height: 44px; }
@@ -340,6 +340,7 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .alert-severity { font-weight: 700; }
 .alert-critical .alert-severity { color: var(--sc-color-danger); }
 .alert-text { flex: 1 1 18rem; }
+.alert-item > a:not(.explain-link) { display: inline-flex; align-items: center; min-height: 24px; }
 
 /* Product photos in the admin (catalog refinement): cover thumbnails and an explicit "Sem foto". */
 .product-cell { display: flex; align-items: center; gap: var(--sc-space-3); min-width: 0; }

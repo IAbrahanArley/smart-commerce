@@ -108,6 +108,8 @@ try {
   assert.ok(catalog.html.includes('href="mailto:contato@loja.example"'));
   assert.ok(catalog.html.includes('href="https://www.instagram.com/loja.teste/"'));
   assert.ok(catalog.html.includes('src="/midia/lojas/loja-teste/logo"'));
+  // MVP block 2 (interface review): the logo size reserves its space before the image loads.
+  assert.match(catalog.html, /class="store-logo" src="\/midia\/lojas\/loja-teste\/logo" alt="" width="240" height="80"/);
   const logo = await fetch(`${base}/midia/lojas/loja-teste/logo`);
   assert.equal(logo.status, 200); assert.equal(logo.headers.get("content-type"), "image/png");
   const detail = await page(`/lojas/loja-teste/produtos/${id}`);

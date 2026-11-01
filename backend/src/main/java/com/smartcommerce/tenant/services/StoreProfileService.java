@@ -130,6 +130,8 @@ public class StoreProfileService {
         settings.whatsapp(),
         settings.instagram(),
         stored.hasLogo(),
+        stored.logoWidth(),
+        stored.logoHeight(),
         stored.version());
   }
 }

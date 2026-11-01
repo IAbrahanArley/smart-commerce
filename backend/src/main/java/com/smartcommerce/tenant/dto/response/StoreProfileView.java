@@ -10,4 +10,6 @@ public record StoreProfileView(
     String whatsapp,
     String instagram,
     boolean hasLogo,
+    Integer logoWidth,
+    Integer logoHeight,
     long version) {}

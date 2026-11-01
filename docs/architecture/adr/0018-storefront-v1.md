@@ -11,7 +11,7 @@ Status: **adotado** em 2026-10-27. Aprovado pelo responsável na mesma data: a v
   - [ADR-0012](0012-stock-reservation-cart-orders.md) e [ADR-0013](0013-mercado-pago-checkout-pro.md): carrinho em cookie, pedido com reserva, Checkout Pro por preferência;
   - URLs `/lojas/{slug}` e `/lojas/{slug}/produtos/{uuid}`; catálogo paginado por cursor;
   - **categorias planas** (bloco 1c do MVP, V30, [validação](../../quality/MVP-1C-CATEGORIES.md)): `catalog_category` por loja, até 50, nome único na loja sem diferenciar maiúsculas, no máximo **uma por produto** (`catalog_product.category_id`), filtro na vitrine por `?categoria={id}`;
-  - **dados da loja** (bloco 1b, V29 `store_profile`, [validação](../../quality/MVP-1B-STORE-PROFILE.md)): logo, e-mail, WhatsApp (E.164) e Instagram públicos por escolha, com o bloco "Fale com a loja" (`wa.me`, `mailto:`);
+  - **dados da loja** (bloco 1b, V29 `store_profile`, [validação](../../quality/MVP-1B-STORE-PROFILE.md)): logo, e-mail, WhatsApp (E.164) e Instagram públicos por escolha, com o bloco "Fale com a loja" (`wa.me`, `mailto:`). Desde a [revisão de interface do MVP](../../quality/MVP-2-INTERFACE-REVIEW.md) (2026-10-31), o perfil público também traz o tamanho do logo (`logoWidth`, `logoHeight`), para a página reservar o espaço;
   - **páginas legais da plataforma** (bloco 1d): termos e privacidade do Smart Commerce no admin; a loja ainda não tem páginas próprias;
   - card de produto da vitrine portado do Dashtail (DESIGN.md);
   - cobrança do lojista pela Stripe ([ADR-0017 — Stripe](0017-saas-billing-stripe.md)), base para cobrar extensões no futuro.

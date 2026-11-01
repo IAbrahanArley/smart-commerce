@@ -33,7 +33,7 @@ public class StoreProfileRepository {
         .query(
             """
             SELECT s.name,p.contact_email,p.whatsapp,p.instagram,p.logo_content IS NOT NULL AS logo,
-              COALESCE(p.version,0) AS version
+              p.logo_width,p.logo_height,COALESCE(p.version,0) AS version
             FROM store s
             JOIN tenant_membership m ON m.tenant_id=s.tenant_id AND m.user_id=? AND m.role='OWNER'
             JOIN identity_user u ON u.id=m.user_id AND u.status='ACTIVE' AND u.verified_at IS NOT NULL
@@ -48,6 +48,8 @@ public class StoreProfileRepository {
                         row.getString("whatsapp"),
                         row.getString("instagram")),
                     row.getBoolean("logo"),
+                    row.getObject("logo_width", Integer.class),
+                    row.getObject("logo_height", Integer.class),
                     row.getLong("version")),
             actor,
             tenant)

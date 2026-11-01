@@ -11,6 +11,7 @@ import PageHeader from "@/components/page-header";
 import PageState from "@/components/page-state";
 import { useConfirm } from "@/components/confirm-dialog";
 import { Loading } from "@/components/ui/loading";
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 
 type Editing = { id: string; name: string; slug: string; parentId: string };
 
@@ -34,6 +35,9 @@ export default function StoreCategories({ tenantId }: { tenantId: string }) {
   const { confirm, dialog } = useConfirm();
   const api = `/api/tenants/${encodeURIComponent(tenantId)}/categories`;
   const storePath = `/lojas/${encodeURIComponent(tenantId)}`;
+  const original = editing ? list?.find(category => category.id === editing.id) : undefined;
+  useUnsavedChanges(!!name.trim() || (!!original && !!editing
+    && (editing.name !== original.name || editing.slug !== original.slug || editing.parentId !== (original.parentId ?? ""))));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -172,7 +176,7 @@ export default function StoreCategories({ tenantId }: { tenantId: string }) {
               </div>
             </form> : <>
               <span className="category-name">
-                <span>{category.name}{category.published ? null : <>{" "}<span className="status-badge status-neutral category-hidden">Oculta na vitrine</span></>}</span>
+                <span>{category.name}{category.parentId ? <span className="visually-hidden">, dentro de {categoryPath(list, category.parentId)}</span> : null}{category.published ? null : <>{" "}<span className="status-badge status-neutral category-hidden">Oculta na vitrine</span></>}</span>
                 <span className="cell-hint">{productCountText(category.products)} · /{category.slug}</span>
               </span>
               <span className="form-actions">

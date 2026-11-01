@@ -81,6 +81,11 @@ public class StorefrontService {
 
   private static PublicStoreProfileView profile(PublicStore store) {
     return new PublicStoreProfileView(
-        store.contactEmail(), store.whatsapp(), store.instagram(), store.logo());
+        store.contactEmail(),
+        store.whatsapp(),
+        store.instagram(),
+        store.logo(),
+        store.logoWidth(),
+        store.logoHeight());
   }
 }

@@ -43,7 +43,7 @@ Itens do PRD que ainda não existem ou estão incompletos, em ordem de execuçã
   - webhook com o evento "Pagamentos" e `MERCADO_PAGO_NOTIFICATION_URL`;
   - assistente desligado até a avaliação.
 - **Observabilidade mínima (requisito não funcional do PRD)** (implementada em 2026-10-31, [validação](../quality/MVP-2-OBSERVABILITY.md)): identificador de correlação por requisição nos logs e conferência de que nenhum log leva segredo ou dado pessoal.
-- **Revisão completa da interface:** admin e vitrine nas larguras de referência, com as pendências de acessibilidade das sprints 5 e 6 (leitor de tela, zoom e espaçamento).
+- **Revisão completa da interface** (implementada em 2026-10-31: vitrine na [SC-048](../quality/SC-048-INTEGRATED-REVIEW.md), admin na [revisão do bloco 2](../quality/MVP-2-INTERFACE-REVIEW.md)): admin e vitrine nas larguras de referência, com as pendências de acessibilidade das sprints 5 e 6 (leitor de tela, zoom e espaçamento). Teste com leitor de tela real, Axe e Lighthouse continuam sem execução, porque não estão instalados.
 
 ## Bloco 3 — Validações reais pendentes
 

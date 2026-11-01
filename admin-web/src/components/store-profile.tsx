@@ -7,6 +7,7 @@ import { type ProfileErrors, type ProfileFields, type StoreProfile, logoFileErro
 import PageHeader from "@/components/page-header";
 import PageState from "@/components/page-state";
 import { useConfirm } from "@/components/confirm-dialog";
+import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 import { Loading } from "@/components/ui/loading";
 
 // MVP block 1b (PRD item 10): what the storefront shows about the store. Contacts are public by
@@ -29,6 +30,7 @@ export default function StoreProfileEditor({ tenantId }: { tenantId: string }) {
   const { confirm, dialog } = useConfirm();
   const path = `/api/tenants/${encodeURIComponent(tenantId)}/profile`;
   const dirty = !!saved && !!fields && JSON.stringify(fields) !== JSON.stringify(profileFields(saved));
+  useUnsavedChanges(dirty);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -142,7 +144,8 @@ export default function StoreProfileEditor({ tenantId }: { tenantId: string }) {
         {saved.hasLogo
           // The version in the URL refreshes the preview after each change; the content is private.
           // eslint-disable-next-line @next/next/no-img-element
-          ? <img className="store-logo-preview" src={`${path}/logo?v=${saved.version}`} alt={`Logo atual de ${saved.name}`} />
+          ? <img className="store-logo-preview" src={`${path}/logo?v=${saved.version}`} alt={`Logo atual de ${saved.name}`}
+            width={saved.logoWidth ?? undefined} height={saved.logoHeight ?? undefined} />
           : <p>Nenhum logo enviado. A vitrine mostra só o nome da loja.</p>}
         <form ref={logoForm} onSubmit={uploadLogo} noValidate aria-busy={busy}>
           <div className="form-field">

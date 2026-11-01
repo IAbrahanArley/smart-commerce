@@ -32,8 +32,10 @@ import tools.jackson.databind.json.JsonMapper;
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class StorefrontIsolationIT {
+  // The logo size is public since the MVP interface review, so pages reserve its space.
   private static final String PROFILE =
-      "{\"contactEmail\":null,\"whatsapp\":null,\"instagram\":null,\"logo\":false}";
+      "{\"contactEmail\":null,\"whatsapp\":null,\"instagram\":null,\"logo\":false,"
+          + "\"logoWidth\":null,\"logoHeight\":null}";
 
   @Container @ServiceConnection
   static final PostgreSQLContainer POSTGRES =
