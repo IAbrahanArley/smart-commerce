@@ -10,5 +10,13 @@ public interface VerificationMail {
     send(recipient, resetLink);
   }
 
+  /**
+   * Invitation to work in a store (SC-049). {@code storeName} is the OWNER's own store name;
+   * adapters with their own wording override it, the DEV mailbox just keeps the link.
+   */
+  default void sendStaffInvitation(String recipient, String storeName, String invitationLink) {
+    send(recipient, invitationLink);
+  }
+
   default void cleanup() {}
 }

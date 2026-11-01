@@ -15,5 +15,5 @@ public record BillingAccountView(
     boolean enforced,
     Limits limits,
     long companies) {
-  public record Limits(int companies, int productsPerStore, int monthlyQuestions) {}
+  public record Limits(int companies, int productsPerStore, int monthlyQuestions, int staff) {}
 }

@@ -2,7 +2,7 @@ export type TenantStore = {
   id: string;
   companyName: string;
   store: { id: string; name: string; slug: string; status: "DRAFT" | "PUBLISHED" };
-  role: "OWNER";
+  role: "OWNER" | "STAFF";
 };
 
 export function storefrontUrl(slug: string): string | null {

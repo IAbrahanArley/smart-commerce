@@ -90,7 +90,7 @@ export default function StoresPanel() {
     </div> : stores.length === 0 ? <p>Você ainda não tem uma loja. Preencha os dados abaixo para criar a primeira.</p> : <ul className="store-list">
       {stores.map(tenant => <li key={tenant.id} className="store-card">
         <h2><Link href={`/lojas/${encodeURIComponent(tenant.id)}`}>{tenant.store.name}</Link></h2>
-        <p>{tenant.companyName}</p><p className="store-status">{tenant.store.status === "PUBLISHED" ? "Vitrine publicada" : "Em configuração · Vitrine oculta"} · Proprietário</p>
+        <p>{tenant.companyName}</p><p className="store-status">{tenant.store.status === "PUBLISHED" ? "Vitrine publicada" : "Em configuração · Vitrine oculta"} · {tenant.role === "STAFF" ? "Funcionário" : "Proprietário"}</p>
       </li>)}
     </ul>}
     <div className="store-create">

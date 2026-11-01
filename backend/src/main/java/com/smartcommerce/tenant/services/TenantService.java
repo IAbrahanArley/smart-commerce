@@ -44,7 +44,8 @@ public class TenantService {
     try {
       return view(
           tenants.create(
-              actor, UUID.randomUUID(), UUID.randomUUID(), company, store, slug, Instant.now()));
+              actor, UUID.randomUUID(), UUID.randomUUID(), company, store, slug, Instant.now()),
+          "OWNER");
     } catch (TenantPersistenceException exception) {
       throw new TenantException(TenantException.Reason.INVALID_IDENTITY, "Sessão inválida.");
     } catch (DataIntegrityViolationException exception) {
@@ -56,14 +57,19 @@ public class TenantService {
 
   @Transactional(readOnly = true)
   public List<TenantView> list(UUID actor) {
-    return tenants.listOwned(actor).stream().map(TenantService::view).toList();
+    // SC-049: companies where the actor is an employee come after his own, marked STAFF.
+    return java.util.stream.Stream.concat(
+            tenants.listOwned(actor).stream().map(details -> view(details, "OWNER")),
+            tenants.listStaffed(actor).stream().map(details -> view(details, "STAFF")))
+        .toList();
   }
 
   @Transactional(readOnly = true)
   public TenantView find(UUID actor, UUID tenant) {
     return tenants
         .findOwned(actor, tenant)
-        .map(TenantService::view)
+        .map(details -> view(details, "OWNER"))
+        .or(() -> tenants.findStaffed(actor, tenant).map(details -> view(details, "STAFF")))
         .orElseThrow(
             () -> new TenantException(TenantException.Reason.MISSING, "Loja não encontrada."));
   }
@@ -72,20 +78,20 @@ public class TenantService {
   public TenantView publish(UUID actor, UUID tenant, boolean published) {
     changes.changed(tenant);
     try {
-      return view(tenants.publish(actor, tenant, published));
+      return view(tenants.publish(actor, tenant, published), "OWNER");
     } catch (TenantPersistenceException exception) {
       throw new TenantException(TenantException.Reason.MISSING, "Loja não encontrada.");
     }
   }
 
-  private static TenantView view(TenantDetails details) {
+  private static TenantView view(TenantDetails details, String role) {
     var tenant = details.tenant();
     var store = details.store();
     return new TenantView(
         tenant.id(),
         tenant.companyName(),
         new TenantView.StoreView(store.id(), store.name(), store.slug(), store.status()),
-        "OWNER");
+        role);
   }
 
   static String name(String value) {

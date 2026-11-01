@@ -136,6 +136,11 @@ V39 (SC-043, ADR-0018 V8, 2026-10-27), aditiva:
 
 Depende da V38.
 
+V40 (SC-049, ADR-0019 C1, 2026-11-01), aditiva:
+- `tenant_membership.role` aceita `OWNER` e `STAFF`; um índice único parcial garante um só `OWNER` por empresa. Todas as consultas de acesso existentes já exigiam `role='OWNER'`, então o `STAFF` nasce sem acesso a elas.
+- `staff_invitation`: um convite por linha, com todo o ciclo de vida (enviado, aceito ou cancelado, acesso revogado). Guarda só o hash SHA-256 do token de uso único, o e-mail convidado (chave de comparação e grafia original, o mínimo para casar com a conta e mostrar ao OWNER), quem convidou, validade de 7 dias, quem aceitou e quem revogou. Um índice único parcial deixa no máximo um convite em aberto por e-mail e empresa.
+- **Dado pessoal:** o e-mail do convite fica guardado também depois de aceito, cancelado ou expirado, para o histórico da equipe. A retenção segue a mesma validação jurídica pendente do D2.
+
 V27 (SC-023), aditiva: um trigger em `finance_entry` faz o banco garantir que o livro é só de acréscimo (F7):
 - **`DELETE`:** recusado sempre;
 - **`UPDATE`:** só para preencher `settled_at` uma única vez, a partir de nulo, que é o caminho da SC-018;

@@ -155,7 +155,8 @@ export function dateText(iso: string): string {
  * is only announced in its last 3 days, so the notice does not become noise.
  */
 export function billingNotice(account: BillingAccount, now: Date): { text: string; tone: "info" | "danger" } | null {
-  if (!account.enforced) return null;
+  // Nothing to block for someone without stores, such as an employee (SC-049).
+  if (!account.enforced || account.companies === 0) return null;
   switch (account.status) {
     case "TRIAL": {
       const days = trialDaysLeft(account, now);

@@ -1,6 +1,6 @@
 # Sprint 7 — Caixa, contas a pagar e a receber, venda presencial e crediário (planejamento)
 
-Data: 2026-10-26. **C1–C14 do [ADR-0017](../architecture/adr/0017-cash-payables-receivables.md) aprovadas em 2026-10-26**, exceto a leitura direta de `.xlsx` em C14, que depende de aprovar uma biblioteca. Por enquanto só o planejamento fica registrado; cada tarefa exige autorização própria.
+Data: 2026-10-26. **C1–C14 do [ADR-0019](../architecture/adr/0019-cash-payables-receivables.md) aprovadas em 2026-10-26**, exceto a leitura direta de `.xlsx` em C14, que depende de aprovar uma biblioteca. Por enquanto só o planejamento fica registrado; cada tarefa exige autorização própria.
 
 **Objetivo:**
 - o lojista controla **num só lugar o que vende online e o que vende na loja física**, com **um só estoque**: cada produto vendido na loja física e lançado no livro de vendas, à mão ou por planilha, baixa o mesmo estoque da vitrine;
@@ -11,26 +11,30 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 **Ordem:** em 2026-10-27 o responsável colocou a [Sprint 8](SPRINT_08.md) (vitrine V1) à frente desta sprint.
 
+**Início (2026-11-01):** o responsável decidiu começar esta sprint deixando a SC-018 (taxas do Mercado Pago) e a SC-023 (revisão integrada da Sprint 5) pendentes. Na mesma data, as tarefas foram renumeradas de SC-031–SC-040 para **SC-049–SC-058** e o ADR de 0017 para **0019**, porque os números colidiam com a assinatura SaaS (SC-031 a SC-033 e ADR-0017 da Stripe). Se a sprint entra no escopo da entrega do MVP ainda não foi decidido.
+
 **Dependências:**
 - A SC-018 (taxa e liberação do Mercado Pago) continua pendente. Sem ela, os pagamentos online aparecem em "a receber, data desconhecida" (C10).
-- A SC-030 (revisão integrada da Sprint 6) deve terminar antes da SC-039, que adiciona alertas ao módulo `advisor`.
+- A SC-030 (revisão integrada da Sprint 6) deve terminar antes da SC-057, que adiciona alertas ao módulo `advisor`.
 
 ## Gates de entrada
 
 | Tarefa | Requer |
 | --- | --- |
-| SC-031 | C1 |
-| SC-032 | C2, C3 |
-| SC-033 | SC-032; C4; revisão da migração de `expense` |
-| SC-034 | SC-031, SC-032; C5 |
-| SC-035 | SC-031, SC-032, SC-034; C6, C7, C8 |
-| SC-036 | SC-035; C14 (CSV); `.xlsx` só com a biblioteca aprovada |
-| SC-037 | SC-035; C9, C10; orientação sobre prazo de retenção (C9) |
-| SC-038 | SC-035; C11 |
-| SC-039 | SC-033, SC-037, SC-030; C12 |
-| SC-040 | SC-031 a SC-039 |
+| SC-049 | C1 |
+| SC-050 | C2, C3 |
+| SC-051 | SC-050; C4; revisão da migração de `expense` |
+| SC-052 | SC-049, SC-050; C5 |
+| SC-053 | SC-049, SC-050, SC-052; C6, C7, C8 |
+| SC-054 | SC-053; C14 (CSV); `.xlsx` só com a biblioteca aprovada |
+| SC-055 | SC-053; C9, C10; orientação sobre prazo de retenção (C9) |
+| SC-056 | SC-053; C11 |
+| SC-057 | SC-051, SC-055, SC-030; C12 |
+| SC-058 | SC-049 a SC-057 |
 
-## SC-031 — Papel de funcionário (`STAFF`)
+## SC-049 — Papel de funcionário (`STAFF`)
+
+**Estado (2026-11-01):** autorizada e implementada ([validação](../quality/SC-049-VALIDATION.md)), com o limite por plano de 1, 3 e 10 funcionários decidido pelo responsável na mesma data.
 
 - `tenant_membership` aceita `STAFF`; os repositórios existentes continuam exigindo `OWNER` (negado por padrão).
 - **Convite:** o OWNER convida por e-mail; o convidado aceita depois de entrar com conta verificada. Convite expira em 7 dias e é de uso único.
@@ -41,7 +45,7 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 **Testes:** matriz de papéis em todos os endpoints existentes; convite expirado, reutilizado e de outro tenant; A/B.
 
-## SC-032 — Contas financeiras e movimentos
+## SC-050 — Contas financeiras e movimentos
 
 - **Migração aditiva:** `finance_account` (CASH, BANK, PAYMENT_PROVIDER) e `account_movement` só de acréscimo, com trigger como a V27.
 - Conta Mercado Pago criada automaticamente quando a loja conecta o provedor; uma conta CASH padrão "Caixa da loja".
@@ -52,7 +56,7 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 **Testes:** idempotência por `request_id`; transferência concorrente; trigger recusando UPDATE/DELETE; A/B.
 
-## SC-033 — Contas a pagar (evolução das despesas)
+## SC-051 — Contas a pagar (evolução das despesas)
 
 - `expense` ganha vencimento, fornecedor, número do documento, grupo de parcelas e recorrência mensal.
 - Situação derivada: aberta, vencida, paga, cancelada.
@@ -64,7 +68,7 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 **Testes:** relatório da SC-021 igual antes e depois da migração; baixa repetida; cancelamento de conta paga recusado sem estorno; A/B.
 
-## SC-034 — Sessão de caixa
+## SC-052 — Sessão de caixa
 
 - Abertura com fundo de troco; uma sessão aberta por conta CASH (índice único parcial).
 - Movimentos: suprimento, sangria (motivo, destino opcional → transferência), despesa paga pelo caixa.
@@ -76,7 +80,7 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 **Testes:** abertura e fechamento concorrentes; sangria maior que o saldo esperado (permitida, mas sinalizada); papéis; A/B.
 
-## SC-035 — Venda presencial (lançamento manual)
+## SC-053 — Venda presencial (lançamento manual)
 
 - Tabela `counter_sale` e itens, no módulo `orders`; `finance_entry` ganha `counter_sale_id` (C7).
 - **No livro de vendas, "Registrar venda presencial":** campo de busca **"Adicionar produto do estoque"** (nome, SKU ou variante, com o disponível à vista), quantidade, desconto em valor, forma de pagamento e conta de entrada. Só produtos do catálogo.
@@ -89,7 +93,7 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 **Testes:** venda concorrente com checkout da vitrine pelo último item; idempotência; cancelamento; STAFF registrando e OWNER cancelando; A/B.
 
-## SC-036 — Importação de vendas presenciais por planilha
+## SC-054 — Importação de vendas presenciais por planilha
 
 - Modelo CSV para baixar (data, código de venda opcional, SKU, quantidade, preço unitário, desconto, forma de pagamento). Uma linha por item.
 - **Envio → prévia → confirmação:** a prévia lista as vendas válidas e os erros por linha (SKU inexistente, estoque insuficiente, data futura, valor ou forma inválidos); só a confirmação grava, numa transação.
@@ -101,7 +105,7 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 **Testes:** arquivo vazio, grande demais, com BOM, separador `;` e `,`, decimal com vírgula, injeção de fórmula; estoque insuficiente no meio do arquivo; importação concorrente com venda online; A/B.
 
-## SC-037 — Crediário e contas a receber
+## SC-055 — Crediário e contas a receber
 
 - Cliente de crediário (nome, telefone, observação, limite opcional).
 - Venda no crediário gera 1 a 12 parcelas; recebimento parcial em qualquer conta, inclusive no caixa aberto.
@@ -112,7 +116,7 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 **Testes:** recebimento parcial e excedente (recusado); parcelas com arredondamento (a última absorve os centavos); acesso de outro tenant; A/B.
 
-## SC-038 — Livro de vendas
+## SC-056 — Livro de vendas
 
 - Relatório diário por canal e forma de pagamento: bruto, desconto, taxa, líquido, reembolso, quem registrou e origem (manual ou importação).
 - Totais do período iguais aos do relatório financeiro.
@@ -122,7 +126,7 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 **Testes:** igualdade com o relatório; período com reembolso e cancelamento; CSV com caracteres especiais; A/B.
 
-## SC-039 — Fluxo de caixa projetado e alertas
+## SC-057 — Fluxo de caixa projetado e alertas
 
 - Saldo das contas + a receber − a pagar, por dia, em 30, 60 e 90 dias; dias negativos marcados.
 - Alertas no `advisor`: contas a pagar vencendo em 3 dias, vencidas, crediário vencido (agregado, sem nome), quebra de caixa acima de um limite, saldo projetado negativo.
@@ -131,7 +135,7 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 **Testes:** limites de data no fuso de São Paulo; loja sem dados; A/B.
 
-## SC-040 — Revisão integrada
+## SC-058 — Revisão integrada
 
 - Revisão de segurança multi-tenant e de papéis em todo o módulo, incluindo a importação.
 - Conferência cruzada: livro × movimentos × estoque × relatório × livro de vendas.

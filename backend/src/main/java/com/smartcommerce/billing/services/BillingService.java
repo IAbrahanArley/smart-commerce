@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.LongSupplier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,7 +65,10 @@ public class BillingService {
         account.currentPeriodEnd(),
         enabled,
         new BillingAccountView.Limits(
-            limits.companies(), limits.productsPerStore(), limits.monthlyQuestions()),
+            limits.companies(),
+            limits.productsPerStore(),
+            limits.monthlyQuestions(),
+            limits.staff()),
         accounts.companiesOwned(user));
   }
 
@@ -82,6 +86,27 @@ public class BillingService {
               + limit
               + (limit == 1 ? " loja" : " lojas")
               + ". Mude de plano para criar outra.");
+  }
+
+  /**
+   * Before inviting an employee (ADR-0019 C1): the owner is in good standing and the people already
+   * working for him, plus open invitations, leave a free slot. Counted once per person over all of
+   * the owner's stores; {@code staffAndInvitations} is read only after the owner lock is held, so
+   * two invitations at once cannot both take the last slot.
+   */
+  @Transactional
+  public void requireStaffSlot(UUID owner, LongSupplier staffAndInvitations) {
+    if (!enabled) return;
+    accounts.lockOwner(owner);
+    var account = requireGoodStanding(owner);
+    int limit = account.limits().staff();
+    if (staffAndInvitations.getAsLong() >= limit)
+      throw new BillingException(
+          BillingException.Reason.PLAN_LIMIT,
+          "Seu plano permite até "
+              + limit
+              + (limit == 1 ? " funcionário" : " funcionários")
+              + ", contando os convites em aberto. Mude de plano para convidar mais.");
   }
 
   /** Before creating a product in a store; a store without owner is left to the access check. */
