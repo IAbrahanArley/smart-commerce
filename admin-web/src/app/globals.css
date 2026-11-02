@@ -176,6 +176,7 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .status-badge { display: inline-flex; align-items: center; gap: var(--sc-space-2); max-width: 100%; padding: var(--sc-space-1) var(--sc-space-2); border-radius: var(--sc-radius-control); font-size: .875rem; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
 .status-positive { color: var(--sc-color-success); background: var(--sc-color-success-background); }
 .status-neutral { color: var(--sc-color-text-secondary); background: var(--sc-color-disabled-background); }
+.status-danger { color: var(--sc-color-danger); background: var(--sc-color-danger-background); }
 
 .data-table-wrap { margin-top: var(--sc-space-6); background: var(--sc-color-surface); border: 1px solid var(--sc-color-divider); border-radius: var(--sc-radius-surface); }
 .data-table { width: 100%; border-collapse: collapse; }

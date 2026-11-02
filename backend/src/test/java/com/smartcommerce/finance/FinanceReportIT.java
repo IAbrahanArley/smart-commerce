@@ -64,6 +64,7 @@ class FinanceReportIT {
   @Autowired JdbcTemplate jdbc;
   @Autowired FinanceLedgerService ledger;
   @Autowired ExpenseService expenses;
+  @Autowired com.smartcommerce.finance.services.AccountService accounts;
   UUID ownerA;
   UUID tenantA;
   UUID tenantB;
@@ -215,7 +216,13 @@ class FinanceReportIT {
                 "Despesa sintética",
                 amount,
                 competence,
+                null,
+                null,
+                null,
+                null,
+                null,
                 paid,
+                paid == null ? null : accounts.list(ownerA, tenantA).get(0).id().toString(),
                 expenses.today()))
         .id();
   }

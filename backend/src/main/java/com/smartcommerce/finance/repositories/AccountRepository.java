@@ -156,9 +156,44 @@ public class AccountRepository {
         == 1;
   }
 
-  /** What a movement key already holds, to tell a retry from a different request. */
+  /**
+   * The money of a payable leaving its account (EXPENSE_PAYMENT, negative) or coming back when the
+   * paid bill is cancelled (EXPENSE_REFUND, positive), once per key (SC-051).
+   */
+  public boolean insertExpenseMovement(
+      UUID tenant,
+      UUID account,
+      String key,
+      String kind,
+      BigDecimal amount,
+      LocalDate occurredOn,
+      String description,
+      UUID expense,
+      UUID actor,
+      Instant now) {
+    return jdbc.update(
+            """
+            INSERT INTO account_movement(id, tenant_id, account_id, movement_key, kind, amount,
+              occurred_on, description, expense_id, created_by, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (tenant_id, movement_key) DO NOTHING
+            """,
+            UUID.randomUUID(),
+            tenant,
+            account,
+            key,
+            kind,
+            amount,
+            Date.valueOf(occurredOn),
+            description,
+            expense,
+            actor,
+            Timestamp.from(now))
+        == 1;
+  }
+
   public record Stored(UUID account, BigDecimal amount, LocalDate occurredOn, String description) {}
 
+  /** What a movement key already holds, to tell a retry from a different request. */
   public Optional<Stored> movement(UUID tenant, String key) {
     return jdbc
         .query(

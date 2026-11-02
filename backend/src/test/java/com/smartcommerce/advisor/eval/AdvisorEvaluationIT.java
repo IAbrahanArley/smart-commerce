@@ -130,6 +130,7 @@ class AdvisorEvaluationIT {
   @Autowired FinanceLedgerService ledger;
   @Autowired FinanceReportService finance;
   @Autowired ExpenseService expenses;
+  @Autowired com.smartcommerce.finance.services.AccountService accounts;
   @Autowired InventoryInsightService inventory;
 
   @DynamicPropertySource
@@ -576,7 +577,13 @@ class AdvisorEvaluationIT {
             description,
             amount,
             day.toString(),
+            null,
+            null,
+            null,
+            null,
+            null,
             day.toString(),
+            accounts.list(owner, tenant).get(0).id().toString(),
             day));
   }
 

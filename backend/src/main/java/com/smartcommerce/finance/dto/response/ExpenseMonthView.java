@@ -1,36 +1,30 @@
 package com.smartcommerce.finance.dto.response;
 
 import com.smartcommerce.finance.domain.Expense;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.YearMonth;
+import com.smartcommerce.finance.services.ExpenseService;
 import java.util.List;
 
 /**
- * Expenses of one competence month (SC-020): active totals split into fixed and variable, and every
- * expense of the month, cancelled ones included for the audit trail.
+ * Payables of one due month (SC-051): what is still to pay and what was paid among the bills due in
+ * the month, the store's past-due bills of any month, and the bills shown (cancelled ones included
+ * for the audit trail).
  */
 public record ExpenseMonthView(
-    String month, String total, String fixed, String variable, List<ExpenseView> expenses) {
-  public static ExpenseMonthView of(YearMonth month, List<Expense> expenses) {
-    BigDecimal fixed = sum(expenses, "FIXED");
-    BigDecimal variable = sum(expenses, "VARIABLE");
+    String month,
+    String situation,
+    String toPay,
+    String paid,
+    long overdueCount,
+    String overdueTotal,
+    List<ExpenseView> expenses) {
+  public static ExpenseMonthView of(ExpenseService.Payables payables, Expense.Situation situation) {
     return new ExpenseMonthView(
-        month.toString(),
-        money(fixed.add(variable)),
-        money(fixed),
-        money(variable),
-        expenses.stream().map(ExpenseView::of).toList());
-  }
-
-  private static BigDecimal sum(List<Expense> expenses, String kind) {
-    return expenses.stream()
-        .filter(expense -> expense.active() && kind.equals(expense.kind()))
-        .map(Expense::amount)
-        .reduce(BigDecimal.ZERO, BigDecimal::add);
-  }
-
-  private static String money(BigDecimal value) {
-    return value.setScale(2, RoundingMode.UNNECESSARY).toPlainString();
+        payables.month().toString(),
+        situation == null ? null : situation.name(),
+        ExpenseView.money(payables.totals().toPay()),
+        ExpenseView.money(payables.totals().paid()),
+        payables.overdue().count(),
+        ExpenseView.money(payables.overdue().total()),
+        payables.shown().stream().map(item -> ExpenseView.of(item, payables.today())).toList());
   }
 }

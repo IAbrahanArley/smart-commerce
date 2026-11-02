@@ -84,6 +84,20 @@ public class FinanceLedgerRepository {
         == 1;
   }
 
+  /**
+   * Fills the settlement of one entry once, when its money moves (SC-051: a payable is paid). The
+   * database allows nothing else on the ledger; returns whether this call filled it.
+   */
+  public boolean settle(UUID tenant, String key, Instant settledAt) {
+    return jdbc.update(
+            "UPDATE finance_entry SET settled_at=? WHERE tenant_id=? AND entry_key=?"
+                + " AND settled_at IS NULL",
+            utc(settledAt),
+            tenant,
+            key)
+        == 1;
+  }
+
   public Optional<FinanceEntry> find(UUID tenant, String key) {
     return jdbc
         .query(

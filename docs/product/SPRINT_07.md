@@ -60,6 +60,8 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 ## SC-051 — Contas a pagar (evolução das despesas)
 
+**Estado (2026-11-02):** autorizada e implementada ([validação](../quality/SC-051-VALIDATION.md)). Na mesma data, o responsável decidiu que cada parcela conta no mês em que vence e que uma conta paga pode ser cancelada com estorno do valor à conta de saída.
+
 - `expense` ganha vencimento, fornecedor, número do documento, grupo de parcelas e recorrência mensal.
 - Situação derivada: aberta, vencida, paga, cancelada.
 - **Baixa:** data, conta de saída, valor pago; juros/multa e desconto em lançamentos próprios; gera movimento na conta e preenche a liquidação no livro.

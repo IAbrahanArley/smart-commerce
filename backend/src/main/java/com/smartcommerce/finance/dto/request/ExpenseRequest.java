@@ -1,8 +1,11 @@
 package com.smartcommerce.finance.dto.request;
 
 /**
- * Store OWNER expense body (SC-020), validated by {@code ExpenseInput}: amount as text with up to
- * two decimals, dates as {@code yyyy-MM-dd}, {@code paidOn} optional.
+ * Store OWNER expense or payable body (SC-020, SC-051), validated by {@code ExpenseInput}: amount
+ * as text with up to two decimals (the total, with installments), dates as {@code yyyy-MM-dd}.
+ * Optional: {@code dueDate} (defaults to the competence), supplier, document number, {@code
+ * installments} (1 to 24), {@code recurrence} ({@code NONE} or {@code MONTHLY}) and, when already
+ * paid, {@code paidOn} together with {@code paidAccountId}.
  */
 public record ExpenseRequest(
     String requestId,
@@ -11,4 +14,10 @@ public record ExpenseRequest(
     String description,
     String amount,
     String competenceDate,
-    String paidOn) {}
+    String dueDate,
+    String supplier,
+    String documentNumber,
+    Integer installments,
+    String recurrence,
+    String paidOn,
+    String paidAccountId) {}

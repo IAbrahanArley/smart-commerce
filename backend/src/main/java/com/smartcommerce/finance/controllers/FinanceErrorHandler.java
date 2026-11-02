@@ -15,18 +15,32 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public final class FinanceErrorHandler {
   @ExceptionHandler(FinanceException.class)
   ResponseEntity<Map<String, String>> finance(FinanceException error) {
-    if (error.reason() == FinanceException.Reason.REQUEST_CONFLICT)
-      return ResponseEntity.status(409)
-          .cacheControl(CacheControl.noStore())
-          .body(
-              Map.of(
-                  "message",
-                  "Esta tentativa já registrou outra despesa. Recarregue a lista antes de lançar de novo.",
-                  "code",
-                  "REQUEST_CONFLICT"));
-    return ResponseEntity.status(404)
+    return switch (error.reason()) {
+      case REQUEST_CONFLICT ->
+          conflict(
+              "Esta tentativa já registrou outra despesa. Recarregue a lista antes de lançar de"
+                  + " novo.",
+              "REQUEST_CONFLICT");
+      case ALREADY_PAID ->
+          conflict(
+              "Esta conta já foi paga com outros dados. Recarregue a lista para ver o pagamento.",
+              "ALREADY_PAID");
+      case NOT_PAYABLE -> conflict("Uma conta cancelada não pode ser paga.", "NOT_PAYABLE");
+      case PROVIDER_READ_ONLY ->
+          conflict(
+              "A conta do Mercado Pago não paga contas manualmente. Escolha outra conta.",
+              "PROVIDER_READ_ONLY");
+      default ->
+          ResponseEntity.status(404)
+              .cacheControl(CacheControl.noStore())
+              .body(Map.of("message", "Despesa, conta ou loja não encontrada."));
+    };
+  }
+
+  private static ResponseEntity<Map<String, String>> conflict(String message, String code) {
+    return ResponseEntity.status(409)
         .cacheControl(CacheControl.noStore())
-        .body(Map.of("message", "Despesa ou loja não encontrada."));
+        .body(Map.of("message", message, "code", code));
   }
 
   @ExceptionHandler({
