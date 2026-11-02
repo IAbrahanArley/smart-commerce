@@ -73,7 +73,7 @@ assert.deepEqual(points.map(point => [point.label, point.revenue, point.orders, 
 assert.deepEqual(salesPoints([]), []);
 assert.equal(shortDay("2026-10-05"), "05/10");
 assert.equal(optionsText([{ name: "Cor", value: "Azul" }, { name: "Tamanho", value: "M" }]), "Cor: Azul · Tamanho: M");
-import { expenseDateErrors, expenseMonth, formatDay, lineText, monthLabel, monthOf, parseAmount, shiftMonth } from "../src/lib/expenses.ts";
+import { expenseDateErrors, expenseMonth, formatDay, installmentAmounts, lineText, monthLabel, monthOf, parseAmount, parseOptionalAmount, paymentTotal, shiftMonth, situationFromSlug } from "../src/lib/expenses.ts";
 
 // Expense dates: same boundaries as the backend, at São Paulo midnight and on leap days.
 const expenseNow = new Date("2026-10-23T02:30:00Z"); // still October 22 in São Paulo
@@ -105,6 +105,17 @@ for (const [input, expected] of [["12,5", "12.50"], ["1.234,56", "1234.56"], ["1
 for (const input of ["0", "0,00", "-5", "1,234", "abc", "1.2.3", ""]) assert.ok("error" in parseAmount(input), input);
 assert.deepEqual(lineText("  Aluguel  ", 200, "a descrição"), { text: "Aluguel" });
 for (const input of ["ab", "linha\nquebrada", "x".repeat(201)]) assert.ok("error" in lineText(input, 200, "a descrição"), input);
+
+// Payables (SC-051): previews mirror the backend split and payment total; filters come from the URL.
+assert.deepEqual(installmentAmounts("1000.00", 3), ["333.33", "333.33", "333.34"]);
+assert.deepEqual(installmentAmounts("900.00", 3), ["300.00", "300.00", "300.00"]);
+assert.deepEqual(installmentAmounts("0.03", 3), ["0.01", "0.01", "0.01"]);
+assert.equal(paymentTotal("500.00", "10.00", "5.00"), "505.00");
+assert.equal(paymentTotal("50.00", "0.00", "60.00"), "-10.00");
+for (const [input, expected] of [["", "0.00"], ["0", "0.00"], ["0,00", "0.00"], ["2,5", "2.50"]]) assert.deepEqual(parseOptionalAmount(input), { amount: expected }, input);
+for (const input of ["-1", "1,234", "abc"]) assert.ok("error" in parseOptionalAmount(input), input);
+assert.equal(situationFromSlug("vencidas"), "OVERDUE"); assert.equal(situationFromSlug("pagas"), "PAID");
+for (const invalid of [undefined, "", "OVERDUE", "atrasadas"]) assert.equal(situationFromSlug(invalid), null);
 
 // Orders (SC-010): URL values are validated before reaching the API; the reason mirrors the backend.
 assert.equal(orderStatus("EXPIRED"), "EXPIRED");

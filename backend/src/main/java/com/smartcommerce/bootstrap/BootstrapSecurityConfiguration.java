@@ -295,7 +295,9 @@ public class BootstrapSecurityConfiguration {
                     .requestMatchers(
                         HttpMethod.POST,
                         "/api/tenants/*/expenses",
-                        "/api/tenants/*/expenses/*/cancel")
+                        "/api/tenants/*/expenses/*/cancel",
+                        // SC-051: paying a payable (OWNER checked in the service).
+                        "/api/tenants/*/expenses/*/pay")
                     .authenticated()
                     // SC-050: accounts, statements, adjustments and transfers (OWNER checked in
                     // the service).

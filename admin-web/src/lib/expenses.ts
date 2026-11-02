@@ -1,9 +1,12 @@
-// Store OWNER manual expenses (SC-020, ADR-0015 F6). Pure helpers, free of React and Next imports
-// for the smoke test. The backend validates everything again.
+// Store OWNER expenses and payables (SC-020, SC-051; ADR-0015 F6, ADR-0019 C4). Pure helpers, free
+// of React and Next imports for the smoke test. The backend validates everything again.
 
 export type ExpenseCategory = "SHIPPING" | "PACKAGING" | "MARKETING" | "RENT" | "PEOPLE" | "OTHER";
 export type ExpenseKind = "FIXED" | "VARIABLE";
 
+export type Situation = "OPEN" | "OVERDUE" | "PAID" | "CANCELLED";
+
+// SC-051: an expense is also a payable. A paid one without paidAccountId was paid before SC-051.
 export type Expense = {
   id: string;
   category: ExpenseCategory;
@@ -11,14 +14,38 @@ export type Expense = {
   description: string;
   amount: string;
   competenceDate: string;
+  dueDate: string;
+  supplier: string | null;
+  documentNumber: string | null;
+  installmentNumber: number | null;
+  installmentCount: number | null;
+  recurrence: "NONE" | "MONTHLY";
+  situation: Situation;
   paidOn: string | null;
+  paidAccountId: string | null;
+  paidAccountName: string | null;
+  surcharge: string;
+  discount: string;
+  paidTotal: string | null;
   status: "ACTIVE" | "CANCELLED";
   createdAt: string;
   cancelledAt: string | null;
   cancelReason: string | null;
 };
 
-export type ExpenseMonth = { month: string; total: string; fixed: string; variable: string; expenses: Expense[] };
+// Payables falling due in one month: still to pay and paid among them, plus every past-due bill.
+export type ExpenseMonth = { month: string; situation: Situation | null; toPay: string; paid: string; overdueCount: number; overdueTotal: string; expenses: Expense[] };
+
+export const SITUATION_LABELS: Record<Situation, string> = { OPEN: "Em aberto", OVERDUE: "Vencida", PAID: "Paga", CANCELLED: "Cancelada" };
+// The filter lives in the URL in Portuguese (?situacao=vencidas); the API takes the code.
+export const SITUATION_SLUGS: Record<Situation, string> = { OPEN: "abertas", OVERDUE: "vencidas", PAID: "pagas", CANCELLED: "canceladas" };
+export const SITUATION_FILTERS: Record<Situation, string> = { OPEN: "Em aberto", OVERDUE: "Vencidas", PAID: "Pagas", CANCELLED: "Canceladas" };
+export const SITUATIONS = Object.keys(SITUATION_LABELS) as Situation[];
+export const MAX_INSTALLMENTS = 24;
+
+export function situationFromSlug(value: string | undefined): Situation | null {
+  return SITUATIONS.find(item => SITUATION_SLUGS[item] === value) ?? null;
+}
 
 export const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   SHIPPING: "Frete",
@@ -94,4 +121,28 @@ export function lineText(value: string, max: number, what: string): { text: stri
   if (length < 3) return { error: `Informe ${what} com pelo menos 3 caracteres.` };
   if (length > max) return { error: `Use até ${max} caracteres.` };
   return { text };
+}
+
+// Interest, fine or discount: blank is zero; otherwise like parseAmount, but zero is allowed.
+export function parseOptionalAmount(value: string): { amount: string } | { error: string } {
+  if (!value.trim()) return { amount: "0.00" };
+  if (/^\s*(R\$\s*)?0+([.,]0{1,2})?\s*$/.test(value)) return { amount: "0.00" };
+  const parsed = parseAmount(value);
+  return "error" in parsed ? { error: "Informe um valor com até duas casas decimais, ou deixe em branco." } : parsed;
+}
+
+const cents = (amount: string) => BigInt(amount.replace(".", ""));
+// BigInt() instead of literals: the build targets ES2017.
+const ZERO = BigInt(0); const HUNDRED = BigInt(100);
+const reais = (value: bigint) => { const sign = value < ZERO ? "-" : ""; const abs = value < ZERO ? -value : value; return `${sign}${abs / HUNDRED}.${String(abs % HUNDRED).padStart(2, "0")}`; };
+
+// Preview only, mirroring ExpenseInput.installmentAmounts: equal cents, the last absorbing the rest.
+export function installmentAmounts(total: string, count: number): string[] {
+  const all = cents(total); const each = all / BigInt(count);
+  return Array.from({ length: count }, (_, index) => reais(index < count - 1 ? each : all - each * BigInt(count - 1)));
+}
+
+// Preview only: what leaves the account when paying (amount + interest or fine − discount).
+export function paymentTotal(amount: string, surcharge: string, discount: string): string {
+  return reais(cents(amount) + cents(surcharge) - cents(discount));
 }

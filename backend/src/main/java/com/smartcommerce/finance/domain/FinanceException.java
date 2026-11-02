@@ -12,7 +12,11 @@ public final class FinanceException extends RuntimeException {
     /** A transfer from an account to itself (SC-050). */
     SAME_ACCOUNT,
     /** A manual adjustment or transfer on the Mercado Pago account, which is read-only. */
-    PROVIDER_READ_ONLY
+    PROVIDER_READ_ONLY,
+    /** The payable was already paid with other data, or before SC-051 with no account. */
+    ALREADY_PAID,
+    /** A cancelled payable cannot be paid (SC-051). */
+    NOT_PAYABLE
   }
 
   private final Reason reason;

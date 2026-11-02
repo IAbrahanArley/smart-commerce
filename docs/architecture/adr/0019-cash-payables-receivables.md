@@ -93,6 +93,46 @@ Regras comuns a todas as decisões: tenant derivado da sessão e conferido no SQ
 - **Fora desta tarefa:** o relatório financeiro ainda não lê os movimentos (C3), e as vendas e despesas ainda não geram movimentos. Isso chega com as contas a pagar (SC-051), a venda presencial (SC-053) e a SC-018 (liberação do Mercado Pago).
 - **Testes:** `AccountIT`, com Postgres real: saldo igual à soma dos movimentos, idempotência e conflito, extrato que fecha, trigger recusando `UPDATE` e `DELETE`, transferências concorrentes inteiras, validação de dinheiro, datas e limite de contas, e nenhum acesso de outro dono nem de funcionário. A matriz de papéis do `StaffIT` cobre as rotas novas automaticamente.
 
+## Implementação da SC-051 — contas a pagar (2026-11-02)
+
+- **Decisões do responsável (2026-11-02):**
+  - cada parcela conta no mês em que vence;
+  - uma conta paga pode ser cancelada, com estorno.
+- **Banco (V42):** colunas novas em `expense` e dois tipos de movimento ([DATA_MODEL.md](../DATA_MODEL.md)). As despesas existentes vencem na competência; as pagas ficam com "conta não informada". O livro não muda.
+- **Cadastro:**
+  - vencimento e competência valem um pelo outro quando só um é informado;
+  - fornecedor e número do documento são opcionais;
+  - **parcelas:** de 2 a 24, um mês entre cada uma a partir do primeiro vencimento; o total é dividido em centavos iguais e a última parcela absorve a diferença;
+  - **recorrência mensal:** não se combina com parcelas;
+  - criar já paga exige a data e a conta de saída.
+
+  Cada parcela é uma despesa com seu lançamento `EXPENSE` na mesma transação. Repetir o pedido devolve a primeira parcela, sem criar nada.
+- **Baixa (só integral):**
+  - informa data (até hoje), conta de saída, juros ou multa e desconto;
+  - o lançamento da despesa recebe a liquidação no dia do pagamento;
+  - juros ou multa (`EXPENSE`) e desconto (`EXPENSE_REVERSAL`) viram lançamentos próprios, com competência e liquidação nesse dia;
+  - o total sai da conta como `EXPENSE_PAYMENT`.
+
+  A conta do Mercado Pago é recusada (409 `PROVIDER_READ_ONLY`). Repetir o mesmo pagamento não muda nada; outro pagamento da mesma conta dá 409 `ALREADY_PAID`. Pagar uma conta mensal cria a do mês seguinte uma única vez (chave derivada da conta paga).
+- **Cancelamento:** sem conta de saída, igual à SC-020. Paga a partir de uma conta:
+  - cada lançamento ganha seu estorno, com a competência original e liquidação no dia do cancelamento;
+  - o valor pago volta para a conta (`EXPENSE_REFUND`) nesse mesmo dia.
+
+  Cancelar uma conta mensal paga cancela também a do mês seguinte, se ainda estiver em aberto: assim a correção, que gera a própria sucessora ao ser paga, não deixa duas contas no mesmo mês. Uma conta cancelada não pode ser paga (409 `NOT_PAYABLE`).
+- **Situação derivada:** aberta, vencida (a partir do dia seguinte ao vencimento), paga ou cancelada.
+- **API (só o OWNER, os demais recebem 404):**
+  - `GET /api/tenants/{id}/expenses?month=&situation=` lista por mês de vencimento, com "a pagar" e "pago" do mês e o total vencido de todos os meses; `situation=OVERDUE` mostra as vencidas de qualquer mês;
+  - `POST /expenses` recebe os campos novos;
+  - `POST /expenses/{id}/pay` registra a baixa.
+- **Admin:** "Despesas" passou a "Contas a pagar", com:
+  - navegação por mês de vencimento e abas por situação na URL (`?situacao=vencidas`);
+  - prévia das parcelas e do total pago;
+  - formulário de pagamento sem a conta do Mercado Pago;
+  - etiqueta vermelha para as vencidas;
+  - aviso, ao cancelar uma conta paga, de que o valor volta para a conta.
+- **Limitação:** a próxima conta mensal vence um mês depois da anterior; depois de um dia 31 que caiu em mês curto, as seguintes ficam no dia 30 ou 28.
+- **Fora desta tarefa:** o relatório financeiro continua lendo a liquidação do livro, que agora coincide com os pagamentos registrados nas contas; ler direto dos movimentos (C3) fica para quando as vendas também gerarem movimentos.
+
 ## Consequências e riscos
 
 - **Escopo:** é a maior ampliação desde o MVP (funcionário, venda presencial, crediário). Fatiado em tarefas independentes para poder parar em qualquer ponto com algo útil.

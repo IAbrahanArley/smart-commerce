@@ -88,7 +88,7 @@ export default function StoreFinance({ tenantId, period }: { tenantId: string; p
       <dl className="order-facts">
         <div><dt>Despesas fixas do período</dt><dd className="numeric">{formatBRL(report.fixedExpenses)}</dd></div>
       </dl>
-      <p className="field-help">Despesas fixas não entram na margem de contribuição. <Link href={`${storePath}/despesas`}>Ver despesas</Link>. Este resumo não é um demonstrativo contábil ou fiscal.</p>
+      <p className="field-help">Despesas fixas não entram na margem de contribuição. <Link href={`${storePath}/despesas`}>Ver contas a pagar</Link>. Este resumo não é um demonstrativo contábil ou fiscal.</p>
     </> : null}
   </section>;
 }
