@@ -8,11 +8,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.StringJoiner;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -76,6 +79,54 @@ public class CounterSaleRepository {
         like,
         like,
         limit);
+  }
+
+  /** Variants by SKU (SC-054), with what is available now; unknown SKUs are omitted. */
+  public List<CounterSaleRecords.Product> productsBySku(
+      UUID tenant, Collection<String> skus, Instant now) {
+    return jdbc.query(
+        PRODUCTS + " WHERE v.tenant_id=? AND v.sku=ANY(CAST(? AS text[]))",
+        CounterSaleRepository::product,
+        utc(now),
+        tenant,
+        texts(skus));
+  }
+
+  /** The import keys already written in this store, among {@code keys}. */
+  public Set<String> importedKeys(UUID tenant, Collection<String> keys) {
+    if (keys.isEmpty()) return Set.of();
+    return new HashSet<>(
+        jdbc.queryForList(
+            "SELECT import_key FROM counter_sale WHERE tenant_id=?"
+                + " AND import_key=ANY(CAST(? AS text[]))",
+            String.class,
+            tenant,
+            texts(keys)));
+  }
+
+  public void insertImport(
+      UUID tenant,
+      UUID id,
+      String fileHash,
+      int itemLines,
+      int salesCount,
+      UUID cashAccount,
+      UUID actor,
+      Instant now) {
+    jdbc.update(
+        """
+        INSERT INTO counter_sale_import(id,tenant_id,file_hash,item_lines,sales_count,
+          cash_account_id,created_by,created_at)
+        VALUES (?,?,?,?,?,?,?,?)
+        """,
+        id,
+        tenant,
+        fileHash,
+        itemLines,
+        salesCount,
+        cashAccount,
+        actor,
+        Timestamp.from(now));
   }
 
   /** The variants of a sale, for its snapshots; foreign or absent ones are omitted. */
@@ -157,13 +208,28 @@ public class CounterSaleRepository {
 
   /** Inserts once per request id; returns whether this call created it. */
   public boolean insert(UUID tenant, CounterSaleRecords.Sale sale, UUID actor, Instant now) {
+    return insert(tenant, sale, actor, now, null, null, null);
+  }
+
+  /**
+   * Inserts once per request id; an imported sale also carries its import, its fingerprint and the
+   * day it happened (SC-054). Returns whether this call created it.
+   */
+  public boolean insert(
+      UUID tenant,
+      CounterSaleRecords.Sale sale,
+      UUID actor,
+      Instant now,
+      UUID importId,
+      String importKey,
+      LocalDate soldOn) {
     boolean created =
         jdbc.update(
                 """
                 INSERT INTO counter_sale(id,tenant_id,request_id,payment_method,subtotal_amount,
                   discount_amount,total_amount,fee_percent,fee_amount,account_id,cash_session_id,
-                  expected_release_on,status,created_by,created_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'ACTIVE',?,?)
+                  expected_release_on,status,created_by,created_at,import_id,import_key,sold_on)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'ACTIVE',?,?,?,?,?)
                 ON CONFLICT (tenant_id, request_id) DO NOTHING
                 """,
                 sale.id(),
@@ -179,7 +245,10 @@ public class CounterSaleRepository {
                 sale.cashSessionId(),
                 sale.expectedReleaseOn() == null ? null : Date.valueOf(sale.expectedReleaseOn()),
                 actor,
-                Timestamp.from(now))
+                Timestamp.from(now),
+                importId,
+                importKey,
+                soldOn == null ? null : Date.valueOf(soldOn))
             == 1;
     if (!created) return false;
     int position = 0;
@@ -294,7 +363,8 @@ public class CounterSaleRepository {
         sale.cancelledAt(),
         sale.cancelReason(),
         sale.restocked(),
-        items);
+        items,
+        sale.soldOn());
   }
 
   private static final String SALE =
@@ -303,7 +373,7 @@ public class CounterSaleRepository {
         c.total_amount, c.fee_percent, c.fee_amount, c.account_id, a.name AS account_name,
         c.cash_session_id, c.expected_release_on, c.status, o.email_original AS created_by,
         c.created_at, k.email_original AS cancelled_by, c.cancelled_at, c.cancel_reason,
-        c.restocked
+        c.restocked, c.sold_on
       FROM counter_sale c
       JOIN identity_user o ON o.id=c.created_by
       LEFT JOIN identity_user k ON k.id=c.cancelled_by
@@ -311,6 +381,7 @@ public class CounterSaleRepository {
 
   private static CounterSaleRecords.Sale sale(ResultSet row, int index) throws SQLException {
     Date release = row.getDate("expected_release_on");
+    Date soldOn = row.getDate("sold_on");
     return new CounterSaleRecords.Sale(
         row.getObject("id", UUID.class),
         row.getObject("request_id", UUID.class),
@@ -331,7 +402,8 @@ public class CounterSaleRepository {
         instant(row, "cancelled_at"),
         row.getString("cancel_reason"),
         row.getObject("restocked", Boolean.class),
-        List.of());
+        List.of(),
+        soldOn == null ? null : soldOn.toLocalDate());
   }
 
   private static BigDecimal scaled(BigDecimal value) {
@@ -345,6 +417,13 @@ public class CounterSaleRepository {
 
   private static OffsetDateTime utc(Instant value) {
     return value.atOffset(ZoneOffset.UTC);
+  }
+
+  /** A text[] literal; SKUs and hex keys never hold quotes, commas or braces. */
+  private static String texts(Collection<String> values) {
+    var joiner = new StringJoiner(",", "{", "}");
+    new TreeSet<>(values).forEach(value -> joiner.add("\"" + value + "\""));
+    return joiner.toString();
   }
 
   private static String array(Collection<UUID> ids) {

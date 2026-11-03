@@ -323,7 +323,10 @@ public class BootstrapSecurityConfiguration {
                     .requestMatchers(
                         HttpMethod.POST,
                         "/api/tenants/*/counter-sales",
-                        "/api/tenants/*/counter-sales/*/cancel")
+                        "/api/tenants/*/counter-sales/*/cancel",
+                        // SC-054: spreadsheet import, OWNER only (checked in the service).
+                        "/api/tenants/*/counter-sales/imports",
+                        "/api/tenants/*/counter-sales/imports/preview")
                     .authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/tenants/*/counter-sales/settings")
                     .authenticated()

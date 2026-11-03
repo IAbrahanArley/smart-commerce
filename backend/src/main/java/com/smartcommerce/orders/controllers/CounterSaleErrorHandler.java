@@ -10,8 +10,12 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-/** Counter sale errors (SC-053): foreign and absent stores, sales or products are one 404. */
-@RestControllerAdvice(assignableTypes = CounterSaleController.class)
+/**
+ * Counter sale and import errors (SC-053, SC-054): foreign and absent stores, sales or products are
+ * one 404; a missing, unreadable or oversized file is a 400.
+ */
+@RestControllerAdvice(
+    assignableTypes = {CounterSaleController.class, CounterImportController.class})
 public final class CounterSaleErrorHandler {
   @ExceptionHandler(CounterSaleException.class)
   ResponseEntity<Map<String, String>> sale(CounterSaleException error) {
@@ -38,6 +42,16 @@ public final class CounterSaleErrorHandler {
       case PROVIDER_READ_ONLY ->
           reply(
               409, "Escolha uma conta bancária da loja para receber o Pix.", "PROVIDER_READ_ONLY");
+      case CASH_ACCOUNT_REQUIRED ->
+          reply(
+              409,
+              "Escolha a gaveta ou a conta bancária que recebeu o dinheiro das vendas da planilha.",
+              "CASH_ACCOUNT_REQUIRED");
+      case STALE_IMPORT ->
+          reply(
+              409,
+              "O estoque mudou desde a prévia. Nada foi importado: confira a prévia de novo.",
+              "STALE_IMPORT");
       case MISSING -> reply(404, "Venda, produto ou loja não encontrado.", "MISSING");
     };
   }
@@ -45,7 +59,9 @@ public final class CounterSaleErrorHandler {
   @ExceptionHandler({
     IllegalArgumentException.class,
     HttpMessageNotReadableException.class,
-    MethodArgumentTypeMismatchException.class
+    MethodArgumentTypeMismatchException.class,
+    org.springframework.web.multipart.MultipartException.class,
+    org.springframework.web.multipart.support.MissingServletRequestPartException.class
   })
   ResponseEntity<Map<String, String>> invalid() {
     return reply(400, "Confira os dados enviados.", "INVALID_REQUEST");

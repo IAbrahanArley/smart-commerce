@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { itemLabel, minus, parseDays, parsePercent, subtotal, withinLimit } from "../src/lib/counter-sales.ts";
+import { TEMPLATE, fileError, linesText } from "../src/lib/counter-import.ts";
 
 // SC-053 (ADR-0019 C6, C8): pure helpers of the counter sales. Imported by smoke.mjs.
 const product = (price, available = 5) => ({ variantId: price, name: "Camiseta", options: "", sku: "CAM", price, available });
@@ -19,3 +20,11 @@ assert.deepEqual(parseDays("30"), { days: 30 }); assert.deepEqual(parseDays(""),
 for (const input of ["121", "-1", "1,5"]) assert.ok("error" in parseDays(input), input);
 assert.equal(itemLabel({ name: "Camiseta", options: "Cor: Azul" }), "Camiseta (Cor: Azul)");
 assert.equal(itemLabel({ name: "Camiseta", options: "" }), "Camiseta");
+
+// SC-054 (ADR-0019 C14): the spreadsheet template and the checks before sending the file.
+assert.ok(TEMPLATE.startsWith("﻿data;codigo_venda;sku;quantidade;preco_unitario;desconto;forma_pagamento\r\n"));
+assert.equal(TEMPLATE.split("\r\n").filter(Boolean).length, 5);
+assert.equal(linesText([4]), "Linha 4"); assert.equal(linesText([2, 3]), "Linhas 2, 3");
+assert.equal(fileError({ name: "vendas.csv", size: 120 }), null);
+assert.equal(fileError({ name: "VENDAS.CSV", size: 120 }), null);
+for (const file of [null, { name: "vendas.xlsx", size: 120 }, { name: "vendas.csv", size: 0 }, { name: "vendas.csv", size: 1_048_577 }]) assert.ok(fileError(file), JSON.stringify(file));

@@ -8,6 +8,7 @@ import { type Account, parseAccounts } from "@/lib/accounts";
 import { formatDateTime } from "@/lib/cash";
 import { type CartLine, type CounterOverview, type CounterProduct, type CounterSale, type CounterSettings, METHOD_LABELS, METHODS, type PaymentMethod, itemLabel, minus, parseDays, parsePercent, subtotal, withinLimit } from "@/lib/counter-sales";
 import { formatDay, lineText, parseOptionalAmount } from "@/lib/expenses";
+import CounterImport from "@/components/counter-import";
 import PageHeader from "@/components/page-header";
 import StatusBadge from "@/components/status-badge";
 import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
@@ -276,13 +277,14 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
           <button type="button" className="button-secondary" disabled={busy} onClick={() => { setCancelling(null); setReason(""); }}>Manter venda</button>
         </div>
       </form> : null}
+      {owner ? <CounterImport tenantId={tenantId} onImported={() => setAttempt(current => current + 1)} /> : null}
       <section aria-labelledby="counter-sales-title">
         <h2 id="counter-sales-title">Últimas vendas na loja</h2>
         {data.sales.length ? <div className="data-table-wrap"><table className="data-table data-table-wrapping" role="table">
           <caption>As 50 vendas mais recentes registradas na loja</caption>
           <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Venda</th><th role="columnheader" scope="col">Pagamento</th><th role="columnheader" scope="col" className="numeric">Total</th><th role="columnheader" scope="col">Situação</th>{owner ? <th role="columnheader" scope="col">Ações</th> : null}</tr></thead>
           <tbody role="rowgroup">{data.sales.map(sale => <tr role="row" key={sale.id}>
-            <th role="rowheader" scope="row">{sale.items.map(item => `${item.quantity}× ${itemLabel(item)}`).join(", ")}<span className="cell-hint">{formatDateTime(sale.createdAt)} · por {sale.createdBy}</span></th>
+            <th role="rowheader" scope="row">{sale.items.map(item => `${item.quantity}× ${itemLabel(item)}`).join(", ")}<span className="cell-hint">{sale.soldOn ? `Venda de ${formatDay(sale.soldOn)}, importada em ${formatDateTime(sale.createdAt)}` : formatDateTime(sale.createdAt)} · por {sale.createdBy}</span></th>
             <td role="cell" data-label="Pagamento">{METHOD_LABELS[sale.paymentMethod]}{sale.accountName ? <span className="cell-hint">{sale.accountName}</span> : null}{sale.paymentMethod === "DEBIT" || sale.paymentMethod === "CREDIT" ? <span className="cell-hint">{sale.expectedReleaseOn ? `Recebe em ${formatDay(sale.expectedReleaseOn)}` : "Data de recebimento desconhecida"}{sale.fee ? ` · taxa ${formatBRL(sale.fee)}` : " · taxa não informada"}</span> : null}</td>
             <td role="cell" data-label="Total" className="numeric">{sale.status === "CANCELLED" ? <s>{formatBRL(sale.total)}</s> : formatBRL(sale.total)}{sale.discount !== "0.00" ? <span className="cell-hint">Desconto {formatBRL(sale.discount)}</span> : null}</td>
             <td role="cell" data-label="Situação"><StatusBadge tone={sale.status === "ACTIVE" ? "positive" : "neutral"}>{sale.status === "ACTIVE" ? "Registrada" : "Cancelada"}</StatusBadge>{sale.cancelReason ? <span className="cell-hint">{sale.cancelReason}</span> : null}</td>
