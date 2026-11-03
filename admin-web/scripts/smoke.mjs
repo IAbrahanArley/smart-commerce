@@ -313,6 +313,8 @@ try {
   assert.ok(html.includes('href="/cadastro"') && html.includes('href="/entrar"'), "Landing leva ao cadastro e ao login");
   assert.ok(html.includes('id="planos"') && html.includes("Começar teste grátis") && html.includes("Mais escolhido"), "Landing mostra os planos");
   assert.ok(!/em desenvolvimento|demonstraç/i.test(html), "Landing sem menção a desenvolvimento ou demonstração");
+  // Landing refresh (2026-11-03): the page describes the MVP scope, marketplaces and store customers included.
+  assert.ok(html.includes('id="operacao"') && html.includes("Balcão e caixa.") && html.includes("Mercado Livre e Shopee.") && html.includes("Clientes da loja."), "Landing mostra o escopo do MVP");
   for (const path of ["/componentes", "/admin/produtos", "/loja/produto"]) {
     const response = await fetch(`${baseUrl}${path}`, { signal: AbortSignal.timeout(5000) });
     assert.equal(response.status, 404, `${path}: demonstração removida`);

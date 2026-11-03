@@ -1,5 +1,15 @@
 # Landing e demonstrações — validação local
 
+## Rodada 3 — conteúdo com o escopo do MVP
+
+Data: 2026-11-03. Só conteúdo, dentro da direção visual já aprovada (tokens `--lp-*`, tipografia e componentes existentes; sem dependência nova).
+
+- **Decisão do responsável (2026-11-03):** a landing descreve o escopo de entrega do MVP como disponível, incluindo o que ainda não está no `main`: o restante da Sprint 7 (crediário, contas a receber, livro de vendas, fluxo de caixa projetado — SC-055 a SC-057), a Sprint 9 (Mercado Livre e Shopee), a Sprint 10 (clientes da loja) e a conta do comprador na vitrine. Uma primeira versão com a seção "Em breve" ("Em preparação"/"Em estudo") foi descartada por essa decisão.
+- **Condição:** a landing não pode ir para produção antes de esses recursos estarem entregues; o que não entrar no MVP sai da página antes da publicação. As Sprints 9 e 10 ainda são propostas sem aprovação das decisões M1–M12 e R2–R15, e a Shopee depende de cadastro de parceiro com prazo desconhecido.
+- **Conteúdo:** hero e recursos citam estoque único para vitrine, balcão e marketplaces; vitrine V1 com conta do comprador; "Mercado Livre e Shopee"; "Balcão e caixa" (contagem cega, sangria, suprimento, venda manual, CSV e crediário). A seção `#operacao` tem nove cartões: financeiro, contas a pagar e a receber, livro de vendas, fluxo de caixa, painel, alertas, clientes, assistente (em liberação gradual) e equipe.
+- **Verificado:** `npm run lint`, `typecheck`, `build` e `test:smoke` (com asserção para o escopo do MVP); a primeira versão foi vista no navegador em 653 px e 1440 px sem rolagem horizontal; a grade de nove cartões usa as mesmas regras responsivas.
+- **Limites:** a revisão `web-design-guidelines` não foi executada nesta rodada.
+
 ## Rodada 2 — direção visual exclusiva da landing
 
 Data: 2026-10-18. O responsável autorizou aplicar a direção da Pacto somente à home `/`, após análise REA da referência. Esta rodada substitui o tratamento visual da home descrito na rodada inicial abaixo, preservando as demonstrações e a plataforma operacional.
