@@ -42,7 +42,7 @@ export function alertText(alert: StoreAlert): string | null {
     case "PAYMENTS_NOT_CONNECTED": return "Conecte a conta Mercado Pago da loja para receber pagamentos.";
     case "MARGIN_NEGATIVE": return alert.amount ? `A margem de contribuição deste mês está negativa: ${formatBRL(alert.amount)}.` : null;
     case "COST_MISSING": return `${plural(count, "pedido pago", "pedidos pagos")} neste mês sem custo cadastrado. A margem fica parcial.`;
-    case "FEES_UNAVAILABLE": return `${plural(count, "venda", "vendas")} deste mês ainda sem a taxa do Mercado Pago. A margem fica parcial.`;
+    case "FEES_UNAVAILABLE": return `${plural(count, "venda", "vendas")} deste mês ainda sem a taxa informada (Mercado Pago ou cartão na loja). A margem fica parcial.`;
     case "ORDERS_EXPIRING": return `${plural(count, "pedido aguardando", "pedidos aguardando")} pagamento com reserva terminando em até 10 minutos.`;
     case "LOW_STOCK": return `${plural(count, "item", "itens")} com estoque baixo (5 unidades ou menos).`;
     case "WITHOUT_SALES": return `${plural(count, "item", "itens")} com estoque e sem venda nos últimos 30 dias.`;

@@ -91,6 +91,13 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 ## SC-053 — Venda presencial (lançamento manual)
 
+**Estado (2026-11-03):** autorizada e implementada ([validação](../quality/SC-053-VALIDATION.md)). Na mesma data, o responsável decidiu três regras:
+- o desconto do funcionário fica limitado a um percentual definido pelo dono;
+- cartão fica a receber, com a data prevista pelo prazo configurado;
+- o Pix entra numa conta padrão escolhida pelo dono.
+
+O livro de vendas (SC-056) ainda não existe. Por isso, por enquanto, a venda é registrada na página "Vendas na loja".
+
 - Tabela `counter_sale` e itens, no módulo `orders`; `finance_entry` ganha `counter_sale_id` (C7).
 - **No livro de vendas, "Registrar venda presencial":** campo de busca **"Adicionar produto do estoque"** (nome, SKU ou variante, com o disponível à vista), quantidade, desconto em valor, forma de pagamento e conta de entrada. Só produtos do catálogo.
 - Baixa de estoque na hora, no mesmo estoque da vitrine, com o bloqueio do inventário; recusa abaixo do disponível.

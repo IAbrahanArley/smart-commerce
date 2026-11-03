@@ -4,6 +4,7 @@ import "./smoke-billing.mjs";
 import "./smoke-staff.mjs";
 import "./smoke-accounts.mjs";
 import "./smoke-cash.mjs";
+import "./smoke-counter.mjs";
 import "./smoke-sprint8.mjs";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
@@ -92,7 +93,7 @@ assert.equal(reportPeriod("LAST_MONTH"), "LAST_MONTH");
 const breakdown = marginBreakdown({ grossRevenue: "100.00", refunds: "-10.00", fees: "5.00", cogs: "40.00", variableExpenses: "0.00", contributionMargin: "45.00" });
 assert.deepEqual(breakdown.map(row => [row.label, row.amount, row.amountText, row.kind]), [["Receita bruta", 100, "100.00", "revenue"], ["Reembolsos", 10, "-10.00", "deduction"], ["Taxas", 5, "5.00", "deduction"], ["Custo dos produtos", 40, "40.00", "deduction"], ["Despesas variáveis", 0, "0.00", "deduction"], ["Margem de contribuição", 45, "45.00", "result"]]);
 for (const invalid of [undefined, "", "last_month", "FOREVER"]) assert.equal(reportPeriod(invalid), "THIS_MONTH");
-assert.equal(missingText({ code: "FEES_UNAVAILABLE", count: 1 }), "1 venda sem a taxa do Mercado Pago informada");
+assert.equal(missingText({ code: "FEES_UNAVAILABLE", count: 1 }), "1 venda sem a taxa informada (Mercado Pago ou cartão na loja)");
 assert.equal(missingText({ code: "COST_MISSING", count: 2 }), "2 pedidos com produto sem custo cadastrado");
 assert.equal(percentText("15.00"), "15,00%"); assert.equal(percentText(null), "—");
 

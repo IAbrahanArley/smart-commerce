@@ -1,13 +1,14 @@
 export type Movement = {
-  id: string; type: "ENTRY" | "ADJUSTMENT" | "SALE" | "SALE_REVERSAL"; delta: number; balanceAfter: number;
+  id: string; type: "ENTRY" | "ADJUSTMENT" | "SALE" | "SALE_REVERSAL" | "COUNTER_SALE" | "COUNTER_RETURN"; delta: number; balanceAfter: number;
   reason: string; createdAt: string; sequence: string;
 };
 /** quantity = saldo físico; reserved = reservas ativas não vencidas; available = max(0, físico − reservado). */
 export type InventorySnapshot = { quantity: number; reserved: number; available: number; movements: Movement[]; nextCursor: string | null };
 export type MovementRequest = { requestId: string; type: "ENTRY" | "ADJUSTMENT"; delta: number; reason: string };
 
-// SALE and SALE_REVERSAL are recorded by the system for paid orders (SC-014), never by hand.
-export const MOVEMENT_LABELS: Record<Movement["type"], string> = { ENTRY: "Entrada", ADJUSTMENT: "Ajuste", SALE: "Venda", SALE_REVERSAL: "Devolução de venda" };
+// SALE and SALE_REVERSAL are recorded by the system for paid orders (SC-014), never by hand;
+// COUNTER_SALE and COUNTER_RETURN by whoever sold or cancelled at the physical store (SC-053).
+export const MOVEMENT_LABELS: Record<Movement["type"], string> = { ENTRY: "Entrada", ADJUSTMENT: "Ajuste", SALE: "Venda", SALE_REVERSAL: "Devolução de venda", COUNTER_SALE: "Venda na loja", COUNTER_RETURN: "Devolução de venda na loja" };
 
 export function wholeQuantity(value: string): number | null {
   if (!/^[0-9]{1,10}$/.test(value.trim())) return null;

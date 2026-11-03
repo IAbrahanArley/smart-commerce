@@ -40,10 +40,14 @@ public class FinanceReportRepository {
           COALESCE(SUM(e.amount) FILTER (WHERE e.type IN ('EXPENSE','EXPENSE_REVERSAL')
             AND x.kind='FIXED'),0),
           COUNT(*) FILTER (WHERE e.type='SALE'),
-          COUNT(*) FILTER (WHERE e.type='SALE' AND NOT EXISTS (SELECT 1 FROM finance_entry f
-            WHERE f.tenant_id=e.tenant_id AND f.order_id=e.order_id AND f.type='FEE')),
+          COUNT(*) FILTER (WHERE e.type='SALE' AND ((e.order_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM finance_entry f
+              WHERE f.tenant_id=e.tenant_id AND f.order_id=e.order_id AND f.type='FEE'))
+            OR (e.counter_sale_id IS NOT NULL AND EXISTS (SELECT 1 FROM counter_sale c
+              WHERE c.id=e.counter_sale_id AND c.tenant_id=e.tenant_id
+                AND c.payment_method IN ('DEBIT','CREDIT') AND c.fee_amount IS NULL)))),
           COUNT(*) FILTER (WHERE e.type='COGS' AND e.cost_incomplete),
-          COALESCE(SUM(e.amount) FILTER (WHERE e.type='CASH_DIFFERENCE'),0)
+          COALESCE(SUM(e.amount) FILTER (WHERE e.type='CASH_DIFFERENCE'),0),
+          COALESCE(SUM(e.amount) FILTER (WHERE e.type='FEE' AND e.counter_sale_id IS NOT NULL),0)
         FROM finance_entry e
         LEFT JOIN expense x ON x.id=e.expense_id AND x.tenant_id=e.tenant_id
         WHERE e.tenant_id=? AND e.competence_at>=? AND e.competence_at<?
@@ -59,7 +63,8 @@ public class FinanceReportRepository {
                 row.getLong(7),
                 row.getLong(8),
                 row.getLong(9),
-                row.getBigDecimal(10)),
+                row.getBigDecimal(10),
+                row.getBigDecimal(11)),
         tenant,
         utc(from),
         utc(to));
@@ -104,9 +109,12 @@ public class FinanceReportRepository {
     return jdbc.queryForObject(
         """
         SELECT COALESCE(SUM(e.amount),0),
-          COUNT(DISTINCT e.order_id) FILTER (WHERE e.type='SALE' AND NOT EXISTS (
-            SELECT 1 FROM finance_entry f WHERE f.tenant_id=e.tenant_id AND f.order_id=e.order_id
-              AND f.type='FEE'))
+          COUNT(DISTINCT COALESCE(e.order_id, e.counter_sale_id)) FILTER (WHERE e.type='SALE'
+            AND ((e.order_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM finance_entry f
+              WHERE f.tenant_id=e.tenant_id AND f.order_id=e.order_id AND f.type='FEE'))
+            OR (e.counter_sale_id IS NOT NULL AND EXISTS (SELECT 1 FROM counter_sale c
+              WHERE c.id=e.counter_sale_id AND c.tenant_id=e.tenant_id
+                AND c.payment_method IN ('DEBIT','CREDIT') AND c.fee_amount IS NULL))))
         FROM finance_entry e
         WHERE e.tenant_id=? AND e.type IN ('SALE','REFUND','FEE') AND e.settled_at IS NULL
           AND e.competence_at<?
@@ -126,7 +134,8 @@ public class FinanceReportRepository {
       long salesCount,
       long salesWithoutFee,
       long incompleteCosts,
-      BigDecimal cashDifferences) {}
+      BigDecimal cashDifferences,
+      BigDecimal informedFees) {}
 
   public record Receivable(BigDecimal amount, long salesWithoutFee) {}
 

@@ -231,6 +231,43 @@ public class AccountRepository {
         == 1;
   }
 
+  /**
+   * The money of a counter sale (SC-053): in (COUNTER_SALE) to the drawer of a cash session or the
+   * Pix account, out (COUNTER_SALE_REFUND) when it is cancelled; once per key.
+   */
+  public boolean insertCounterMovement(
+      UUID tenant,
+      UUID account,
+      String key,
+      String kind,
+      BigDecimal amount,
+      LocalDate occurredOn,
+      String description,
+      UUID counterSale,
+      UUID session,
+      UUID actor,
+      Instant now) {
+    return jdbc.update(
+            """
+            INSERT INTO account_movement(id, tenant_id, account_id, movement_key, kind, amount,
+              occurred_on, description, counter_sale_id, cash_session_id, created_by, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (tenant_id, movement_key) DO NOTHING
+            """,
+            UUID.randomUUID(),
+            tenant,
+            account,
+            key,
+            kind,
+            amount,
+            Date.valueOf(occurredOn),
+            description,
+            counterSale,
+            session,
+            actor,
+            Timestamp.from(now))
+        == 1;
+  }
+
   /** The drawer's balance now: the sum of all its movements. */
   public BigDecimal balance(UUID tenant, UUID account) {
     return jdbc.queryForObject(

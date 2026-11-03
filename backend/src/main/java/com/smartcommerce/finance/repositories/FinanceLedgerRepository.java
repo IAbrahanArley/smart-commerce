@@ -122,6 +122,40 @@ public class FinanceLedgerRepository {
         == 1;
   }
 
+  /**
+   * Records a counter sale fact once (SC-053, ADR-0019 C7): SALE, COGS, FEE, REFUND or
+   * COGS_REVERSAL pointing at the counter sale instead of an online order.
+   */
+  public boolean appendCounter(
+      UUID tenant,
+      String key,
+      String type,
+      BigDecimal amount,
+      Instant competenceAt,
+      Instant settledAt,
+      UUID counterSale,
+      boolean costIncomplete,
+      Instant now) {
+    return jdbc.update(
+            """
+            INSERT INTO finance_entry(id,tenant_id,entry_key,type,amount,currency,competence_at,
+              settled_at,counter_sale_id,cost_incomplete,created_at)
+            VALUES (?,?,?,?,?,'BRL',?,?,?,?,?)
+            ON CONFLICT (tenant_id, entry_key) DO NOTHING
+            """,
+            UUID.randomUUID(),
+            tenant,
+            key,
+            type,
+            amount,
+            utc(competenceAt),
+            settledAt == null ? null : utc(settledAt),
+            counterSale,
+            costIncomplete,
+            utc(now))
+        == 1;
+  }
+
   public Optional<FinanceEntry> find(UUID tenant, String key) {
     return jdbc
         .query(
