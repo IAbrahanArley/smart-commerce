@@ -69,9 +69,6 @@
 .preview-description a { display: inline-block; padding-block: .75rem; }
 .store-preview { background: var(--sc-color-surface); padding: 2.5rem; border-radius: var(--sc-radius-surface); }
 .store-preview h3 { font-size: 2rem; }
-.roadmap > p { max-width: 36rem; }
-.roadmap > h2 { margin-bottom: 2rem; }
-.roadmap ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 1rem 2.5rem; margin: 2rem 0 0; color: var(--sc-color-text-secondary); }
 .landing-closing { padding-block: 5rem; background: var(--landing-field); }
 .landing-closing .landing-wrap { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2rem; }
 .landing-closing h2 { max-width: 20ch; }
