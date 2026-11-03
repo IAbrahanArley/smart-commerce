@@ -202,7 +202,8 @@ public class CounterSaleService {
             null,
             null,
             null,
-            items);
+            items,
+            null);
     if (!sales.insert(tenant, sale, actor, now))
       throw new CounterSaleException(CounterSaleException.Reason.REQUEST_CONFLICT);
     if (!inventory.sellAtCounter(

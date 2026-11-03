@@ -207,6 +207,39 @@ Regras comuns a todas as decisões: tenant derivado da sessão e conferido no SQ
 
   O histórico de estoque e o extrato das contas reconhecem os tipos novos.
 
+## Implementação da SC-054 — importação por planilha (2026-11-03)
+
+- **Banco (V45):** `counter_sale_import` e, em `counter_sale`, o vínculo com a importação, a impressão digital da venda e o dia da venda ([DATA_MODEL.md](../DATA_MODEL.md)).
+- **Arquivo:** só CSV, até 1 MB e 500 linhas de itens, lido em memória e nunca guardado.
+  - **Codificação:** UTF-8, com ou sem BOM; se os bytes não forem UTF-8, Windows-1252 (o "CSV" do Excel em português).
+  - **Separador:** `;` ou `,`, conforme o cabeçalho.
+  - **Colunas:** pelo nome, em qualquer ordem e com variações ("Forma de pagamento", "Código da venda", "Preço").
+  - **Valores e datas:** aceita "R$ 1.234,50", "1234,50" e "1234.50", e datas em dd/mm/aaaa ou aaaa-mm-dd, de 2000 até hoje.
+  - **Recusas por linha:** célula começando com `=`, `+`, `-`, `@`, tabulação ou CR; crediário; linha com mais células preenchidas que o cabeçalho (uma vírgula decimal que partiu o preço). Linhas só de separadores são ignoradas.
+- **Venda:** linhas com a mesma data e o mesmo código formam uma venda; sem código, cada linha é uma venda.
+  - Se uma linha da venda tiver erro, a venda inteira espera a planilha corrigida. Isso evita gravar a venda sem um item e depois gravá-la de novo, inteira.
+  - A impressão digital é calculada a partir de data, código, forma e itens, mais a ocorrência do mesmo conteúdo no arquivo. Reenviar o arquivo, ou uma versão corrigida, não repete as vendas já importadas.
+  - Corrigir uma venda que já foi importada exige cancelá-la e registrá-la de novo.
+- **Prévia e confirmação:** a prévia (`POST /counter-sales/imports/preview`) não grava nada e mostra cada venda como pronta, já importada ou com erro.
+  - A confirmação (`POST /counter-sales/imports`) trava a loja, analisa o arquivo de novo e grava as vendas prontas numa transação, pelo mesmo caminho da SC-053.
+  - O que mudou desde a prévia (por exemplo, o estoque) aparece como erro na hora. Uma corrida no instante da baixa desfaz tudo (409 `STALE_IMPORT`).
+  - Só o dono importa.
+- **Datas e dinheiro:**
+  - a competência e a liquidação ficam no dia da venda, e o estoque sai na importação;
+  - o preço vem da planilha e o custo vem do catálogo atual;
+  - o dinheiro entra na gaveta ou na conta bancária escolhida na confirmação, fora de sessão de caixa (sem conta: 409 `CASH_ACCOUNT_REQUIRED`);
+  - o Pix entra na conta padrão;
+  - o cartão fica a receber a partir do dia da venda, mais o prazo configurado.
+- **Filtro de identidade:** as duas rotas entram na lista de uploads do `IdentityRequestFilter`, que continua exigindo `X-CSRF-TOKEN`; antes, elas caíam no limite de 8 KB.
+- **Admin:** "Importar vendas de uma planilha" na página "Vendas na loja", só para o dono. Tem:
+  - modelo para baixar;
+  - prévia com resumo, erros por linha e situação de cada venda;
+  - escolha da conta do dinheiro;
+  - confirmação.
+
+  Depois de importar, a prévia do mesmo arquivo é refeita e mostra o que entrou e o que ficou de fora. Na lista, a venda importada mostra a data da venda.
+- **Fora desta tarefa:** `.xlsx` direto, que depende de aprovar uma biblioteca.
+
 ## Consequências e riscos
 
 - **Escopo:** é a maior ampliação desde o MVP (funcionário, venda presencial, crediário). Fatiado em tarefas independentes para poder parar em qualquer ponto com algo útil.

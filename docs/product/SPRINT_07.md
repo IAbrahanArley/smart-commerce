@@ -111,6 +111,10 @@ O livro de vendas (SC-056) ainda não existe. Por isso, por enquanto, a venda é
 
 ## SC-054 — Importação de vendas presenciais por planilha
 
+**Estado (2026-11-03):** autorizada e implementada só com CSV ([validação](../quality/SC-054-VALIDATION.md)). Duas mudanças em relação ao plano:
+- **Código da venda:** vale dentro do dia, porque muitas lojas recomeçam a numeração todo dia.
+- **Venda com uma linha errada:** não entra até a planilha ser corrigida.
+
 - Modelo CSV para baixar (data, código de venda opcional, SKU, quantidade, preço unitário, desconto, forma de pagamento). Uma linha por item.
 - **Envio → prévia → confirmação:** a prévia lista as vendas válidas e os erros por linha (SKU inexistente, estoque insuficiente, data futura, valor ou forma inválidos); só a confirmação grava, numa transação.
 - Cada venda importada segue C6: `counter_sale`, lançamentos e baixa de estoque. Competência na data informada; baixa no momento da importação.

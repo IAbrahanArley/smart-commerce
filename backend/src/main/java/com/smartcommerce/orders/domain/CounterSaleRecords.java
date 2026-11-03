@@ -77,7 +77,8 @@ public final class CounterSaleRecords {
       Instant cancelledAt,
       String cancelReason,
       Boolean restocked,
-      List<Item> items) {
+      List<Item> items,
+      LocalDate soldOn) {
     public boolean active() {
       return "ACTIVE".equals(status);
     }

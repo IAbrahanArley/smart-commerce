@@ -41,11 +41,13 @@ public final class IdentityRequestFilter extends OncePerRequestFilter {
         "POST".equals(request.getMethod())
             && request
                 .getRequestURI()
-                // Product photos, the store logo (MVP 1b) and home banners (SC-043): the only
+                // Product photos, the store logo (MVP 1b), home banners (SC-043) and the counter
+                // sales spreadsheet (SC-054, at most 1 MB, read by the controller): the only
                 // uploads.
                 .matches(
                     "/api/tenants/[0-9a-fA-F-]{36}/(products/[0-9a-fA-F-]{36}/images|profile/logo"
-                        + "|content/banners/[0-9a-fA-F-]{36}/images/(desktop|mobile))")
+                        + "|content/banners/[0-9a-fA-F-]{36}/images/(desktop|mobile)"
+                        + "|counter-sales/imports(/preview)?)")
             && request.getContentType() != null
             && request
                 .getContentType()

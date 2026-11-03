@@ -16,7 +16,11 @@ public final class CounterSaleException extends RuntimeException {
     /** A cash sale into a cash session that is not open. */
     SESSION_CLOSED,
     /** The Pix account must be a bank account (not a drawer, not Mercado Pago). */
-    PROVIDER_READ_ONLY
+    PROVIDER_READ_ONLY,
+    /** An import with cash sales needs the drawer or bank account they went into (SC-054). */
+    CASH_ACCOUNT_REQUIRED,
+    /** The stock changed between the preview and the confirmation: nothing was imported. */
+    STALE_IMPORT
   }
 
   private final Reason reason;

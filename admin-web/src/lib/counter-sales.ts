@@ -8,6 +8,8 @@ export type CounterSale = {
   id: string; paymentMethod: PaymentMethod; subtotal: string; discount: string; total: string; fee: string | null;
   accountName: string | null; expectedReleaseOn: string | null; status: "ACTIVE" | "CANCELLED"; createdBy: string; createdAt: string;
   cancelledBy: string | null; cancelledAt: string | null; cancelReason: string | null; restocked: boolean | null; items: CounterItem[];
+  // SC-054: the day an imported sale happened (null for sales registered live).
+  soldOn: string | null;
 };
 export type CounterOverview = { role: "OWNER" | "STAFF"; staffDiscountLimit: string; pixAccountName: string | null; sessions: { id: string; accountName: string }[]; sales: CounterSale[] };
 export type CounterSettings = { staffDiscountLimit: string; pixAccountId: string | null; debitFeePercent: string | null; debitReleaseDays: number | null; creditFeePercent: string | null; creditReleaseDays: number | null };

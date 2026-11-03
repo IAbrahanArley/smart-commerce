@@ -74,6 +74,15 @@ public class CounterSaleMoneyService {
         .map(found -> found.name());
   }
 
+  /** A drawer or bank account of the store (SC-054: where an imported file's cash went). */
+  @Transactional(readOnly = true)
+  public Optional<String> cashOrBankAccountName(UUID tenant, UUID account) {
+    return accounts
+        .account(tenant, account)
+        .filter(found -> "CASH".equals(found.type()) || "BANK".equals(found.type()))
+        .map(found -> found.name());
+  }
+
   /** What a sale paid: method, account and session (cash), fee (cards) and settlement. */
   public record Payment(
       UUID account, UUID session, BigDecimal fee, boolean settledNow, String description) {}
@@ -87,16 +96,34 @@ public class CounterSaleMoneyService {
       boolean costIncomplete,
       Payment payment,
       UUID actor) {
+    recordSale(tenant, sale, total, knownCost, costIncomplete, payment, actor, now(), today());
+  }
+
+  /**
+   * A sale that happened at {@code soldAt} (an imported one, SC-054): its facts count and settle
+   * then, and its money moves on {@code soldOn}.
+   */
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public void recordSale(
+      UUID tenant,
+      UUID sale,
+      BigDecimal total,
+      BigDecimal knownCost,
+      boolean costIncomplete,
+      Payment payment,
+      UUID actor,
+      Instant soldAt,
+      LocalDate soldOn) {
     Instant now = now();
-    Instant settled = payment.settledNow() ? now : null;
+    Instant settled = payment.settledNow() ? soldAt : null;
     ledger.appendCounter(
-        tenant, "counter-sale:" + sale, "SALE", total, now, settled, sale, false, now);
+        tenant, "counter-sale:" + sale, "SALE", total, soldAt, settled, sale, false, now);
     ledger.appendCounter(
         tenant,
         "counter-cogs:" + sale,
         "COGS",
         knownCost.negate(),
-        now,
+        soldAt,
         null,
         sale,
         costIncomplete,
@@ -107,7 +134,7 @@ public class CounterSaleMoneyService {
           "counter-fee:" + sale,
           "FEE",
           payment.fee().negate(),
-          now,
+          soldAt,
           settled,
           sale,
           false,
@@ -119,7 +146,7 @@ public class CounterSaleMoneyService {
           "counter-sale:" + sale,
           "COUNTER_SALE",
           total,
-          today(),
+          soldOn,
           payment.description(),
           sale,
           payment.session(),

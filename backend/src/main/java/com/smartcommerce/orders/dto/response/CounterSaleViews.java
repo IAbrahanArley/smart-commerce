@@ -55,7 +55,8 @@ public final class CounterSaleViews {
       Instant cancelledAt,
       String cancelReason,
       Boolean restocked,
-      List<Item> items) {
+      List<Item> items,
+      LocalDate soldOn) {
     public static Sale of(CounterSaleRecords.Sale sale) {
       return of(sale, true);
     }
@@ -89,7 +90,8 @@ public final class CounterSaleViews {
                           money(item.unitPrice()),
                           item.quantity(),
                           money(item.lineTotal())))
-              .toList());
+              .toList(),
+          sale.soldOn());
     }
   }
 
