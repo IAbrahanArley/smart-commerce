@@ -74,6 +74,11 @@ Sem PDV: não há leitor de código de barras, cupom, TEF nem impressora. Nada a
 
 ## SC-052 — Sessão de caixa
 
+**Estado (2026-11-03):** autorizada e implementada ([validação](../quality/SC-052-VALIDATION.md)). Na mesma data, o responsável decidiu três coisas:
+- a diferença de caixa entra no resultado como linha própria;
+- o funcionário pode registrar despesa paga pela gaveta;
+- sangria e suprimento sem conta são retirada e aporte do dono.
+
 - Abertura com fundo de troco; uma sessão aberta por conta CASH (índice único parcial).
 - Movimentos: suprimento, sangria (motivo, destino opcional → transferência), despesa paga pelo caixa.
 - **Fechamento com contagem cega**; diferença registrada como `CASH_DIFFERENCE`.

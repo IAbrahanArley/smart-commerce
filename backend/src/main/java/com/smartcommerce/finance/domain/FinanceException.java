@@ -16,7 +16,11 @@ public final class FinanceException extends RuntimeException {
     /** The payable was already paid with other data, or before SC-051 with no account. */
     ALREADY_PAID,
     /** A cancelled payable cannot be paid (SC-051). */
-    NOT_PAYABLE
+    NOT_PAYABLE,
+    /** The drawer already has an open cash session (SC-052). */
+    SESSION_OPEN,
+    /** The cash session is closed: no movement, no second close (SC-052). */
+    SESSION_CLOSED
   }
 
   private final Reason reason;

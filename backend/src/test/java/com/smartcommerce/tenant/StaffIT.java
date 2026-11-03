@@ -299,6 +299,9 @@ class StaffIT {
                 : methods) {
           // The company itself is shown to its employees on purpose (to reach their features).
           if (pattern.equals("/api/tenants/{tenantId}") && method.name().equals("GET")) continue;
+          // SC-052: the cash register is the employees' own screen (checked in CashIT).
+          if (pattern.equals("/api/tenants/{tenantId}/cash") && method.name().equals("GET"))
+            continue;
           String path =
               pattern
                   .replace("{tenantId}", store)

@@ -98,6 +98,30 @@ public class FinanceLedgerRepository {
         == 1;
   }
 
+  /**
+   * Records a cash difference once (SC-052): counted minus expected, either sign, as its own result
+   * line, with competence and settlement on the day it was found.
+   */
+  public boolean appendCashDifference(
+      UUID tenant, String key, BigDecimal amount, Instant day, UUID session, Instant now) {
+    return jdbc.update(
+            """
+            INSERT INTO finance_entry(id,tenant_id,entry_key,type,amount,currency,competence_at,
+              settled_at,cash_session_id,created_at)
+            VALUES (?,?,?,'CASH_DIFFERENCE',?,'BRL',?,?,?,?)
+            ON CONFLICT (tenant_id, entry_key) DO NOTHING
+            """,
+            UUID.randomUUID(),
+            tenant,
+            key,
+            amount,
+            utc(day),
+            utc(day),
+            session,
+            utc(now))
+        == 1;
+  }
+
   public Optional<FinanceEntry> find(UUID tenant, String key) {
     return jdbc
         .query(

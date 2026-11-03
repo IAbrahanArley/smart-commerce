@@ -24,8 +24,8 @@ public class FinanceReportRepository {
 
   /**
    * Signed sums by competence in [from, to): sales, refunds, fees, COGS (with reversals), variable
-   * and fixed expenses (with reversals), number of sales, sales without a fee entry and COGS
-   * entries built from incomplete costs.
+   * and fixed expenses (with reversals), number of sales, sales without a fee entry, COGS entries
+   * built from incomplete costs and cash differences (SC-052, signed: negative is cash missing).
    */
   public Totals totals(UUID tenant, Instant from, Instant to) {
     return jdbc.queryForObject(
@@ -42,7 +42,8 @@ public class FinanceReportRepository {
           COUNT(*) FILTER (WHERE e.type='SALE'),
           COUNT(*) FILTER (WHERE e.type='SALE' AND NOT EXISTS (SELECT 1 FROM finance_entry f
             WHERE f.tenant_id=e.tenant_id AND f.order_id=e.order_id AND f.type='FEE')),
-          COUNT(*) FILTER (WHERE e.type='COGS' AND e.cost_incomplete)
+          COUNT(*) FILTER (WHERE e.type='COGS' AND e.cost_incomplete),
+          COALESCE(SUM(e.amount) FILTER (WHERE e.type='CASH_DIFFERENCE'),0)
         FROM finance_entry e
         LEFT JOIN expense x ON x.id=e.expense_id AND x.tenant_id=e.tenant_id
         WHERE e.tenant_id=? AND e.competence_at>=? AND e.competence_at<?
@@ -57,7 +58,8 @@ public class FinanceReportRepository {
                 row.getBigDecimal(6),
                 row.getLong(7),
                 row.getLong(8),
-                row.getLong(9)),
+                row.getLong(9),
+                row.getBigDecimal(10)),
         tenant,
         utc(from),
         utc(to));
@@ -123,7 +125,8 @@ public class FinanceReportRepository {
       BigDecimal fixedExpenses,
       long salesCount,
       long salesWithoutFee,
-      long incompleteCosts) {}
+      long incompleteCosts,
+      BigDecimal cashDifferences) {}
 
   public record Receivable(BigDecimal amount, long salesWithoutFee) {}
 

@@ -312,6 +312,20 @@ public class BootstrapSecurityConfiguration {
                         "/api/tenants/*/finance/accounts/*/adjustments",
                         "/api/tenants/*/finance/transfers")
                     .authenticated()
+                    // SC-052: cash register (OWNER or STAFF, checked in the service).
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/tenants/*/cash",
+                        "/api/tenants/*/cash/sessions",
+                        "/api/tenants/*/cash/sessions/*")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/tenants/*/cash/sessions",
+                        "/api/tenants/*/cash/sessions/*/movements",
+                        "/api/tenants/*/cash/sessions/*/close",
+                        "/api/tenants/*/cash/sessions/*/reopen")
+                    .authenticated()
                     .requestMatchers(
                         HttpMethod.GET, "/api/tenants/*/products", "/api/tenants/*/products/*")
                     .authenticated()

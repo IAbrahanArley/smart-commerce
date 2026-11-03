@@ -75,6 +75,22 @@ public class ExpenseService {
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public Expense create(UUID actor, UUID tenant, ExpenseInput input) {
     requireOwner(actor, tenant);
+    return createAs(actor, tenant, input, null);
+  }
+
+  /**
+   * An expense paid with the drawer's cash during a cash session (SC-052): recorded and paid at
+   * once, its movement tied to the session. Internal: the caller has already authorized the store's
+   * OWNER or employee and locked the open session, inside its own transaction.
+   */
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public Expense recordFromDrawer(UUID actor, UUID tenant, ExpenseInput input, UUID session) {
+    if (input.paidOn() == null || input.installments() != 1 || input.monthly())
+      throw new IllegalArgumentException("Invalid drawer expense");
+    return createAs(actor, tenant, input, session);
+  }
+
+  private Expense createAs(UUID actor, UUID tenant, ExpenseInput input, UUID session) {
     Instant now = now();
     List<BigDecimal> amounts = input.installmentAmounts();
     boolean installments = amounts.size() > 1;
@@ -113,7 +129,7 @@ public class ExpenseService {
     }
     if (input.paidOn() != null) {
       Expense created = expenses.lock(tenant, first).orElseThrow();
-      settle(tenant, created, ExpensePayment.of(input), actor, now);
+      settle(tenant, created, ExpensePayment.of(input), actor, now, session);
     }
     return expenses.byId(tenant, first).orElseThrow();
   }
@@ -131,7 +147,7 @@ public class ExpenseService {
       if (expense.paidAccountId() != null && payment.sameAs(expense)) return expense;
       throw new FinanceException(FinanceException.Reason.ALREADY_PAID);
     }
-    settle(tenant, expense, payment, actor, now());
+    settle(tenant, expense, payment, actor, now(), null);
     return expenses.byId(tenant, id).orElseThrow();
   }
 
@@ -203,6 +219,7 @@ public class ExpenseService {
         today,
         expense.description(),
         id,
+        null,
         actor,
         now);
     return expenses.byId(tenant, id).orElseThrow();
@@ -259,7 +276,7 @@ public class ExpenseService {
   }
 
   private void settle(
-      UUID tenant, Expense expense, ExpensePayment payment, UUID actor, Instant now) {
+      UUID tenant, Expense expense, ExpensePayment payment, UUID actor, Instant now, UUID session) {
     FinanceAccount account =
         accounts
             .account(tenant, payment.accountId())
@@ -305,6 +322,7 @@ public class ExpenseService {
         payment.paidOn(),
         expense.description(),
         id,
+        session,
         actor,
         now);
     if (expense.monthly()) next(tenant, expense, actor, now);

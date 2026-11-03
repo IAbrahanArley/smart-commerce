@@ -89,15 +89,15 @@ public record ExpenseInput(
       LocalDate today) {
     UUID request = uuid(requestId);
     if (request == null) throw new IllegalArgumentException("Invalid request id");
-    if (!CATEGORIES.contains(category)) throw new IllegalArgumentException("Invalid category");
-    if (!KINDS.contains(kind)) throw new IllegalArgumentException("Invalid kind");
+    if (!listed(CATEGORIES, category)) throw new IllegalArgumentException("Invalid category");
+    if (!listed(KINDS, kind)) throw new IllegalArgumentException("Invalid kind");
     BigDecimal value = money(amount);
     if (value == null || value.signum() <= 0) throw new IllegalArgumentException("Invalid amount");
     int count = installments == null ? 1 : installments;
     if (count < 1 || count > MAX_INSTALLMENTS)
       throw new IllegalArgumentException("Invalid installments");
     String repeat = recurrence == null || recurrence.isBlank() ? "NONE" : recurrence;
-    if (!RECURRENCES.contains(repeat)) throw new IllegalArgumentException("Invalid recurrence");
+    if (!listed(RECURRENCES, repeat)) throw new IllegalArgumentException("Invalid recurrence");
     LocalDate limit = today.plusYears(1);
     LocalDate due = blank(dueDate) ? null : date(dueDate);
     if (!blank(dueDate) && (due == null || due.isBefore(FLOOR) || due.isAfter(limit)))
@@ -141,6 +141,10 @@ public record ExpenseInput(
         repeat,
         paid,
         account);
+  }
+
+  public boolean monthly() {
+    return "MONTHLY".equals(recurrence);
   }
 
   /** The amount of each installment, in order: equal cents, the last one absorbing the rest. */
@@ -211,6 +215,11 @@ public record ExpenseInput(
 
   static UUID uuid(String value) {
     return value != null && value.matches(UUID_PATTERN) ? UUID.fromString(value) : null;
+  }
+
+  /** Whether {@code value} is one of a fixed list; absent is not (List.of refuses null lookups). */
+  public static boolean listed(List<String> list, String value) {
+    return value != null && list.contains(value);
   }
 
   static boolean blank(String value) {

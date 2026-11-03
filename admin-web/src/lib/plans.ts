@@ -28,17 +28,17 @@ export const PLANS: Plan[] = [
   {
     id: "essencial", name: "Essencial", summary: "Para começar a vender online com uma loja.",
     prices: { monthly: 59, semiannual: 318, annual: 564 }, stores: 1,
-    features: ["1 loja", "Até 150 produtos", "Vitrine, carrinho e pedidos", "Pagamentos pelo Mercado Pago, sem tarifa por venda", "Resumo financeiro do mês", "Alertas de estoque e pedidos"],
+    features: ["1 loja", "Até 150 produtos", "Vitrine, carrinho e pedidos", "Pagamentos pelo Mercado Pago, sem tarifa por venda", "Resumo financeiro do mês", "Caixa da loja com 1 funcionário", "Alertas de estoque e pedidos"],
   },
   {
     id: "profissional", name: "Profissional", summary: "Para quem quer acompanhar margem e crescer.", featured: true,
     prices: { monthly: 129, semiannual: 696, annual: 1236 }, stores: 2,
-    features: ["Até 2 lojas", "Até 2.000 produtos por loja", "Tudo do Essencial", "Financeiro completo: margem, despesas e caixa", "Assistente com IA: 60 perguntas por mês", "Suporte prioritário por e-mail"],
+    features: ["Até 2 lojas", "Até 2.000 produtos por loja", "Tudo do Essencial", "Financeiro completo: margem, despesas e caixa", "Até 3 funcionários no caixa", "Assistente com IA: 60 perguntas por mês", "Suporte prioritário por e-mail"],
   },
   {
     id: "escala", name: "Escala", summary: "Para operações com várias lojas.",
     prices: { monthly: 299, semiannual: 1614, annual: 2868 }, stores: 5,
-    features: ["Até 5 lojas", "Produtos sem limite", "Tudo do Profissional", "Assistente com IA: 200 perguntas por mês", "Suporte prioritário"],
+    features: ["Até 5 lojas", "Produtos sem limite", "Tudo do Profissional", "Até 10 funcionários no caixa", "Assistente com IA: 200 perguntas por mês", "Suporte prioritário"],
   },
 ];
 

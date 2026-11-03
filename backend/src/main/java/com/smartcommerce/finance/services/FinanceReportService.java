@@ -95,7 +95,8 @@ public class FinanceReportService {
                 gross.divide(BigDecimal.valueOf(totals.salesCount()), 2, RoundingMode.HALF_EVEN))
             : null,
         new FinanceReportView.Receivable(money(receivable.amount()), receivable.salesWithoutFee()),
-        money(reports.settled(tenant, period.from(), period.to())));
+        money(reports.settled(tenant, period.from(), period.to())),
+        money(totals.cashDifferences()));
   }
 
   /**

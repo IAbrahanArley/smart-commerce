@@ -6,7 +6,7 @@ import { decimalInput } from "./catalog.ts";
 export type AccountType = "CASH" | "BANK" | "PAYMENT_PROVIDER";
 export type Account = { id: string; type: AccountType; name: string; systemKey: string | null; balance: string };
 export type Movement = {
-  id: string; kind: "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "EXPENSE_PAYMENT" | "EXPENSE_REFUND"; amount: string; occurredOn: string;
+  id: string; kind: "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "EXPENSE_PAYMENT" | "EXPENSE_REFUND" | "CASH_DIFFERENCE" | "OWNER_WITHDRAWAL" | "OWNER_CONTRIBUTION"; amount: string; occurredOn: string;
   description: string | null; counterpartAccountId: string | null; balanceAfter: string;
 };
 export type Statement = { account: Account; from: string; to: string; openingBalance: string; closingBalance: string; movements: Movement[]; truncated: boolean };
@@ -17,10 +17,10 @@ const MONEY = /^-?\d{1,16}\.\d{2}$/;
 const BALANCE = /^-?\d+\.\d{2}$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const TYPES: readonly AccountType[] = ["CASH", "BANK", "PAYMENT_PROVIDER"];
-const KINDS: readonly Movement["kind"][] = ["ADJUSTMENT", "TRANSFER_OUT", "TRANSFER_IN", "EXPENSE_PAYMENT", "EXPENSE_REFUND"];
+const KINDS: readonly Movement["kind"][] = ["ADJUSTMENT", "TRANSFER_OUT", "TRANSFER_IN", "EXPENSE_PAYMENT", "EXPENSE_REFUND", "CASH_DIFFERENCE", "OWNER_WITHDRAWAL", "OWNER_CONTRIBUTION"];
 
 export const TYPE_LABELS: Record<AccountType, string> = { CASH: "Dinheiro (gaveta)", BANK: "Banco", PAYMENT_PROVIDER: "Mercado Pago" };
-export const KIND_LABELS: Record<Movement["kind"], string> = { ADJUSTMENT: "Ajuste", TRANSFER_OUT: "Transferência enviada", TRANSFER_IN: "Transferência recebida", EXPENSE_PAYMENT: "Pagamento de conta", EXPENSE_REFUND: "Estorno de conta paga" };
+export const KIND_LABELS: Record<Movement["kind"], string> = { ADJUSTMENT: "Ajuste", TRANSFER_OUT: "Transferência enviada", TRANSFER_IN: "Transferência recebida", EXPENSE_PAYMENT: "Pagamento de conta", EXPENSE_REFUND: "Estorno de conta paga", CASH_DIFFERENCE: "Diferença de caixa", OWNER_WITHDRAWAL: "Retirada do dono", OWNER_CONTRIBUTION: "Aporte do dono" };
 
 const text = (value: unknown, max: number) => typeof value === "string" && value.length <= max ? value : null;
 
