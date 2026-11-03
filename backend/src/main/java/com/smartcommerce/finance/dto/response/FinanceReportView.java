@@ -7,7 +7,9 @@ import java.util.List;
  * The store's financial summary of a period (SC-021, ADR-0015 F1–F5). Money is text with two
  * decimals; deductions (refunds, fees, COGS, expenses) are shown as positive amounts and the margin
  * keeps its sign. {@code complete} is false whenever a component is unknown, and {@code missing}
- * says what: then the margin is a partial figure, never a definitive profit.
+ * says what: then the margin is a partial figure, never a definitive profit. {@code
+ * cashDifferences} (SC-052) is the drawer counts minus the expected amounts, signed (negative is
+ * cash missing): a result line of its own, outside the contribution margin.
  */
 public record FinanceReportView(
     Period period,
@@ -25,7 +27,8 @@ public record FinanceReportView(
     long paidOrders,
     String averageTicket,
     Receivable receivable,
-    String cashMovement) {
+    String cashMovement,
+    String cashDifferences) {
   /** {@code lastDay} is inclusive. */
   public record Period(String key, LocalDate firstDay, LocalDate lastDay) {}
 

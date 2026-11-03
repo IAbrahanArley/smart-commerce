@@ -141,6 +141,17 @@ V40 (SC-049, ADR-0019 C1, 2026-11-01), aditiva:
 - `staff_invitation`: um convite por linha, com todo o ciclo de vida (enviado, aceito ou cancelado, acesso revogado). Guarda só o hash SHA-256 do token de uso único, o e-mail convidado (chave de comparação e grafia original, o mínimo para casar com a conta e mostrar ao OWNER), quem convidou, validade de 7 dias, quem aceitou e quem revogou. Um índice único parcial deixa no máximo um convite em aberto por e-mail e empresa.
 - **Dado pessoal:** o e-mail do convite fica guardado também depois de aceito, cancelado ou expirado, para o histórico da equipe. A retenção segue a mesma validação jurídica pendente do D2.
 
+V43 (SC-052, ADR-0019 C5, 2026-11-03), aditiva:
+- `cash_session`: sessão de uma gaveta (conta `CASH`), com fundo de troco contado, quem abriu e quando. O fechamento grava, juntos, o pedido de fechamento, o valor contado, o esperado (o saldo da gaveta antes da diferença), quem fechou e quando. A reabertura é uma sessão nova que aponta para a fechada (`reopened_from`, no máximo uma por sessão), com o motivo.
+  - **Banco:** um índice único parcial deixa só uma sessão `OPEN` por gaveta. Um trigger só permite a passagem de `OPEN` para `CLOSED`, uma vez e sem mudar os dados da abertura, e recusa `DELETE`.
+- `account_movement` ganha `cash_session_id` (FK composta) e os tipos:
+  - `CASH_DIFFERENCE`, com qualquer sinal;
+  - `OWNER_WITHDRAWAL`, negativo;
+  - `OWNER_CONTRIBUTION`, positivo.
+
+  Os três exigem a sessão e a descrição. Um trigger recusa movimento de sessão fechada ou de outra gaveta.
+- `finance_entry` ganha `cash_session_id` e o tipo `CASH_DIFFERENCE`: qualquer sinal, nunca zero, sempre com a sessão. As CHECKs de tipo e sinal foram recriadas, e o trigger de só acréscimo (V27) passou a proteger também a coluna nova.
+
 V42 (SC-051, ADR-0019 C3 e C4, 2026-11-02), aditiva. A despesa passa a ser também a conta a pagar; nenhum lançamento do livro nem movimento muda:
 - `expense` ganha `due_date` (as existentes vencem na competência), fornecedor (2 a 120 caracteres) e número do documento (até 40), ambos opcionais.
 - **Parcelas:** `installment_group` (o `request_id` do pedido que as criou), `installment_number` e `installment_count` (2 a 24), todos juntos ou nenhum, únicos por grupo e número.

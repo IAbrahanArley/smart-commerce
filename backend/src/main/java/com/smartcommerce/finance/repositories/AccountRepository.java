@@ -169,13 +169,14 @@ public class AccountRepository {
       LocalDate occurredOn,
       String description,
       UUID expense,
+      UUID session,
       UUID actor,
       Instant now) {
     return jdbc.update(
             """
             INSERT INTO account_movement(id, tenant_id, account_id, movement_key, kind, amount,
-              occurred_on, description, expense_id, created_by, created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (tenant_id, movement_key) DO NOTHING
+              occurred_on, description, expense_id, cash_session_id, created_by, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (tenant_id, movement_key) DO NOTHING
             """,
             UUID.randomUUID(),
             tenant,
@@ -186,9 +187,68 @@ public class AccountRepository {
             Date.valueOf(occurredOn),
             description,
             expense,
+            session,
             actor,
             Timestamp.from(now))
         == 1;
+  }
+
+  /**
+   * A movement of a cash session (SC-052): an opening or closing difference, a drop or top-up
+   * (alone, or as the drawer's leg of a transfer) and the other leg of that transfer. {@code
+   * session} is null only on the other leg; the database refuses a closed or foreign session.
+   */
+  public boolean insertSessionMovement(
+      UUID tenant,
+      UUID account,
+      String key,
+      String kind,
+      BigDecimal amount,
+      LocalDate occurredOn,
+      String description,
+      UUID transfer,
+      UUID session,
+      UUID actor,
+      Instant now) {
+    return jdbc.update(
+            """
+            INSERT INTO account_movement(id, tenant_id, account_id, movement_key, kind, amount,
+              occurred_on, description, transfer_id, cash_session_id, created_by, created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (tenant_id, movement_key) DO NOTHING
+            """,
+            UUID.randomUUID(),
+            tenant,
+            account,
+            key,
+            kind,
+            amount,
+            Date.valueOf(occurredOn),
+            description,
+            transfer,
+            session,
+            actor,
+            Timestamp.from(now))
+        == 1;
+  }
+
+  /** The drawer's balance now: the sum of all its movements. */
+  public BigDecimal balance(UUID tenant, UUID account) {
+    return jdbc.queryForObject(
+            "SELECT COALESCE(SUM(amount), 0) FROM account_movement WHERE tenant_id=? AND account_id=?",
+            BigDecimal.class,
+            tenant,
+            account)
+        .setScale(2);
+  }
+
+  /** Whether the account never had a movement (its first opening count is its opening balance). */
+  public boolean untouched(UUID tenant, UUID account) {
+    return !Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            "SELECT EXISTS(SELECT 1 FROM account_movement WHERE tenant_id=? AND account_id=?)",
+            Boolean.class,
+            tenant,
+            account));
   }
 
   public record Stored(UUID account, BigDecimal amount, LocalDate occurredOn, String description) {}

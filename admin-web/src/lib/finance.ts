@@ -20,6 +20,8 @@ export type FinanceReport = {
   averageTicket: string | null;
   receivable: { amount: string; feesUnknown: number };
   cashMovement: string;
+  // SC-052: drawer counts minus expected, signed (negative is cash missing); outside the margin.
+  cashDifferences: string;
 };
 
 export const PERIODS: { key: ReportPeriodKey; label: string }[] = [

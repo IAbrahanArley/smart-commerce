@@ -139,6 +139,8 @@ class ExpenseInputTest {
     String[][] invalid = {
       {"not-a-uuid", "RENT", "FIXED", "Aluguel", "10", "2026-10-01", ""},
       {REQUEST, "TAXES", "FIXED", "Aluguel", "10", "2026-10-01", ""},
+      {REQUEST, null, "FIXED", "Aluguel", "10", "2026-10-01", ""},
+      {REQUEST, "RENT", null, "Aluguel", "10", "2026-10-01", ""},
       {REQUEST, "RENT", "MONTHLY", "Aluguel", "10", "2026-10-01", ""},
       {REQUEST, "RENT", "FIXED", "Al", "10", "2026-10-01", ""},
       {REQUEST, "RENT", "FIXED", "x".repeat(201), "10", "2026-10-01", ""},

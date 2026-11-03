@@ -7,7 +7,7 @@ import { billingText, CYCLES, monthlyPrice, PLANS, priceText } from "../src/lib/
 // product list filters. Imported by smoke.mjs.
 // Design system Dashtail: navigation shared by the sidebar and the search; strict, accent-insensitive search.
 const navigation = storeItems("t 1", "/lojas/t%201/produtos/abc");
-assert.equal(navigation.length, 14);
+assert.equal(navigation.length, 15); // SC-052 added "Caixa"
 assert.ok(navigation.every(item => item.href.startsWith("/lojas/t%201")), "Links só do tenant da rota");
 assert.deepEqual(navigation.filter(item => item.current).map(item => item.label), ["Produtos"]);
 assert.deepEqual(storeItems("t", "/lojas/t").filter(item => item.current).map(item => item.label), ["Visão geral"]);

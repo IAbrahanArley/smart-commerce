@@ -51,7 +51,7 @@ class PayablesMigrationIT {
     List<Map<String, Object>> ledger =
         jdbc.queryForList("SELECT * FROM finance_entry ORDER BY entry_key");
 
-    flyway(source, "latest").migrate();
+    flyway(source, "42").migrate();
 
     assertThat(jdbc.queryForList("SELECT * FROM finance_entry ORDER BY entry_key"))
         .isEqualTo(ledger);

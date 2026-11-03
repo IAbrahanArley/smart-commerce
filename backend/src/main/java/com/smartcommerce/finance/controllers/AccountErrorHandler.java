@@ -31,7 +31,7 @@ public final class AccountErrorHandler {
               "A conta do Mercado Pago segue os pagamentos do próprio Mercado Pago e não aceita"
                   + " lançamentos manuais.",
               "PROVIDER_READ_ONLY");
-      case MISSING, ALREADY_PAID, NOT_PAYABLE ->
+      case MISSING, ALREADY_PAID, NOT_PAYABLE, SESSION_OPEN, SESSION_CLOSED ->
           reply(404, "Conta ou loja não encontrada.", "MISSING");
     };
   }

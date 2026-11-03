@@ -133,6 +133,41 @@ Regras comuns a todas as decisões: tenant derivado da sessão e conferido no SQ
 - **Limitação:** a próxima conta mensal vence um mês depois da anterior; depois de um dia 31 que caiu em mês curto, as seguintes ficam no dia 30 ou 28.
 - **Fora desta tarefa:** o relatório financeiro continua lendo a liquidação do livro, que agora coincide com os pagamentos registrados nas contas; ler direto dos movimentos (C3) fica para quando as vendas também gerarem movimentos.
 
+## Implementação da SC-052 — sessão de caixa (2026-11-03)
+
+- **Decisões do responsável (2026-11-03):**
+  - a diferença de caixa entra no resultado como linha própria, "Diferenças de caixa", fora da margem de contribuição;
+  - o funcionário pode registrar despesa paga com o dinheiro da gaveta;
+  - sangria sem conta de destino e suprimento sem conta de origem são retirada e aporte do dono, sem entrar como despesa nem receita.
+- **Banco (V43):** `cash_session`, três tipos de movimento novos e o tipo `CASH_DIFFERENCE` no livro ([DATA_MODEL.md](../DATA_MODEL.md)). Uma sessão aberta por gaveta, nenhum movimento em sessão fechada e nenhuma mudança na sessão fechada: tudo isso é garantido pelo banco, não só pelo serviço.
+- **Quem faz o quê:**
+  - o dono e os funcionários da loja abrem, movimentam e fecham;
+  - só o dono reabre, vê o histórico e vê o valor esperado.
+
+  A conferência de papel trava a loja; qualquer outra pessoa recebe 404. É a primeira funcionalidade em que o funcionário recebe respostas de sucesso. A matriz do `StaffIT` libera só `GET /cash`, e as demais rotas do caixa ficam cobertas pelo `CashIT`.
+- **Valor esperado:** é o saldo da gaveta no fechamento, porque o saldo já é o dinheiro que está nela.
+  - **Abertura:** o fundo de troco contado é comparado com o saldo. Numa gaveta que nunca teve movimento, vira o saldo inicial (`ADJUSTMENT`); depois disso, uma diferença vira `CASH_DIFFERENCE`.
+  - **Fechamento às cegas:** a tela não mostra o esperado. A diferença (contado − esperado) vira movimento e linha do livro, com competência e liquidação no dia.
+- **Movimentos da sessão:**
+  - **sangria e suprimento:** com outra conta da loja, viram transferência (a perna da gaveta leva a sessão); sem conta, viram retirada ou aporte do dono;
+  - **despesa paga pelo caixa:** vira conta a pagar já paga pela gaveta, pelo mesmo caminho da SC-051. Aluguel e pessoal entram como fixas; as demais categorias, como variáveis.
+- **Idempotência:** o `requestId` torna repetições a mesma abertura, o mesmo movimento ou o mesmo fechamento. Outro fechamento dá 409 `SESSION_CLOSED`, e outra abertura com o caixa já aberto dá 409 `SESSION_OPEN`.
+- **API:**
+  - `GET /api/tenants/{id}/cash` (gavetas, sessão aberta e contas, só com o nome);
+  - `GET /cash/sessions` (histórico, só o dono);
+  - `GET /cash/sessions/{sessionId}`;
+  - `POST /cash/sessions`;
+  - `POST /cash/sessions/{sessionId}/movements`;
+  - `POST /cash/sessions/{sessionId}/close`;
+  - `POST /cash/sessions/{sessionId}/reopen` (só o dono).
+- **Admin:** "Caixa" no menu do dono e do funcionário, e a página inicial do funcionário leva ao caixa. A tela mostra:
+  - abertura com fundo de troco, sangria, suprimento e despesa;
+  - fechamento às cegas;
+  - para o dono, o histórico com esperado, contado e diferença (falta em vermelho) e o botão "Reabrir".
+
+  O relatório financeiro ganhou a linha "Diferenças de caixa". Os cards dos planos agora anunciam o limite de funcionários (1, 3 e 10), como previsto na SC-049.
+- **Correção de passagem:** uma categoria, tipo ou recorrência ausente no corpo da requisição gerava `NullPointerException` (respondida como 403) em vez de 400. Isso valia também para as despesas desde a SC-020.
+
 ## Consequências e riscos
 
 - **Escopo:** é a maior ampliação desde o MVP (funcionário, venda presencial, crediário). Fatiado em tarefas independentes para poder parar em qualquer ponto com algo útil.

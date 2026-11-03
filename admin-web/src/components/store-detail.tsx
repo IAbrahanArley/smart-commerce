@@ -69,7 +69,7 @@ export default function StoreDetail({ tenantId, period }: { tenantId: string; pe
   }, [tenantId, attempt]);
 
   // SC-049: an employee sees the store without the OWNER's figures or actions.
-  if (state === "ready" && store?.role === "STAFF") return <StaffHome storeName={store.store.name} />;
+  if (state === "ready" && store?.role === "STAFF") return <StaffHome storeName={store.store.name} tenantId={tenantId} />;
   return <section className="page" aria-labelledby="store-title">{dialog}
     <PageHeader id="store-title" title={state === "ready" && store ? <span translate="no">{store.store.name}</span> : "Minha loja"}
       description={state === "ready" && store ? store.store.status === "PUBLISHED" ? <StatusBadge tone="positive">Vitrine publicada</StatusBadge> : <StatusBadge tone="neutral">Vitrine oculta</StatusBadge> : undefined}
