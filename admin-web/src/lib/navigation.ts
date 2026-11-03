@@ -24,6 +24,7 @@ export function storeItems(tenantId: string, pathname: string): NavItem[] {
     { href: `${base}/entrega`, label: "Entrega", icon: "truck", current: at("/entrega"), keywords: "frete retirada" },
     { href: `${base}/pagamentos`, label: "Pagamentos", icon: "card", current: at("/pagamentos"), keywords: "mercado pago conectar" },
     { href: `${base}/financeiro`, label: "Financeiro", icon: "chart", current: at("/financeiro"), keywords: "receita margem relatorio" },
+    { href: `${base}/vendas-loja`, label: "Vendas na loja", icon: "receipt", current: at("/vendas-loja"), keywords: "balcao venda presencial loja fisica pdv pix cartao" },
     { href: `${base}/caixa`, label: "Caixa", icon: "wallet", current: at("/caixa"), keywords: "abrir fechar sangria suprimento gaveta dinheiro troco" },
     { href: `${base}/contas`, label: "Contas", icon: "landmark", current: under("/contas"), keywords: "caixa banco saldo extrato transferencia dinheiro" },
     { href: `${base}/despesas`, label: "Contas a pagar", icon: "wallet", current: at("/despesas"), keywords: "despesas custos gastos duplicatas boletos" },
@@ -32,11 +33,12 @@ export function storeItems(tenantId: string, pathname: string): NavItem[] {
   ];
 }
 
-/** SC-049, SC-052: an employee reaches the store's home and the cash register. */
+/** SC-049, SC-052, SC-053: an employee reaches the store's home, the counter and the cash register. */
 export function staffItems(tenantId: string, pathname: string): NavItem[] {
   const base = storeBase(tenantId);
   return [
     { href: base, label: "Visão geral", icon: "home", current: pathname === base, keywords: "inicio" },
+    { href: `${base}/vendas-loja`, label: "Vendas na loja", icon: "receipt", current: pathname === `${base}/vendas-loja`, keywords: "balcao venda presencial pix cartao" },
     { href: `${base}/caixa`, label: "Caixa", icon: "wallet", current: pathname === `${base}/caixa`, keywords: "abrir fechar sangria suprimento gaveta dinheiro troco" },
   ];
 }

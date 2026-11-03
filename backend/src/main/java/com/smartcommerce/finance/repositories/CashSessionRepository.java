@@ -150,6 +150,14 @@ public class CashSessionRepository {
     return one(" WHERE c.tenant_id=? AND c.reopened_from=?", tenant, closed);
   }
 
+  /** The store's open sessions, by drawer name. */
+  public List<CashSession> openSessions(UUID tenant) {
+    return jdbc.query(
+        SELECT + " WHERE c.tenant_id=? AND c.status='OPEN' ORDER BY a.name, c.id",
+        CashSessionRepository::session,
+        tenant);
+  }
+
   /** The store's sessions, newest first, at most {@code limit}. */
   public List<CashSession> recent(UUID tenant, int limit) {
     return jdbc.query(

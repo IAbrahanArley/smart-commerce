@@ -168,6 +168,45 @@ Regras comuns a todas as decisões: tenant derivado da sessão e conferido no SQ
   O relatório financeiro ganhou a linha "Diferenças de caixa". Os cards dos planos agora anunciam o limite de funcionários (1, 3 e 10), como previsto na SC-049.
 - **Correção de passagem:** uma categoria, tipo ou recorrência ausente no corpo da requisição gerava `NullPointerException` (respondida como 403) em vez de 400. Isso valia também para as despesas desde a SC-020.
 
+## Implementação da SC-053 — venda presencial (2026-11-03)
+
+- **Decisões do responsável (2026-11-03):**
+  - o desconto do funcionário fica limitado a um percentual definido pelo dono, e o dono não tem limite;
+  - cartão de débito e de crédito fica a receber, com a data prevista pelo prazo configurado e a taxa informada pelo lojista;
+  - o Pix entra na hora numa conta padrão escolhida pelo dono.
+- **Banco (V44):** `counter_sale`, os itens, as configurações e os tipos novos no estoque, no dinheiro e no livro ([DATA_MODEL.md](../DATA_MODEL.md)).
+- **Registrar a venda (dono ou funcionário):**
+  - "Adicionar produto do estoque" busca pelo nome ou pelo SKU (2 caracteres no mínimo, até 20 resultados) e mostra o disponível de agora, sem custo;
+  - preço e custo vêm do catálogo como snapshot;
+  - a baixa usa a mesma trava do estoque da vitrine, em ordem de variante, e respeita as reservas em vigor da vitrine. Se faltar estoque em algum item, nada é gravado (409 `INSUFFICIENT_STOCK`).
+- **Lançamentos e dinheiro:**
+  - o livro recebe `SALE` (total) e `COGS` (custo incompleto quando falta custo) e, no cartão com taxa configurada, `FEE`;
+  - dinheiro e Pix liquidam na hora; cartão fica a receber;
+  - o dinheiro entra na gaveta de uma sessão de caixa aberta; o Pix entra na conta padrão. Sem essa conta, a venda no Pix é recusada (409 `PIX_NOT_CONFIGURED`).
+- **Cancelamento (só o dono, com motivo):**
+  - devolução ao estoque opcional (`COUNTER_RETURN`);
+  - `REFUND` e, se o produto voltou ao estoque, estorno do CMV;
+  - dinheiro e Pix saem da conta de origem; no dinheiro, ligado à sessão aberta da gaveta, se houver;
+  - a taxa do cartão não é estornada.
+- **Relatório:**
+  - a venda na loja entra na receita;
+  - dinheiro e Pix não contam como "taxa indisponível"; só o cartão sem taxa configurada conta;
+  - `informedFees` mostra a parte das taxas informada pelo lojista, e o texto da taxa faltante deixou de citar só o Mercado Pago.
+- **API:**
+  - `GET /api/tenants/{id}/counter-sales` (papel, limite, Pix, sessões abertas e as 50 últimas vendas);
+  - `GET /counter-sales/products?q=`;
+  - `POST /counter-sales`;
+  - `POST /counter-sales/{saleId}/cancel` (só o dono);
+  - `GET` e `PUT /counter-sales/settings` (só o dono).
+
+  A matriz do `StaffIT` libera só `GET /counter-sales` para o funcionário.
+- **Admin:** "Vendas na loja" no menu do dono e do funcionário, e a página inicial do funcionário leva até lá. A tela tem:
+  - busca no estoque, itens, desconto com o limite e forma de pagamento (caixa aberto, Pix ou cartão), com prévia do total;
+  - as 50 últimas vendas, com "Cancelar" só para o dono;
+  - as configurações do dono.
+
+  O histórico de estoque e o extrato das contas reconhecem os tipos novos.
+
 ## Consequências e riscos
 
 - **Escopo:** é a maior ampliação desde o MVP (funcionário, venda presencial, crediário). Fatiado em tarefas independentes para poder parar em qualquer ponto com algo útil.

@@ -9,7 +9,9 @@ import java.util.List;
  * keeps its sign. {@code complete} is false whenever a component is unknown, and {@code missing}
  * says what: then the margin is a partial figure, never a definitive profit. {@code
  * cashDifferences} (SC-052) is the drawer counts minus the expected amounts, signed (negative is
- * cash missing): a result line of its own, outside the contribution margin.
+ * cash missing): a result line of its own, outside the contribution margin. {@code informedFees}
+ * (SC-053) is the part of {@code fees} the store informed for card sales at the counter, not the
+ * provider's.
  */
 public record FinanceReportView(
     Period period,
@@ -28,7 +30,8 @@ public record FinanceReportView(
     String averageTicket,
     Receivable receivable,
     String cashMovement,
-    String cashDifferences) {
+    String cashDifferences,
+    String informedFees) {
   /** {@code lastDay} is inclusive. */
   public record Period(String key, LocalDate firstDay, LocalDate lastDay) {}
 

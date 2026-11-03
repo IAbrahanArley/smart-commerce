@@ -312,6 +312,21 @@ public class BootstrapSecurityConfiguration {
                         "/api/tenants/*/finance/accounts/*/adjustments",
                         "/api/tenants/*/finance/transfers")
                     .authenticated()
+                    // SC-053: counter sales (OWNER or STAFF; cancel and settings OWNER only,
+                    // checked in the service).
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/tenants/*/counter-sales",
+                        "/api/tenants/*/counter-sales/products",
+                        "/api/tenants/*/counter-sales/settings")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/tenants/*/counter-sales",
+                        "/api/tenants/*/counter-sales/*/cancel")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.PUT, "/api/tenants/*/counter-sales/settings")
+                    .authenticated()
                     // SC-052: cash register (OWNER or STAFF, checked in the service).
                     .requestMatchers(
                         HttpMethod.GET,

@@ -40,7 +40,7 @@ export default function StoreFinance({ tenantId, period }: { tenantId: string; p
   const rows: { label: string; value: string; strong?: boolean; note?: string }[] = report ? [
     { label: "Receita bruta (vendas pagas)", value: formatBRL(report.grossRevenue) },
     { label: "(−) Reembolsos", value: formatBRL(report.refunds) },
-    { label: "(−) Taxas do Mercado Pago", value: feesUnknown && report.fees === "0.00" ? "Não informadas" : formatBRL(report.fees), note: feesUnknown ? "Parte das taxas ainda não foi informada pelo Mercado Pago." : undefined },
+    { label: "(−) Taxas", value: feesUnknown && report.fees === "0.00" ? "Não informadas" : formatBRL(report.fees), note: [feesUnknown ? "Parte das taxas ainda não foi informada." : null, report.informedFees !== "0.00" ? `Inclui ${formatBRL(report.informedFees)} de taxas de cartão informadas pelo lojista.` : null].filter(Boolean).join(" ") || undefined },
     { label: "= Receita líquida", value: formatBRL(report.netRevenue), strong: true },
     { label: "(−) Custo dos produtos vendidos (CMV)", value: formatBRL(report.cogs) },
     { label: "(−) Despesas variáveis", value: formatBRL(report.variableExpenses) },

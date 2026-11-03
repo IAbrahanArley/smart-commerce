@@ -3,7 +3,7 @@
 
 import { parseAmount } from "./expenses.ts";
 
-export type MovementKind = "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "EXPENSE_PAYMENT" | "EXPENSE_REFUND" | "CASH_DIFFERENCE" | "OWNER_WITHDRAWAL" | "OWNER_CONTRIBUTION";
+export type MovementKind = "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "EXPENSE_PAYMENT" | "EXPENSE_REFUND" | "CASH_DIFFERENCE" | "OWNER_WITHDRAWAL" | "OWNER_CONTRIBUTION" | "COUNTER_SALE" | "COUNTER_SALE_REFUND";
 export type CashMovement = { id: string; kind: MovementKind; amount: string; description: string | null; recordedBy: string; createdAt: string };
 // expectedAmount and difference are null for employees (blind close) and while the session is open.
 export type CashSession = {
@@ -20,6 +20,7 @@ export const MOVEMENT_LABELS: Record<MovementKind, string> = {
   ADJUSTMENT: "Saldo inicial", TRANSFER_OUT: "Sangria para outra conta", TRANSFER_IN: "Suprimento de outra conta",
   EXPENSE_PAYMENT: "Despesa paga pelo caixa", EXPENSE_REFUND: "Estorno de despesa", CASH_DIFFERENCE: "Diferença de caixa",
   OWNER_WITHDRAWAL: "Retirada do dono", OWNER_CONTRIBUTION: "Aporte do dono",
+  COUNTER_SALE: "Venda em dinheiro", COUNTER_SALE_REFUND: "Cancelamento de venda",
 };
 export const MOVE_TITLES: Record<MoveType, string> = { DROP: "Sangria", TOP_UP: "Suprimento", EXPENSE: "Despesa paga pelo caixa" };
 

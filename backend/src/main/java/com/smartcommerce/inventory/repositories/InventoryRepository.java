@@ -200,6 +200,59 @@ public class InventoryRepository {
     return units;
   }
 
+  /**
+   * Appends a COUNTER_SALE (out) or COUNTER_RETURN (back) movement of a counter sale by the person
+   * who registered or cancelled it (SC-053). The request key is derived from the sale and the
+   * variant, so the ledger refuses a second one of the same kind for the same line.
+   */
+  public void appendCounter(
+      String type,
+      UUID tenant,
+      UUID variant,
+      UUID counterSale,
+      UUID requestId,
+      int delta,
+      int balanceAfter,
+      String reason,
+      UUID actor,
+      Instant now) {
+    if (!"COUNTER_SALE".equals(type) && !"COUNTER_RETURN".equals(type))
+      throw new IllegalArgumentException("Not a counter sale movement");
+    jdbc.update(
+        """
+        INSERT INTO inventory_movement(id,tenant_id,product_id,actor_id,actor_kind,request_id,type,
+          delta,balance_after,reason,created_at,counter_sale_id)
+        VALUES (?,?,?,?,'USER',?,?,?,?,?,?,?)
+        """,
+        UUID.randomUUID(),
+        tenant,
+        variant,
+        actor,
+        requestId,
+        type,
+        delta,
+        balanceAfter,
+        reason,
+        InventoryReservationRepository.utc(now),
+        counterSale);
+  }
+
+  /** Units each variant left the stock with through a counter sale (SC-053). */
+  public Map<UUID, Integer> counterSoldUnits(UUID tenant, UUID counterSale) {
+    Map<UUID, Integer> units = new TreeMap<>();
+    jdbc.query(
+        """
+        SELECT product_id,-delta FROM inventory_movement
+        WHERE tenant_id=? AND counter_sale_id=? AND type='COUNTER_SALE'
+        """,
+        row -> {
+          units.put(row.getObject(1, UUID.class), row.getInt(2));
+        },
+        tenant,
+        counterSale);
+    return units;
+  }
+
   /** Puts units back into a balance the caller already locked; returns the new quantity. */
   public int restore(UUID tenant, UUID variant, int quantity) {
     return jdbc.queryForObject(

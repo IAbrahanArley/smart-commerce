@@ -96,7 +96,8 @@ public class FinanceReportService {
             : null,
         new FinanceReportView.Receivable(money(receivable.amount()), receivable.salesWithoutFee()),
         money(reports.settled(tenant, period.from(), period.to())),
-        money(totals.cashDifferences()));
+        money(totals.cashDifferences()),
+        money(totals.informedFees().negate()));
   }
 
   /**

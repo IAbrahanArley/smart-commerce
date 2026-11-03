@@ -22,6 +22,8 @@ export type FinanceReport = {
   cashMovement: string;
   // SC-052: drawer counts minus expected, signed (negative is cash missing); outside the margin.
   cashDifferences: string;
+  // SC-053: the part of the fees the store informed for card sales at the counter.
+  informedFees: string;
 };
 
 export const PERIODS: { key: ReportPeriodKey; label: string }[] = [
@@ -39,7 +41,7 @@ export function reportPeriod(value: string | undefined): ReportPeriodKey {
 
 export function missingText(item: { code: string; count: number }): string {
   const plural = item.count === 1 ? "" : "s";
-  if (item.code === "FEES_UNAVAILABLE") return `${item.count} venda${plural} sem a taxa do Mercado Pago informada`;
+  if (item.code === "FEES_UNAVAILABLE") return `${item.count} venda${plural} sem a taxa informada (Mercado Pago ou cartão na loja)`;
   if (item.code === "COST_MISSING") return `${item.count} pedido${plural} com produto sem custo cadastrado`;
   return `${item.count} item${plural} sem dados completos`;
 }

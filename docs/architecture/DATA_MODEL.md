@@ -141,6 +141,24 @@ V40 (SC-049, ADR-0019 C1, 2026-11-01), aditiva:
 - `staff_invitation`: um convite por linha, com todo o ciclo de vida (enviado, aceito ou cancelado, acesso revogado). Guarda só o hash SHA-256 do token de uso único, o e-mail convidado (chave de comparação e grafia original, o mínimo para casar com a conta e mostrar ao OWNER), quem convidou, validade de 7 dias, quem aceitou e quem revogou. Um índice único parcial deixa no máximo um convite em aberto por e-mail e empresa.
 - **Dado pessoal:** o e-mail do convite fica guardado também depois de aceito, cancelado ou expirado, para o histórico da equipe. A retenção segue a mesma validação jurídica pendente do D2.
 
+V44 (SC-053, ADR-0019 C6–C8, 2026-11-03), aditiva:
+- `counter_sale_settings`: por loja, definidas pelo dono:
+  - desconto máximo do funcionário (%);
+  - conta que recebe o Pix (FK composta);
+  - taxa (%) e prazo de recebimento (dias) do débito e do crédito.
+
+  Taxa ou prazo em branco ficam desconhecidos.
+- `counter_sale`: venda na loja física, sempre com snapshots. Guarda:
+  - subtotal, desconto e total (`total = subtotal − desconto`, maior que zero);
+  - forma de pagamento: `CASH` exige a sessão de caixa e a conta; `PIX` exige a conta; `DEBIT` e `CREDIT` não têm conta e podem ter taxa e data prevista de recebimento;
+  - quem registrou e, no cancelamento, quem cancelou, quando, por quê e se devolveu ao estoque.
+
+  `request_id` é único por loja. Nada é apagado.
+- `counter_sale_item`: snapshot de nome, opções, SKU, preço e custo de cada variante, com quantidade de 1 a 9999 e no máximo uma linha por variante.
+- **Estoque:** `inventory_movement` ganha `counter_sale_id` e os tipos `COUNTER_SALE` (saída) e `COUNTER_RETURN` (volta). Os dois são feitos por pessoa (`actor_kind = USER`). A coluna de tipo tem 16 caracteres.
+- **Dinheiro:** `account_movement` ganha `counter_sale_id` e os tipos `COUNTER_SALE` (entrada) e `COUNTER_SALE_REFUND` (saída).
+- **Livro:** `finance_entry` ganha `counter_sale_id`. Venda, reembolso, taxa, CMV e estorno de CMV apontam para exatamente um entre o pedido online e a venda na loja. O trigger de só acréscimo protege a coluna nova.
+
 V43 (SC-052, ADR-0019 C5, 2026-11-03), aditiva:
 - `cash_session`: sessão de uma gaveta (conta `CASH`), com fundo de troco contado, quem abriu e quando. O fechamento grava, juntos, o pedido de fechamento, o valor contado, o esperado (o saldo da gaveta antes da diferença), quem fechou e quando. A reabertura é uma sessão nova que aponta para a fechada (`reopened_from`, no máximo uma por sessão), com o motivo.
   - **Banco:** um índice único parcial deixa só uma sessão `OPEN` por gaveta. Um trigger só permite a passagem de `OPEN` para `CLOSED`, uma vez e sem mudar os dados da abertura, e recusa `DELETE`.

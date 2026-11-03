@@ -197,6 +197,85 @@ public class InventoryReservationService {
     return sold.size();
   }
 
+  /**
+   * Takes a counter sale's units out of the stock the storefront also sells (SC-053, ADR-0019 C6),
+   * all or nothing. Joins the caller's READ COMMITTED transaction. Balances are locked in variant
+   * order, as in {@link #reserve}, and a line must fit what is available to anyone: the
+   * storefront's reservations in force are respected. Returns false, deducting nothing, when a line
+   * does not fit.
+   */
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public boolean sellAtCounter(
+      UUID tenant, UUID sale, UUID actor, List<ReservationLine> lines, String reason) {
+    if (tenant == null || sale == null || actor == null || lines == null || lines.isEmpty())
+      throw new IllegalArgumentException("Invalid counter sale");
+    var ordered = lines.stream().sorted(Comparator.comparing(ReservationLine::variantId)).toList();
+    var ids = ordered.stream().map(ReservationLine::variantId).toList();
+    if (new HashSet<>(ids).size() != ids.size())
+      throw new IllegalArgumentException("Duplicated variant");
+    var now = ReservationPolicy.now(clock);
+    var levels =
+        inventory.lockLevels(tenant, ids, now).stream()
+            .collect(Collectors.toMap(StockLevel::variantId, Function.identity()));
+    boolean covered =
+        ordered.stream()
+            .allMatch(
+                line -> {
+                  StockLevel level = levels.get(line.variantId());
+                  return level != null && line.quantity() <= level.available();
+                });
+    if (!covered) return false;
+    for (var line : ordered) {
+      int after =
+          inventory
+              .deduct(tenant, line.variantId(), line.quantity())
+              .orElseThrow(() -> new IllegalStateException("Locked balance changed"));
+      inventory.appendCounter(
+          "COUNTER_SALE",
+          tenant,
+          line.variantId(),
+          sale,
+          counterRequest("counter-sale:", sale, line.variantId()),
+          -line.quantity(),
+          after,
+          reason,
+          actor,
+          now);
+    }
+    return true;
+  }
+
+  /** Puts a cancelled counter sale's units back, exactly what it took out (SC-053). */
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public int reverseCounterSale(UUID tenant, UUID sale, UUID actor, String reason) {
+    if (tenant == null || sale == null || actor == null)
+      throw new IllegalArgumentException("Invalid reversal");
+    var sold = inventory.counterSoldUnits(tenant, sale);
+    if (sold.isEmpty()) return 0;
+    var now = ReservationPolicy.now(clock);
+    inventory.lockLevels(tenant, sold.keySet(), now);
+    for (var line : sold.entrySet()) {
+      int after = inventory.restore(tenant, line.getKey(), line.getValue());
+      inventory.appendCounter(
+          "COUNTER_RETURN",
+          tenant,
+          line.getKey(),
+          sale,
+          counterRequest("counter-sale-reversal:", sale, line.getKey()),
+          line.getValue(),
+          after,
+          reason,
+          actor,
+          now);
+    }
+    return sold.size();
+  }
+
+  static UUID counterRequest(String kind, UUID sale, UUID variant) {
+    return UUID.nameUUIDFromBytes(
+        (kind + sale + ":" + variant).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  }
+
   static UUID reversalRequest(UUID order, UUID variant) {
     return UUID.nameUUIDFromBytes(
         ("sale-reversal:" + order + ":" + variant)
