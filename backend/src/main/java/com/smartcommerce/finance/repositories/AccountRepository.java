@@ -271,6 +271,42 @@ public class AccountRepository {
         == 1;
   }
 
+  /**
+   * The money of a store credit receipt (SC-055): in (CREDIT_RECEIPT) to a drawer's open cash
+   * session or a bank account, once per key.
+   */
+  public boolean insertCreditMovement(
+      UUID tenant,
+      UUID account,
+      String key,
+      BigDecimal amount,
+      LocalDate occurredOn,
+      String description,
+      UUID receipt,
+      UUID session,
+      UUID actor,
+      Instant now) {
+    return jdbc.update(
+            """
+            INSERT INTO account_movement(id, tenant_id, account_id, movement_key, kind, amount,
+              occurred_on, description, credit_receipt_id, cash_session_id, created_by, created_at)
+            VALUES (?,?,?,?,'CREDIT_RECEIPT',?,?,?,?,?,?,?)
+            ON CONFLICT (tenant_id, movement_key) DO NOTHING
+            """,
+            UUID.randomUUID(),
+            tenant,
+            account,
+            key,
+            amount,
+            Date.valueOf(occurredOn),
+            description,
+            receipt,
+            session,
+            actor,
+            Timestamp.from(now))
+        == 1;
+  }
+
   /** The drawer's balance now: the sum of all its movements. */
   public BigDecimal balance(UUID tenant, UUID account) {
     return jdbc.queryForObject(

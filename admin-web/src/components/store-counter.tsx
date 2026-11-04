@@ -9,6 +9,8 @@ import { formatDateTime } from "@/lib/cash";
 import { type CartLine, type CounterOverview, type CounterProduct, type CounterSale, type CounterSettings, METHOD_LABELS, METHODS, type PaymentMethod, itemLabel, minus, parseDays, parsePercent, subtotal, withinLimit } from "@/lib/counter-sales";
 import { formatDay, lineText, parseOptionalAmount } from "@/lib/expenses";
 import CounterImport from "@/components/counter-import";
+import CounterCredit from "@/components/counter-credit";
+import { type Customer, addMonths, firstDueError, splitInstallments, todayInStore } from "@/lib/credit";
 import PageHeader from "@/components/page-header";
 import ListPager from "@/components/list-pager";
 import { AddButton, FormSheet } from "@/components/form-sheet";
@@ -22,7 +24,8 @@ type SettingsDraft = { limit: string; pix: string; debitFee: string; debitDays: 
 
 // SC-053 (ADR-0019 C6, C8): sales at the physical store, from the same stock as the storefront.
 // Employees and the OWNER register; only the OWNER cancels and sets the employee discount limit,
-// the Pix account and the card fees and release days. No cost or margin is shown here.
+// the Pix account and the card fees and release days. No cost or margin is shown here. SC-055: a
+// sale on store credit names a customer and splits into 1 to 12 monthly installments.
 export default function StoreCounter({ tenantId }: { tenantId: string }) {
   const [data, setData] = useState<CounterOverview | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "signed-out" | "missing" | "error">("loading");
@@ -34,7 +37,10 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [session, setSession] = useState("");
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
-  const [errors, setErrors] = useState<{ cart?: string; discount?: string; method?: string }>({});
+  const [errors, setErrors] = useState<{ cart?: string; discount?: string; method?: string; customer?: string; installments?: string; firstDue?: string }>({});
+  // SC-055: the store credit terms of the sale (customer, installments and first due date).
+  const [customer, setCustomer] = useState<Customer | null>(null); const [installments, setInstallments] = useState(1);
+  const [firstDue, setFirstDue] = useState(() => addMonths(todayInStore(new Date()), 1));
   const [cancelling, setCancelling] = useState<CounterSale | null>(null);
   const [reason, setReason] = useState("");
   const [restock, setRestock] = useState(true);
@@ -124,18 +130,26 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
     else if (!owner && cart.length && !withinLimit(off.amount, total, data.staffDiscountLimit)) next.discount = `O desconto passa do limite de ${data.staffDiscountLimit.replace(".", ",")}% definido pelo dono da loja.`;
     if (method === "CASH" && !session) next.method = "Abra o caixa antes de vender em dinheiro.";
     if (method === "PIX" && !data.pixAccountName) next.method = "O dono da loja ainda não escolheu a conta que recebe o Pix.";
+    if (method === "STORE_CREDIT") {
+      if (!customer) next.customer = "Escolha ou cadastre o cliente do crediário.";
+      next.firstDue = firstDueError(firstDue, todayInStore(new Date())) ?? undefined;
+      if (cart.length && !next.discount && !final.startsWith("-") && !splitInstallments(final, installments)) next.installments = "O total não cobre um centavo por parcela. Use menos parcelas.";
+    }
     setErrors(next);
-    const first = next.cart ? "counter-search" : next.discount ? "counter-discount" : next.method ? "counter-method-CASH" : null;
+    const first = next.cart ? "counter-search" : next.discount ? "counter-discount" : next.method ? "counter-method-CASH"
+      : next.customer ? "counter-customer-search" : next.installments ? "counter-installments" : next.firstDue ? "counter-first-due" : null;
     if (first) { document.getElementById(first)?.focus(); return; }
     submitting.current = true; setBusy(true); setFeedback(null);
     try {
       const response = await apiRequest(api, { method: "POST", body: {
         requestId, items: cart.map(line => ({ variantId: line.product.variantId, quantity: line.quantity })),
-        discount: "amount" in off ? off.amount : null, paymentMethod: method, cashSessionId: method === "CASH" ? session : null } });
+        discount: "amount" in off ? off.amount : null, paymentMethod: method, cashSessionId: method === "CASH" ? session : null,
+        ...(method === "STORE_CREDIT" && customer ? { customerId: customer.id, installments, firstDueOn: firstDue } : {}) } });
       if (response.ok) {
         const sale: CounterSale = await response.json();
-        setCart([]); setDiscount(""); setRequestId(crypto.randomUUID()); setAttempt(current => current + 1); setSheet(null); setBefore(null);
-        setFeedback({ text: `Venda registrada: ${formatBRL(sale.total)} em ${METHOD_LABELS[sale.paymentMethod].toLowerCase()}.${sale.expectedReleaseOn ? ` Previsão de recebimento: ${formatDay(sale.expectedReleaseOn)}.` : ""}`, error: false });
+        setCart([]); setDiscount(""); setCustomer(null); setInstallments(1); setRequestId(crypto.randomUUID()); setAttempt(current => current + 1); setSheet(null); setBefore(null);
+        setFeedback({ text: sale.paymentMethod === "STORE_CREDIT" ? `Venda registrada: ${formatBRL(sale.total)} no crediário de ${sale.customerName}, em ${sale.installmentCount === 1 ? "parcela única" : `${sale.installmentCount} parcelas`}.`
+          : `Venda registrada: ${formatBRL(sale.total)} em ${METHOD_LABELS[sale.paymentMethod].toLowerCase()}.${sale.expectedReleaseOn ? ` Previsão de recebimento: ${formatDay(sale.expectedReleaseOn)}.` : ""}`, error: false });
         return;
       }
       if (response.status === 401) { setFeedback({ text: "Sua sessão expirou. Entre novamente antes de registrar a venda.", error: true }); return; }
@@ -145,7 +159,7 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
         setAttempt(current => current + 1);
         setFeedback({ text: answer?.message ?? "A venda não pôde ser registrada. Confira e tente de novo.", error: true }); return;
       }
-      if (response.status === 404) { setAttempt(current => current + 1); setFeedback({ text: "Algum produto ou o caixa não existe mais. A página foi atualizada.", error: true }); return; }
+      if (response.status === 404) { setAttempt(current => current + 1); setFeedback({ text: "Algum produto, o caixa ou o cliente não existe mais. A página foi atualizada.", error: true }); return; }
       if (response.status === 400) { setFeedback({ text: "Confira os dados: quantidades inteiras e desconto com até duas casas decimais.", error: true }); return; }
       setFeedback({ text: requestError(response.status), error: true });
     } catch {
@@ -167,7 +181,8 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
         return;
       }
       if (response.status === 401) { setFeedback({ text: "Sua sessão expirou. Entre novamente antes de cancelar.", error: true }); return; }
-      setFeedback({ text: requestError(response.status), error: true });
+      const answer = await response.json().catch(() => null) as { message?: string } | null; // 409: credit sale already paid in part
+      setFeedback({ text: response.status === 409 && answer?.message ? answer.message : requestError(response.status), error: true });
     } catch {
       setFeedback({ text: "Não foi possível confirmar o cancelamento. Consulte a lista antes de tentar de novo.", error: true });
     } finally { submitting.current = false; setBusy(false); }
@@ -274,6 +289,9 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
         </div> : <p className="field-help">Nenhum caixa aberto. <Link href={`/lojas/${encodeURIComponent(tenantId)}/caixa`}>Abrir o caixa</Link> antes de vender em dinheiro.</p> : null}
         {method === "PIX" ? <p className="field-help">{data.pixAccountName ? `O Pix entra em “${data.pixAccountName}”.` : "O dono da loja ainda não escolheu a conta que recebe o Pix."}</p> : null}
         {method === "DEBIT" || method === "CREDIT" ? <p className="field-help">Venda no cartão fica a receber até a maquininha liberar o valor.</p> : null}
+        {method === "STORE_CREDIT" ? <CounterCredit tenantId={tenantId} busy={busy} total={cart.length && !final.startsWith("-") && final !== "0.00" ? final : null} errors={errors}
+          clear={field => setErrors(current => ({ ...current, [field]: undefined }))} customer={customer} setCustomer={setCustomer}
+          installments={installments} setInstallments={setInstallments} firstDue={firstDue} setFirstDue={setFirstDue} /> : null}
         <p aria-live="polite">Total da venda: <strong>{cart.length && !final.startsWith("-") ? formatBRL(final) : "—"}</strong></p>
         <div className="form-actions"><button type="submit" disabled={busy}>{busy ? "Registrando…" : "Registrar venda"}</button></div>
       </form>
@@ -302,7 +320,7 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
           <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Venda</th><th role="columnheader" scope="col">Pagamento</th><th role="columnheader" scope="col" className="numeric">Total</th><th role="columnheader" scope="col">Situação</th>{owner ? <th role="columnheader" scope="col">Ações</th> : null}</tr></thead>
           <tbody role="rowgroup">{data.sales.map(sale => <tr role="row" key={sale.id}>
             <th role="rowheader" scope="row">{sale.items.map(item => `${item.quantity}× ${itemLabel(item)}`).join(", ")}<span className="cell-hint">{sale.soldOn ? `Venda de ${formatDay(sale.soldOn)}, importada em ${formatDateTime(sale.createdAt)}` : formatDateTime(sale.createdAt)} · por {sale.createdBy}</span></th>
-            <td role="cell" data-label="Pagamento">{METHOD_LABELS[sale.paymentMethod]}{sale.accountName ? <span className="cell-hint">{sale.accountName}</span> : null}{sale.paymentMethod === "DEBIT" || sale.paymentMethod === "CREDIT" ? <span className="cell-hint">{sale.expectedReleaseOn ? `Recebe em ${formatDay(sale.expectedReleaseOn)}` : "Data de recebimento desconhecida"}{sale.fee ? ` · taxa ${formatBRL(sale.fee)}` : " · taxa não informada"}</span> : null}</td>
+            <td role="cell" data-label="Pagamento">{METHOD_LABELS[sale.paymentMethod]}{sale.accountName ? <span className="cell-hint">{sale.accountName}</span> : null}{sale.paymentMethod === "STORE_CREDIT" ? <span className="cell-hint">{sale.customerName ? `${sale.customerName} · ` : ""}{sale.installmentCount === 1 ? "parcela única" : `${sale.installmentCount} parcelas`}</span> : null}{sale.paymentMethod === "DEBIT" || sale.paymentMethod === "CREDIT" ? <span className="cell-hint">{sale.expectedReleaseOn ? `Recebe em ${formatDay(sale.expectedReleaseOn)}` : "Data de recebimento desconhecida"}{sale.fee ? ` · taxa ${formatBRL(sale.fee)}` : " · taxa não informada"}</span> : null}</td>
             <td role="cell" data-label="Total" className="numeric">{sale.status === "CANCELLED" ? <s>{formatBRL(sale.total)}</s> : formatBRL(sale.total)}{sale.discount !== "0.00" ? <span className="cell-hint">Desconto {formatBRL(sale.discount)}</span> : null}</td>
             <td role="cell" data-label="Situação"><StatusBadge tone={sale.status === "ACTIVE" ? "positive" : "neutral"}>{sale.status === "ACTIVE" ? "Registrada" : "Cancelada"}</StatusBadge>{sale.cancelReason ? <span className="cell-hint">{sale.cancelReason}</span> : null}</td>
             {owner ? <td role="cell" data-label="Ações">{sale.status === "ACTIVE" ? <button type="button" className="button-secondary" disabled={busy} aria-label={`Cancelar venda de ${formatBRL(sale.total)} de ${formatDateTime(sale.createdAt)}`} onClick={() => { setFeedback(null); setReason(""); setReasonError(""); setRestock(true); setCancelling(sale); }}>Cancelar</button> : null}</td> : null}

@@ -56,13 +56,23 @@ public final class CounterSaleViews {
       String cancelReason,
       Boolean restocked,
       List<Item> items,
-      LocalDate soldOn) {
+      LocalDate soldOn,
+      String customerName,
+      Integer installmentCount) {
     public static Sale of(CounterSaleRecords.Sale sale) {
       return of(sale, true);
     }
 
     /** Employees never see the card fee: like costs, it is margin data. */
     public static Sale of(CounterSaleRecords.Sale sale, boolean owner) {
+      return of(sale, owner, owner);
+    }
+
+    /**
+     * {@code customer}: whether the store credit customer's name is shown. An employee sees it only
+     * on the sale they have just registered, never across the list (SC-055).
+     */
+    public static Sale of(CounterSaleRecords.Sale sale, boolean owner, boolean customer) {
       return new Sale(
           sale.id(),
           sale.paymentMethod(),
@@ -91,7 +101,9 @@ public final class CounterSaleViews {
                           item.quantity(),
                           money(item.lineTotal())))
               .toList(),
-          sale.soldOn());
+          sale.soldOn(),
+          customer ? sale.customerName() : null,
+          sale.installmentCount());
     }
   }
 

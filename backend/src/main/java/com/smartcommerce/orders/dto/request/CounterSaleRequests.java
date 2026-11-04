@@ -8,13 +8,20 @@ public final class CounterSaleRequests {
 
   public record Line(String variantId, Integer quantity) {}
 
-  /** {@code paymentMethod}: CASH (with {@code cashSessionId}), PIX, DEBIT or CREDIT. */
+  /**
+   * {@code paymentMethod}: CASH (with {@code cashSessionId}), PIX, DEBIT, CREDIT or STORE_CREDIT
+   * (with {@code customerId}, {@code installments} from 1 to 12 and {@code firstDueOn},
+   * yyyy-mm-dd).
+   */
   public record Sale(
       String requestId,
       List<Line> items,
       String discount,
       String paymentMethod,
-      String cashSessionId) {}
+      String cashSessionId,
+      String customerId,
+      Integer installments,
+      String firstDueOn) {}
 
   public record Cancel(String reason, Boolean restock) {}
 

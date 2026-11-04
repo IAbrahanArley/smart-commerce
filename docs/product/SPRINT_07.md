@@ -127,6 +127,12 @@ O livro de vendas (SC-056) ainda não existe. Por isso, por enquanto, a venda é
 
 ## SC-055 — Crediário e contas a receber
 
+**Estado (2026-11-04):** autorizada; primeira parte implementada ([validação](../quality/SC-055-VALIDATION.md)). Na mesma data, o responsável decidiu quatro coisas:
+- **Cliente:** é a `store_customer` do ADR-0021 (R2).
+- **Retenção:** fica registrada como pendente de orientação jurídica, e a anonimização vai para a SC-074.
+- **Funcionário:** vê só o cliente que atende, com o telefone mascarado.
+- **Entrega:** em duas partes. Esta traz clientes, venda no crediário e recebimentos. A segunda traz as contas a receber unificadas, com a baixa do cartão presencial e o Mercado Pago como "data desconhecida".
+
 - Cliente de crediário (nome, telefone, observação, limite opcional).
 - Venda no crediário gera 1 a 12 parcelas; recebimento parcial em qualquer conta, inclusive no caixa aberto.
 - **Contas a receber** unificadas (C10): Mercado Pago, cartão presencial e crediário.

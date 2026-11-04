@@ -71,9 +71,12 @@ public final class CounterSaleController {
                 .toList(),
             request.discount(),
             request.paymentMethod(),
-            request.cashSessionId());
+            request.cashSessionId(),
+            request.customerId(),
+            request.installments(),
+            request.firstDueOn());
     var registered = sales.register(actor(actor), tenantId, input);
-    return fresh(CounterSaleViews.Sale.of(registered.sale(), registered.owner()));
+    return fresh(CounterSaleViews.Sale.of(registered.sale(), registered.owner(), true));
   }
 
   @SecurityRequirement(name = "csrf")

@@ -52,7 +52,17 @@ public final class CounterSaleErrorHandler {
               409,
               "O estoque mudou desde a prévia. Nada foi importado: confira a prévia de novo.",
               "STALE_IMPORT");
-      case MISSING -> reply(404, "Venda, produto ou loja não encontrado.", "MISSING");
+      case CREDIT_LIMIT ->
+          reply(
+              409,
+              "A venda passa do limite de crédito do cliente, contando o que ele já deve.",
+              "CREDIT_LIMIT");
+      case CREDIT_RECEIVED ->
+          reply(
+              409,
+              "Esta venda no crediário já recebeu pagamentos e não pode ser cancelada.",
+              "CREDIT_RECEIVED");
+      case MISSING -> reply(404, "Venda, produto, cliente ou loja não encontrado.", "MISSING");
     };
   }
 
@@ -65,6 +75,13 @@ public final class CounterSaleErrorHandler {
   })
   ResponseEntity<Map<String, String>> invalid() {
     return reply(400, "Confira os dados enviados.", "INVALID_REQUEST");
+  }
+
+  /** A database guard refused the write (SC-055 triggers and constraints): nothing was saved. */
+  @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+  ResponseEntity<Map<String, String>> refused() {
+    return reply(
+        409, "Os dados mudaram enquanto você registrava. Recarregue a página.", "DATA_CHANGED");
   }
 
   @ExceptionHandler(DataAccessException.class)

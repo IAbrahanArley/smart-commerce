@@ -1,6 +1,7 @@
 package com.smartcommerce.orders.services;
 
 import com.smartcommerce.finance.services.CounterSaleMoneyService;
+import com.smartcommerce.finance.services.CreditService;
 import com.smartcommerce.inventory.domain.ReservationLine;
 import com.smartcommerce.inventory.services.InventoryReservationService;
 import com.smartcommerce.orders.domain.CounterSaleCursor;
@@ -39,6 +40,9 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Cash goes into the drawer of an open cash session, Pix into the OWNER's Pix account; cards
  *       stay receivable until released, with the fee and release days the OWNER informed (decided
  *       on 2026-11-03). The ledger records sale, COGS and, when known, the fee.
+ *   <li>Store credit (SC-055): the sale names a customer of the store and becomes 1 to 12
+ *       installments, refused above the customer's limit; it settles when they are all received. A
+ *       credit sale already paid in part cannot be cancelled.
  *   <li>The request id makes a retry the same sale. Nothing is deleted: the OWNER cancels with a
  *       reason, choosing whether the goods come back to stock.
  * </ul>
@@ -52,16 +56,19 @@ public class CounterSaleService {
   private final CounterSaleRepository sales;
   private final InventoryReservationService inventory;
   private final CounterSaleMoneyService money;
+  private final CreditService credit;
   private final Clock clock;
 
   public CounterSaleService(
       CounterSaleRepository sales,
       InventoryReservationService inventory,
       CounterSaleMoneyService money,
+      CreditService credit,
       Clock clock) {
     this.sales = sales;
     this.inventory = inventory;
     this.money = money;
+    this.credit = credit;
     this.clock = clock;
   }
 
@@ -113,7 +120,9 @@ public class CounterSaleService {
     boolean owner = "OWNER".equals(member(actor, tenant, true));
     var previous = sales.byRequest(tenant, input.requestId());
     if (previous.isPresent()) {
-      if (!same(previous.get(), input))
+      if (!same(previous.get(), input)
+          || (previous.get().storeCredit()
+              && !credit.firstDueOn(tenant, previous.get().id()).equals(input.firstDueOn())))
         throw new CounterSaleException(CounterSaleException.Reason.REQUEST_CONFLICT);
       return new Registered(previous.get(), owner);
     }
@@ -174,12 +183,25 @@ public class CounterSaleService {
                 .orElseThrow(
                     () -> new CounterSaleException(CounterSaleException.Reason.SESSION_CLOSED));
       }
+      case "STORE_CREDIT" -> {
+        LocalDate today = today();
+        if (input.firstDueOn().isBefore(today) || input.firstDueOn().isAfter(today.plusYears(1)))
+          throw new IllegalArgumentException("Invalid first due date");
+        // At least one cent per installment, checked before anything is written.
+        com.smartcommerce.finance.domain.Credit.split(total, input.installments());
+        switch (credit.check(tenant, input.customerId(), total)) {
+          case MISSING -> throw missing();
+          case LIMIT -> throw new CounterSaleException(CounterSaleException.Reason.CREDIT_LIMIT);
+          case OK -> {}
+        }
+      }
       case "PIX" -> {
         account = settings.pixAccountId();
         if (account == null || money.bankAccountName(tenant, account).isEmpty())
           throw new CounterSaleException(CounterSaleException.Reason.PIX_NOT_CONFIGURED);
       }
       default -> {
+        // DEBIT and CREDIT cards.
         feePercent = settings.feePercent(input.method());
         if (feePercent != null)
           fee =
@@ -211,7 +233,10 @@ public class CounterSaleService {
             null,
             null,
             items,
-            null);
+            null,
+            input.customerId(),
+            null,
+            input.installments());
     if (!sales.insert(tenant, sale, actor, now))
       throw new CounterSaleException(CounterSaleException.Reason.REQUEST_CONFLICT);
     if (!inventory.sellAtCounter(
@@ -228,13 +253,11 @@ public class CounterSaleService {
         total,
         cost,
         costIncomplete,
-        new CounterSaleMoneyService.Payment(
-            account,
-            session,
-            fee,
-            !"DEBIT".equals(input.method()) && !"CREDIT".equals(input.method()),
-            REASON),
+        new CounterSaleMoneyService.Payment(account, session, fee, !sale.receivable(), REASON),
         actor);
+    if (sale.storeCredit())
+      credit.recordSale(
+          tenant, id, input.customerId(), total, input.installments(), input.firstDueOn());
     return new Registered(sales.byId(tenant, id).orElseThrow(), owner);
   }
 
@@ -245,6 +268,8 @@ public class CounterSaleService {
     requireOwner(member(actor, tenant, true));
     var sale = sales.lock(tenant, id).orElseThrow(CounterSaleService::missing);
     if (!sale.active()) return sale;
+    if (sale.storeCredit() && credit.received(tenant, id))
+      throw new CounterSaleException(CounterSaleException.Reason.CREDIT_RECEIVED);
     sales.cancel(tenant, id, actor, reason, restock, now());
     if (restock) inventory.reverseCounterSale(tenant, id, actor, "Cancelamento de venda na loja");
     money.recordRefund(
@@ -253,7 +278,7 @@ public class CounterSaleService {
         sale.total(),
         restock,
         sale.accountId(),
-        !sale.card(),
+        !sale.receivable(),
         "Cancelamento de venda na loja",
         actor);
     return sales.byId(tenant, id).orElseThrow();
@@ -277,11 +302,13 @@ public class CounterSaleService {
     return settings(tenant);
   }
 
-  /** A retry carries the same items, discount, method and session. */
+  /** A retry carries the same items, discount, method, session, customer and installments. */
   private static boolean same(CounterSaleRecords.Sale stored, CounterSaleInput.Sale input) {
     if (!stored.paymentMethod().equals(input.method())
         || stored.discount().compareTo(input.discount()) != 0
         || !Objects.equals(stored.cashSessionId(), input.cashSessionId())
+        || !Objects.equals(stored.customerId(), input.customerId())
+        || !Objects.equals(stored.installmentCount(), input.installments())
         || stored.items().size() != input.lines().size()) return false;
     for (int index = 0; index < input.lines().size(); index++) {
       var item = stored.items().get(index);
