@@ -7,6 +7,7 @@ import type { Product } from "@/lib/catalog";
 import { MOVEMENT_LABELS, reservedStockMessage, wholeQuantity, type InventorySnapshot, type MovementRequest } from "@/lib/inventory";
 import { variantLabel } from "@/components/variant-builder";
 import PageHeader from "@/components/page-header";
+import { AddButton, FormSheet } from "@/components/form-sheet";
 import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 import { Loading } from "@/components/ui/loading";
 
@@ -26,6 +27,7 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
   const [reason, setReason] = useState("");
   const [errors, setErrors] = useState<{ quantity?: string; reason?: string }>({});
   const [busy, setBusy] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [paging, setPaging] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);
@@ -90,7 +92,7 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
       const response = await apiRequest(inventoryApi, { method: "POST", body: request });
       if (response.ok) {
         await response.json();
-        confirmed = true; setPending(null); setQuantity(""); setReason("");
+        confirmed = true; setPending(null); setQuantity(""); setReason(""); setMoving(false);
         setFeedback({ text: "Movimentação registrada. O saldo será consultado novamente.", error: false });
       } else if ([400, 401, 403, 404, 409, 429].includes(response.status)) {
         const result: { code?: string; reserved?: unknown } = await response.json().catch(() => ({}));
@@ -132,9 +134,11 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
     finally { setPaging(false); }
   }
 
+  const feedbackNode = feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null;
   return <section className="page page-panel" aria-labelledby="inventory-title">
     <PageHeader id="inventory-title" title="Estoque do produto" current="Estoque"
-      breadcrumbs={[{ href: `/lojas/${encodeURIComponent(tenantId)}/produtos`, label: "Produtos" }, { href: productPath, label: product?.name ?? "Produto" }]} />
+      breadcrumbs={[{ href: `/lojas/${encodeURIComponent(tenantId)}/produtos`, label: "Produtos" }, { href: productPath, label: product?.name ?? "Produto" }]}
+      action={state === "ready" && product && snapshot ? <AddButton disabled={refreshing || paging} onClick={() => { setFeedback(null); setMoving(true); }}>Nova movimentação</AddButton> : undefined} />
     {state === "loading" ? <Loading context="estoque" /> : null}
     {state === "signed-out" ? <><p role="status">Entre novamente para consultar o estoque.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <p role="status">Produto ou loja indisponível. Escolha uma loja à qual você tem acesso.</p> : null}
@@ -148,11 +152,11 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
         <div><dt>Disponível para venda</dt><dd><strong>{integer.format(snapshot.available)} unidades</strong></dd></div>
       </dl>
       <p className="notice">Entradas adicionam unidades e ajustes corrigem o saldo físico. Pedidos pendentes reservam unidades por tempo limitado sem alterar o saldo físico; o disponível é o físico menos o reservado. Ajustes de retirada não podem deixar o físico abaixo do reservado.</p>
-      {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}
+      {moving ? null : feedbackNode}
       {refreshFailed ? <p role="alert" className="feedback feedback-error">O saldo exibido pode estar desatualizado. Se uma movimentação foi confirmada, ela já está registrada. Atualize o saldo antes de registrar outra.</p> : null}
       <button type="button" disabled={busy || refreshing || paging} onClick={() => void refresh()}>{refreshing ? "Consultando saldo…" : "Atualizar saldo e histórico"}</button>
-      <section className="store-create product-editor" aria-labelledby="movement-title"><h2 id="movement-title">Registrar movimentação</h2>
-        <form onSubmit={submit} noValidate aria-busy={busy}>
+      <FormSheet open={moving} onOpenChange={setMoving} titleId="movement-title" title="Registrar movimentação" busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
+        <form onSubmit={submit} noValidate aria-busy={busy} aria-labelledby="movement-title">
           <div className="form-field"><label htmlFor="movement-kind">Tipo de movimentação</label><select id="movement-kind" name="type" value={kind} onChange={event => setKind(event.target.value)} disabled={busy || !!pending}>
             <option value="ENTRY">Entrada</option><option value="ADD">Ajuste para adicionar</option><option value="REMOVE">Ajuste para retirar</option>
           </select></div>
@@ -162,7 +166,7 @@ export default function Inventory({ tenantId, productId, variantId }: { tenantId
             <p id="movement-reason-help" className="field-help">Até 240 caracteres, sem quebras de linha. Exemplo: recebimento de fornecedor ou conferência física.</p>{errors.reason ? <p id="movement-reason-error" className="field-error">{errors.reason}</p> : null}</div>
           {pending ? <><p className="notice">Solicitação pendente: {pending.type === "ENTRY" ? "entrada" : pending.delta > 0 ? "ajuste para adicionar" : "ajuste para retirar"} de {integer.format(Math.abs(pending.delta))} unidades. O conteúdo permanece bloqueado até a confirmação.</p><button type="button" disabled={busy || refreshing} onClick={() => void send(pending)}>{busy ? "Confirmando movimentação…" : "Repetir mesma solicitação com segurança"}</button></> : <button type="submit" disabled={busy || refreshing || refreshFailed}>{busy ? "Registrando movimentação…" : "Registrar movimentação"}</button>}
         </form>
-      </section>
+      </FormSheet>
       <section className="store-create" aria-labelledby="history-title"><h2 id="history-title">Histórico de movimentações</h2><p className="field-help">Mais recentes primeiro. Datas no fuso de São Paulo (America/Sao_Paulo).</p>
         {snapshot.movements.length ? <ol className="movement-list">{snapshot.movements.map(movement => <li className="product-card" key={movement.id}>
           <h3>{MOVEMENT_LABELS[movement.type] ?? "Movimentação"}: {movement.delta > 0 ? "+" : "−"}{integer.format(Math.abs(movement.delta))} unidades</h3>

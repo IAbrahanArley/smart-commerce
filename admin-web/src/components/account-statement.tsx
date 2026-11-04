@@ -7,6 +7,7 @@ import { accountRefusal, KIND_LABELS, lineError, parseAccounts, parseSignedAmoun
 import { formatBRL } from "@/lib/catalog";
 import { formatDay } from "@/lib/expenses";
 import PageHeader from "@/components/page-header";
+import { AddButton, FormSheet } from "@/components/form-sheet";
 import PageState from "@/components/page-state";
 import { Loading } from "@/components/ui/loading";
 
@@ -25,6 +26,7 @@ export default function AccountStatement({ tenantId, accountId }: { tenantId: st
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
   const [form, setForm] = useState({ amount: "", day: "", reason: "", request: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [adjusting, setAdjusting] = useState(false);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -73,7 +75,7 @@ export default function AccountStatement({ tenantId, accountId }: { tenantId: st
         if (response.status === 409) setForm(current => ({ ...current, request: "" }));
         return;
       }
-      setForm({ amount: "", day: "", reason: "", request: "" });
+      setForm({ amount: "", day: "", reason: "", request: "" }); setAdjusting(false);
       setFeedback({ text: "Ajuste registrado.", error: false }); setAttempt(current => current + 1);
     } catch { setFeedback({ text: "Não foi possível falar com o servidor. Tente novamente.", error: true }); }
     finally { setBusy(false); }
@@ -91,15 +93,17 @@ export default function AccountStatement({ tenantId, accountId }: { tenantId: st
   const field = (key: string) => ({ id: `adjust-${key}`, "aria-invalid": errors[key] ? true : undefined, "aria-describedby": errors[key] ? `adjust-${key}-error` : undefined });
   const error = (key: string) => errors[key] ? <p id={`adjust-${key}-error`} className="field-error">{errors[key]}</p> : null;
   const account = statement?.account;
+  const feedbackNode = feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null;
 
   return <section className="page store-categories" aria-labelledby="statement-title" aria-busy={state === "loading" || busy}>
     <PageHeader id="statement-title" title={account ? account.name : "Extrato"} breadcrumbs={[{ href: `${storePath}/contas`, label: "Contas" }]}
-      description={account ? `${TYPE_LABELS[account.type]} · saldo atual ${formatBRL(account.balance)}` : undefined} />
+      description={account ? `${TYPE_LABELS[account.type]} · saldo atual ${formatBRL(account.balance)}` : undefined}
+      action={state === "ready" && statement && statement.account.systemKey !== "MERCADO_PAGO" ? <AddButton onClick={() => { setFeedback(null); setErrors({}); setAdjusting(true); }}>Novo ajuste</AddButton> : undefined} />
     {state === "loading" ? <Loading context="o extrato" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para ver o extrato.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Conta indisponível" href={`${storePath}/contas`} actionLabel="Voltar para as contas">Escolha uma conta desta loja.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="box" title="Não foi possível consultar o extrato" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar novamente">Confira a conexão e tente novamente.</PageState> : null}
-    {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}
+    {adjusting ? null : feedbackNode}
     {state === "ready" && statement ? <>
       <form className="flex flex-wrap items-end gap-4" onSubmit={choosePeriod} aria-label="Período do extrato">
         <div className="form-field"><label htmlFor="period-from">De</label><input id="period-from" name="from" type="date" defaultValue={statement.from} /></div>
@@ -123,8 +127,8 @@ export default function AccountStatement({ tenantId, accountId }: { tenantId: st
       {statement.truncated ? <p className="field-help">Mostrando os 500 movimentos mais recentes do período. Escolha um período menor para ver os demais.</p> : null}
 
       {statement.account.systemKey === "MERCADO_PAGO" ? <p className="field-help">Esta conta segue os pagamentos do próprio Mercado Pago e não aceita ajustes nem transferências manuais.</p> :
-      <form className="side-card" onSubmit={event => void adjust(event)} noValidate aria-labelledby="adjust-title">
-        <h2 id="adjust-title">Registrar ajuste</h2>
+      <FormSheet open={adjusting} onOpenChange={setAdjusting} titleId="adjust-title" title="Registrar ajuste" busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
+      <form onSubmit={event => void adjust(event)} noValidate aria-labelledby="adjust-title">
         <p className="field-help">Use para o saldo inicial da conta ou para corrigir uma diferença. Valor negativo diminui o saldo (por exemplo, -20,00).</p>
         <div className="form-field"><label htmlFor="adjust-amount">Valor (R$)</label>
           <input {...field("amount")} inputMode="decimal" autoComplete="off" value={form.amount} disabled={busy} onChange={event => setForm(current => ({ ...current, amount: event.target.value }))} />{error("amount")}</div>
@@ -133,7 +137,8 @@ export default function AccountStatement({ tenantId, accountId }: { tenantId: st
         <div className="form-field"><label htmlFor="adjust-reason">Motivo</label>
           <input {...field("reason")} maxLength={200} autoComplete="off" value={form.reason} disabled={busy} onChange={event => setForm(current => ({ ...current, reason: event.target.value }))} />{error("reason")}</div>
         <button type="submit" disabled={busy}>{busy ? "Registrando…" : "Registrar ajuste"}</button>
-      </form>}
+      </form>
+      </FormSheet>}
     </> : null}
   </section>;
 }

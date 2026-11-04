@@ -7,6 +7,7 @@ import { formatBRL } from "@/lib/catalog";
 import { type CashOverview, type CashSession, type Drawer, MOVE_TITLES, MOVEMENT_LABELS, type MoveType, differenceText, formatDateTime, otherAccounts, parseCount } from "@/lib/cash";
 import { CATEGORIES, CATEGORY_LABELS, type ExpenseCategory, lineText, parseAmount } from "@/lib/expenses";
 import PageHeader from "@/components/page-header";
+import { FormSheet } from "@/components/form-sheet";
 import StatusBadge from "@/components/status-badge";
 import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 import PageState from "@/components/page-state";
@@ -32,7 +33,6 @@ export default function StoreCash({ tenantId }: { tenantId: string }) {
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
   const submitting = useRef(false);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
-  const formTitleRef = useRef<HTMLHeadingElement>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const api = `/api/tenants/${encodeURIComponent(tenantId)}/cash`;
   const owner = data?.role === "OWNER";
@@ -58,7 +58,6 @@ export default function StoreCash({ tenantId }: { tenantId: string }) {
   }, [api, attempt]);
 
   useEffect(() => { if (feedback) feedbackRef.current?.focus(); }, [feedback]);
-  useEffect(() => { if (action) formTitleRef.current?.focus(); }, [action]);
 
   function start(next: Action, button: HTMLButtonElement) {
     trigger.current = button; setFeedback(null); setErrors({}); setFields(EMPTY); setRequestId(crypto.randomUUID()); setAction(next);
@@ -132,12 +131,13 @@ export default function StoreCash({ tenantId }: { tenantId: string }) {
   const amountInput = <input id="cash-amount" disabled={busy} value={fields.amount} inputMode="decimal" autoComplete="off" maxLength={24} onChange={event => set("amount", event.target.value)} aria-invalid={errors.amount ? true : undefined} aria-describedby={described("amount", true)} />;
   const reopenable = (session: CashSession) => session.status === "CLOSED" && !history?.some(item => item.reopenedFrom === session.id) && !data?.drawers.some(drawer => drawer.id === session.accountId && drawer.session);
 
+  // The drawer buttons stay on the page; each one opens its form in a side sheet.
   function form() {
     if (!action) return null;
     const title = action.kind === "OPEN" ? `Abrir “${action.drawer.name}”` : action.kind === "CLOSE" ? `Fechar “${action.drawer.name}”` : action.kind === "REOPEN" ? `Reabrir “${action.session.accountName}”` : `${MOVE_TITLES[action.kind]} em “${action.drawer.name}”`;
     const accounts = action.drawer && data ? otherAccounts(data.destinations, action.drawer.id) : [];
-    return <form className="side-card" onSubmit={event => void submit(event)} noValidate aria-labelledby="cash-form-title">
-      <h2 id="cash-form-title" ref={formTitleRef} tabIndex={-1}>{title}</h2>
+    return <FormSheet open onOpenChange={next => { if (!next) setAction(null); }} titleId="cash-form-title" title={title} busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
+    <form onSubmit={event => void submit(event)} noValidate aria-labelledby="cash-form-title">
       {action.kind === "OPEN" ? field("amount", "Fundo de troco (R$)", amountInput, "Conte o dinheiro que está na gaveta agora. Pode ser zero.") : null}
       {action.kind === "CLOSE" ? field("amount", "Dinheiro contado na gaveta (R$)", amountInput, "Conte todo o dinheiro da gaveta antes de informar. O valor esperado não é mostrado.") : null}
       {action.kind === "DROP" || action.kind === "TOP_UP" || action.kind === "EXPENSE" ? <>
@@ -153,12 +153,15 @@ export default function StoreCash({ tenantId }: { tenantId: string }) {
         <button type="submit" disabled={busy}>{busy ? "Registrando…" : action.kind === "OPEN" ? "Abrir caixa" : action.kind === "CLOSE" ? "Fechar caixa" : action.kind === "REOPEN" ? "Reabrir caixa" : "Registrar"}</button>
         <button type="button" className="button-secondary" disabled={busy} onClick={cancel}>Voltar</button>
       </div>
-    </form>;
+    </form>
+    </FormSheet>;
   }
+
+  const feedbackNode = feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback ${feedback.error ? "feedback-error" : "feedback-success"}`}>{feedback.text}</p> : null;
 
   return <section className="page" aria-labelledby="cash-title">
     <PageHeader id="cash-title" title="Caixa" description="Abertura, sangria, suprimento, despesas pagas com dinheiro da gaveta e fechamento. Nada é apagado." />
-    {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback ${feedback.error ? "feedback-error" : "feedback-success"}`}>{feedback.text}</p> : null}
+    {action ? null : feedbackNode}
     {state === "loading" ? <Loading context="caixa" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar o caixa.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}

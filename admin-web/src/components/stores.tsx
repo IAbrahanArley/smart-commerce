@@ -6,6 +6,7 @@ import { billingRefusal } from "@/lib/billing";
 import { apiRequest, requestError } from "@/lib/auth-api";
 import type { TenantStore } from "@/lib/tenant-api";
 import PageHeader from "@/components/page-header";
+import { AddButton, FormSheet } from "@/components/form-sheet";
 import { Loading } from "@/components/ui/loading";
 
 export default function StoresPanel() {
@@ -19,6 +20,7 @@ export default function StoresPanel() {
   const [slugError, setSlugError] = useState("");
   const [nameErrors, setNameErrors] = useState<{ companyName?: string; storeName?: string }>({});
   const [created, setCreated] = useState<TenantStore | null>(null);
+  const [creating, setCreating] = useState(false);
   const submitting = useRef(false);
   const slugField = useRef<HTMLInputElement>(null);
   const feedback = useRef<HTMLParagraphElement>(null);
@@ -71,7 +73,7 @@ export default function StoresPanel() {
       }
       const store: TenantStore = await response.json();
       setStores(current => [...current, store]);
-      setCreated(store); form.reset();
+      setCreated(store); form.reset(); setCreating(false);
     } catch { setError("Não foi possível confirmar a criação. Consulte suas lojas antes de tentar novamente."); }
     finally { submitting.current = false; setPending(false); }
   }
@@ -82,25 +84,24 @@ export default function StoresPanel() {
   </section>;
 
   return <section className="page" aria-labelledby="stores-title">
-    <PageHeader id="stores-title" title="Minhas lojas" description="Escolha uma loja para gerenciar produtos, vitrine e entrega, ou crie uma nova." />
+    <PageHeader id="stores-title" title="Minhas lojas" description="Escolha uma loja para gerenciar produtos, vitrine e entrega, ou crie uma nova."
+      action={loading || loadError ? undefined : <AddButton onClick={() => { setError(""); setCreated(null); setCreating(true); }}>Nova loja</AddButton>} />
+    {created && !creating ? <p ref={feedback} role="status" tabIndex={-1} className="feedback feedback-success">Loja criada. <Link href={`/lojas/${encodeURIComponent(created.id)}`}>Visualizar {created.store.name}</Link></p> : null}
     <div className="stores-panel">
     {loading ? <Loading context="suas lojas" /> : loadError ? <div>
       <p role="alert" className="feedback feedback-error">{loadError}</p>
       <button type="button" onClick={() => { setLoading(true); setLoadError(""); setAttempt(current => current + 1); }}>Consultar lojas novamente</button>
-    </div> : stores.length === 0 ? <p>Você ainda não tem uma loja. Preencha os dados abaixo para criar a primeira.</p> : <ul className="store-list">
+    </div> : stores.length === 0 ? <p>Você ainda não tem uma loja. Use “Nova loja” para criar a primeira.</p> : <ul className="store-list">
       {stores.map(tenant => <li key={tenant.id} className="store-card">
         <h2><Link href={`/lojas/${encodeURIComponent(tenant.id)}`}>{tenant.store.name}</Link></h2>
         <p>{tenant.companyName}</p><p className="store-status">{tenant.store.status === "PUBLISHED" ? "Vitrine publicada" : "Em configuração · Vitrine oculta"} · {tenant.role === "STAFF" ? "Funcionário" : "Proprietário"}</p>
       </li>)}
     </ul>}
-    <div className="store-create">
-      <h2>Criar minha loja</h2>
-      <p>A loja começa em configuração, com a vitrine oculta. Você decide quando publicar a loja e quais produtos exibir.</p>
-      <p ref={feedback} role="status" aria-live="polite" tabIndex={-1}
-        className={error ? "feedback feedback-error" : created ? "feedback feedback-success" : "feedback-empty"}>
-        {error || (created ? <>Loja criada. <Link href={`/lojas/${encodeURIComponent(created.id)}`}>Visualizar {created.store.name}</Link></> : "")}
-      </p>
-      <form onSubmit={(event) => void createStore(event)} aria-busy={pending} noValidate>
+    </div>
+    <FormSheet open={creating} onOpenChange={setCreating} titleId="store-create-title" title="Criar minha loja" busy={pending} feedbackRef={feedback}
+      description="A loja começa em configuração, com a vitrine oculta. Você decide quando publicar a loja e quais produtos exibir.">
+      {error ? <p ref={feedback} role="alert" tabIndex={-1} className="feedback feedback-error">{error}</p> : null}
+      <form onSubmit={(event) => void createStore(event)} aria-busy={pending} noValidate aria-labelledby="store-create-title">
         <div className="form-field"><label htmlFor="company-name">Nome da empresa</label>
           <input id="company-name" name="companyName" autoComplete="organization" required maxLength={240}
             aria-invalid={nameErrors.companyName ? true : undefined} aria-describedby={nameErrors.companyName ? "company-name-error" : undefined}
@@ -123,7 +124,6 @@ export default function StoresPanel() {
         </div>
         <button type="submit" disabled={pending}>{pending ? "Criando loja…" : "Criar minha loja"}</button>
       </form>
-    </div>
-    </div>
+    </FormSheet>
   </section>;
 }

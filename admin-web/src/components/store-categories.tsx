@@ -8,6 +8,7 @@ import {
   categorySlugError, parentOptions, parseCategories, productCountText, siblings,
 } from "@/lib/categories";
 import PageHeader from "@/components/page-header";
+import { AddButton, FormSheet } from "@/components/form-sheet";
 import PageState from "@/components/page-state";
 import { useConfirm } from "@/components/confirm-dialog";
 import { Loading } from "@/components/ui/loading";
@@ -28,6 +29,7 @@ export default function StoreCategories({ tenantId }: { tenantId: string }) {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [editErrors, setEditErrors] = useState<{ name?: string; slug?: string }>({});
   const [busy, setBusy] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
   const submitting = useRef(false);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
@@ -88,7 +90,7 @@ export default function StoreCategories({ tenantId }: { tenantId: string }) {
     setNameError(problem);
     if (problem) { document.getElementById("category-name")?.focus(); return; }
     const value = categoryName(name);
-    if (await mutate([() => apiRequest(api, { method: "POST", body: { name: value, parentId: parent || null } })], `Categoria “${value}” criada.`)) setName("");
+    if (await mutate([() => apiRequest(api, { method: "POST", body: { name: value, parentId: parent || null } })], `Categoria “${value}” criada.`)) { setName(""); setCreating(false); }
   }
 
   async function save(event: FormEvent<HTMLFormElement>, category: Category) {
@@ -133,16 +135,18 @@ export default function StoreCategories({ tenantId }: { tenantId: string }) {
   }
 
   const full = (list?.length ?? 0) >= MAX_CATEGORIES;
+  const feedbackNode = feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null;
   return <section className="page store-categories" aria-labelledby="categories-title" aria-busy={state === "loading" || busy}>{dialog}
     <PageHeader id="categories-title" title="Categorias" breadcrumbs={[{ href: `${storePath}/produtos`, label: "Produtos" }]}
-      description={`Organize os produtos em até ${MAX_DEPTH} níveis, por exemplo Feminino › Roupas › Camisetas. A ordem aqui é a do menu da vitrine. Escolha a categoria de cada produto na edição do produto.`} />
+      description={`Organize os produtos em até ${MAX_DEPTH} níveis, por exemplo Feminino › Roupas › Camisetas. A ordem aqui é a do menu da vitrine. Escolha a categoria de cada produto na edição do produto.`}
+      action={state === "ready" ? <AddButton onClick={() => { setFeedback(null); setCreating(true); }}>Nova categoria</AddButton> : undefined} />
     {state === "loading" ? <Loading context="categorias" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para gerenciar as categorias.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="box" title="Não foi possível consultar as categorias" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar novamente">Confira a conexão e tente novamente.</PageState> : null}
-    {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}
+    {creating ? null : feedbackNode}
     {state === "ready" && list ? <>
-      {list.length === 0 ? <PageState icon="box" title="Nenhuma categoria">Crie a primeira categoria abaixo, por exemplo “Feminino” ou “Acessórios”.</PageState> : <ul className="category-list">
+      {list.length === 0 ? <PageState icon="box" title="Nenhuma categoria">Use “Nova categoria” para criar a primeira, por exemplo “Feminino” ou “Acessórios”.</PageState> : <ul className="category-list">
         {list.map(category => {
           const group = siblings(list, category);
           const index = group.findIndex(other => other.id === category.id);
@@ -191,8 +195,8 @@ export default function StoreCategories({ tenantId }: { tenantId: string }) {
           </li>;
         })}
       </ul>}
-      <form className="side-card" onSubmit={event => void create(event)} noValidate aria-labelledby="category-create-title">
-        <h2 id="category-create-title">Nova categoria</h2>
+      <FormSheet open={creating} onOpenChange={setCreating} titleId="category-create-title" title="Nova categoria" busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
+      <form onSubmit={event => void create(event)} noValidate aria-labelledby="category-create-title">
         <div className="form-field">
           <label htmlFor="category-name">Nome</label>
           <p id="category-name-help" className="field-help">Até 60 caracteres. Até {MAX_CATEGORIES} categorias por loja.</p>
@@ -211,6 +215,7 @@ export default function StoreCategories({ tenantId }: { tenantId: string }) {
         <button type="submit" disabled={busy || full}>{busy ? "Salvando…" : "Criar categoria"}</button>
         {full ? <p className="field-help">A loja atingiu o limite de categorias.</p> : null}
       </form>
+      </FormSheet>
     </> : null}
   </section>;
 }

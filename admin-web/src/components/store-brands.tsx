@@ -6,6 +6,7 @@ import { apiRequest } from "@/lib/auth-api";
 import { type Brand, MAX_BRANDS, brandError, parseBrands } from "@/lib/brands";
 import { categoryName, categoryNameError, productCountText } from "@/lib/categories";
 import PageHeader from "@/components/page-header";
+import { AddButton, FormSheet } from "@/components/form-sheet";
 import PageState from "@/components/page-state";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
@@ -22,6 +23,7 @@ export default function StoreBrands({ tenantId }: { tenantId: string }) {
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
   useUnsavedChanges(!!name.trim() || (!!editing && editing.name !== list?.find(brand => brand.id === editing.id)?.name));
   const submitting = useRef(false);
@@ -74,7 +76,7 @@ export default function StoreBrands({ tenantId }: { tenantId: string }) {
     setNameError(problem);
     if (problem) { document.getElementById("brand-name")?.focus(); return; }
     const value = categoryName(name);
-    if (await mutate(() => apiRequest(api, { method: "POST", body: { name: value } }), `Marca “${value}” criada.`)) setName("");
+    if (await mutate(() => apiRequest(api, { method: "POST", body: { name: value } }), `Marca “${value}” criada.`)) { setName(""); setCreating(false); }
   }
 
   async function rename(event: FormEvent<HTMLFormElement>) {
@@ -97,16 +99,18 @@ export default function StoreBrands({ tenantId }: { tenantId: string }) {
   }
 
   const full = (list?.length ?? 0) >= MAX_BRANDS;
+  const feedbackNode = feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null;
   return <section className="page store-categories" aria-labelledby="brands-title" aria-busy={state === "loading" || busy}>{dialog}
     <PageHeader id="brands-title" title="Marcas" breadcrumbs={[{ href: `${storePath}/produtos`, label: "Produtos" }]}
-      description="Cadastre as marcas que a loja vende. O comprador poderá filtrar por marca na vitrine. Escolha a marca de cada produto no cartão “Vitrine” da edição do produto." />
+      description="Cadastre as marcas que a loja vende. O comprador poderá filtrar por marca na vitrine. Escolha a marca de cada produto no cartão “Vitrine” da edição do produto."
+      action={state === "ready" ? <AddButton onClick={() => { setFeedback(null); setCreating(true); }}>Nova marca</AddButton> : undefined} />
     {state === "loading" ? <Loading context="marcas" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para gerenciar as marcas.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="box" title="Não foi possível consultar as marcas" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar novamente">Confira a conexão e tente novamente.</PageState> : null}
-    {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}
+    {creating ? null : feedbackNode}
     {state === "ready" && list ? <>
-      {list.length === 0 ? <PageState icon="box" title="Nenhuma marca">Crie a primeira marca abaixo.</PageState> : <ul className="category-list">
+      {list.length === 0 ? <PageState icon="box" title="Nenhuma marca">Use “Nova marca” para criar a primeira.</PageState> : <ul className="category-list">
         {list.map(brand => <li key={brand.id} className="category-item">
           {editing?.id === brand.id ? <form onSubmit={event => void rename(event)} noValidate className="category-edit">
             <label htmlFor={`brand-edit-${brand.id}`} className="visually-hidden">Novo nome de “{brand.name}”</label>
@@ -127,8 +131,8 @@ export default function StoreBrands({ tenantId }: { tenantId: string }) {
           </>}
         </li>)}
       </ul>}
-      <form className="side-card" onSubmit={event => void create(event)} noValidate aria-labelledby="brand-create-title">
-        <h2 id="brand-create-title">Nova marca</h2>
+      <FormSheet open={creating} onOpenChange={setCreating} titleId="brand-create-title" title="Nova marca" busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
+      <form onSubmit={event => void create(event)} noValidate aria-labelledby="brand-create-title">
         <div className="form-field">
           <label htmlFor="brand-name">Nome</label>
           <p id="brand-name-help" className="field-help">Até 60 caracteres. Até {MAX_BRANDS} marcas por loja.</p>
@@ -140,6 +144,7 @@ export default function StoreBrands({ tenantId }: { tenantId: string }) {
         <button type="submit" disabled={busy || full}>{busy ? "Salvando…" : "Criar marca"}</button>
         {full ? <p className="field-help">A loja atingiu o limite de marcas.</p> : null}
       </form>
+      </FormSheet>
     </> : null}
   </section>;
 }

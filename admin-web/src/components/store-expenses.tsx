@@ -7,6 +7,7 @@ import { formatBRL } from "@/lib/catalog";
 import { type Account, manualAccounts, parseAccounts, todayInStore } from "@/lib/accounts";
 import { CATEGORIES, CATEGORY_LABELS, KIND_LABELS, MAX_INSTALLMENTS, SITUATION_FILTERS, SITUATION_LABELS, SITUATION_SLUGS, SITUATIONS, type Expense, type ExpenseCategory, type ExpenseKind, type ExpenseMonth, type Situation, expenseDateErrors, formatDay, installmentAmounts, lineText, monthLabel, monthOf, parseAmount, parseOptionalAmount, paymentTotal, shiftMonth } from "@/lib/expenses";
 import PageHeader from "@/components/page-header";
+import { AddButton, FormSheet } from "@/components/form-sheet";
 import StatusBadge from "@/components/status-badge";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
@@ -50,14 +51,12 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
   const [payment, setPayment] = useState<Payment>({ paidOn: "", accountId: "", surcharge: "", discount: "" });
   const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
   const [busy, setBusy] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
   const submitting = useRef(false);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
-  const formTitleRef = useRef<HTMLHeadingElement>(null);
   const reasonRef = useRef<HTMLInputElement>(null);
-  const payTitleRef = useRef<HTMLHeadingElement>(null);
   const actionTrigger = useRef<HTMLButtonElement | null>(null);
-  const focusDraft = useRef(false);
   const { confirm, dialog } = useConfirm();
   const draftDirty = JSON.stringify(draft) !== baseline;
   const dirty = draftDirty || Boolean(reason) || Boolean(paying) || busy;
@@ -83,13 +82,8 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
     return () => controller.abort();
   }, [api, tenantId, month, situation, attempt]);
 
-  useEffect(() => {
-    if (!feedback) return;
-    if (focusDraft.current) { focusDraft.current = false; formTitleRef.current?.focus(); }
-    else feedbackRef.current?.focus();
-  }, [feedback]);
+  useEffect(() => { if (feedback) feedbackRef.current?.focus(); }, [feedback]);
   useEffect(() => { if (cancelling) reasonRef.current?.focus(); }, [cancelling]);
-  useEffect(() => { if (paying) payTitleRef.current?.focus(); }, [paying]);
   useUnsavedChanges(dirty);
 
   function set<K extends keyof Draft>(name: K, value: Draft[K]) {
@@ -144,7 +138,7 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
       if (response.ok) {
         const clean = { ...EMPTY, dueDate: draft.dueDate };
         setDraft(clean); setBaseline(JSON.stringify(clean)); setRequestId(crypto.randomUUID());
-        setFeedback({ text: split ? `Conta registrada em ${count} parcelas.` : "Conta registrada.", error: false }); setAttempt(current => current + 1);
+        setCreating(false); setFeedback({ text: split ? `Conta registrada em ${count} parcelas.` : "Conta registrada.", error: false }); setAttempt(current => current + 1);
         return;
       }
       if (response.status === 401) { setFeedback({ text: "Sua sessão expirou. Entre novamente antes de registrar a conta.", error: true }); return; }
@@ -223,12 +217,12 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
         setCancelling(null); setReason(""); setAttempt(current => current + 1);
         const refunded = expense.paidAccountName ? ` O valor pago voltou para “${expense.paidAccountName}”.` : "";
         if (correct) {
-          setErrors({}); focusDraft.current = true;
+          setErrors({}); setCreating(true);
           setDraft({ ...EMPTY, description: expense.description, supplier: expense.supplier ?? "", documentNumber: expense.documentNumber ?? "", category: expense.category, kind: expense.kind,
             amount: expense.amount.replace(".", ","), dueDate: expense.dueDate, competenceDate: expense.competenceDate === expense.dueDate ? "" : expense.competenceDate, monthly: expense.recurrence === "MONTHLY" });
           setRequestId(crypto.randomUUID());
           const paidAgain = expense.paidOn ? " Se ela já foi paga, marque “Já está paga” de novo." : "";
-          setFeedback({ text: `Conta cancelada.${refunded} Ajuste os valores abaixo e registre a conta correta.${paidAgain}`, error: false });
+          setFeedback({ text: `Conta cancelada.${refunded} Ajuste os valores e registre a conta correta.${paidAgain}`, error: false });
         } else setFeedback({ text: `Conta cancelada.${refunded} Ela continua na lista para consulta.`, error: false });
         return;
       }
@@ -258,8 +252,12 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
   const preview = split && "amount" in parseAmount(draft.amount) ? installmentAmounts((parseAmount(draft.amount) as { amount: string }).amount, count) : null;
   const caption = situation === "OVERDUE" ? "Contas vencidas de todos os meses" : `Contas com vencimento em ${monthLabel(month)}${situation ? ` · ${SITUATION_FILTERS[situation]}` : ""}`;
 
-  return <section className="page" aria-labelledby="expenses-title">{dialog}
-    <PageHeader id="expenses-title" title="Contas a pagar" description="Duplicatas, salários e despesas da loja por mês de vencimento. Para corrigir, cancele com um motivo e registre de novo: nada é apagado." />
+  const sheetOpen = creating || Boolean(paying) || Boolean(cancelling);
+  const feedbackNode = feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback ${feedback.error ? "feedback-error" : "feedback-success"}`}>{feedback.text}</p> : null;
+
+  return <section className="page" aria-labelledby="expenses-title">
+    <PageHeader id="expenses-title" title="Contas a pagar" description="Duplicatas, salários e despesas da loja por mês de vencimento. Para corrigir, cancele com um motivo e registre de novo: nada é apagado."
+      action={state === "ready" ? <AddButton onClick={() => { setFeedback(null); setPaying(null); setCancelling(null); setCreating(true); }}>Nova conta</AddButton> : undefined} />
     {situation !== "OVERDUE" ? <nav className="period-navigation" aria-label="Mês de vencimento">
       <Link className="button-link button-secondary" href={pagePath(shiftMonth(month, -1), situation)} prefetch={false}><span aria-hidden="true">‹</span> Mês anterior</Link>
       <div className="period-navigation-current"><span className="field-help">Vencimento</span><strong>{monthLabel(month)}</strong></div>
@@ -269,7 +267,7 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
       <Link href={pagePath(month, null)} prefetch={false} aria-current={situation === null ? "page" : undefined}>Todas</Link>
       {SITUATIONS.map(value => <Link key={value} href={pagePath(month, value)} prefetch={false} aria-current={situation === value ? "page" : undefined}>{SITUATION_FILTERS[value]}</Link>)}
     </nav>
-    {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback ${feedback.error ? "feedback-error" : "feedback-success"}`}>{feedback.text}</p> : null}
+    {sheetOpen ? null : feedbackNode}
     {state === "loading" ? <Loading context="contas a pagar" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para acessar as contas a pagar.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
@@ -300,8 +298,8 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
           </div> : null}</td>
         </tr>)}</tbody>
       </table></div> : <PageState icon="wallet" title={situation ? "Nenhuma conta nesta situação" : "Nenhuma conta neste mês"}>{situation === "OVERDUE" ? "Nenhuma conta vencida. Tudo em dia." : `Nenhuma conta ${situation ? SITUATION_FILTERS[situation].toLowerCase() : "registrada"} com vencimento em ${monthLabel(month)}.`}</PageState>}
-      {paying ? <form className="side-card" onSubmit={event => void pay(event)} noValidate aria-labelledby="payment-title">
-        <h2 id="payment-title" ref={payTitleRef} tabIndex={-1}>Pagar “{paying.description}”</h2>
+      <FormSheet open={Boolean(paying)} onOpenChange={open => { if (!open) setPaying(null); }} titleId="payment-title" title={paying ? `Pagar “${paying.description}”` : "Pagar"} busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
+      {paying ? <form onSubmit={event => void pay(event)} noValidate aria-labelledby="payment-title">
         <p>Valor da conta: <strong>{formatBRL(paying.amount)}</strong>, com vencimento em {formatDay(paying.dueDate)}.{paying.recurrence === "MONTHLY" ? " Ao pagar, a conta do próximo mês será criada." : ""}</p>
         {paymentField("paidOn", "Data do pagamento", <input id="payment-paidOn" type="date" min="2000-01-01" max={today()} disabled={busy} value={payment.paidOn} onChange={event => setPaymentField("paidOn", event.target.value)} aria-invalid={paymentErrors.paidOn ? true : undefined} aria-describedby={paymentDescribed("paidOn")} />)}
         {paymentField("accountId", "Conta de saída", <select id="payment-accountId" disabled={busy} value={payment.accountId} onChange={event => setPaymentField("accountId", event.target.value)} aria-invalid={paymentErrors.accountId ? true : undefined} aria-describedby={paymentDescribed("accountId", true)}>
@@ -314,8 +312,9 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
           <button type="button" className="button-secondary" disabled={busy} onClick={() => { setPaying(null); actionTrigger.current?.focus(); }}>Voltar</button>
         </div>
       </form> : null}
-      {cancelling ? <form className="side-card" onSubmit={event => void cancel(event)} noValidate aria-labelledby="expense-cancel-title">
-        <h2 id="expense-cancel-title">{cancelling.correct ? "Corrigir" : "Cancelar"} “{cancelling.expense.description}”</h2>
+      </FormSheet>
+      <FormSheet open={Boolean(cancelling)} onOpenChange={open => { if (!open) { setCancelling(null); setReason(""); } }} titleId="expense-cancel-title" title={cancelling ? `${cancelling.correct ? "Corrigir" : "Cancelar"} “${cancelling.expense.description}”` : "Cancelar"} busy={busy} feedbackRef={feedbackRef}>{feedbackNode}{dialog}
+      {cancelling ? <form onSubmit={event => void cancel(event)} noValidate aria-labelledby="expense-cancel-title">
         <p>{cancelling.correct ? "A conta atual será cancelada e o formulário abrirá com os valores dela para você registrar a correta." : "A conta sai dos totais, mas continua na lista com o motivo."}
           {cancelling.expense.paidAccountName ? ` O pagamento de ${formatBRL(cancelling.expense.paidTotal ?? cancelling.expense.amount)} volta para “${cancelling.expense.paidAccountName}” hoje.` : ""}
           {cancelling.expense.recurrence === "MONTHLY" && cancelling.expense.paidOn ? " A conta do mês seguinte, se ainda estiver em aberto, também será cancelada." : ""}</p>
@@ -329,9 +328,10 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
           <button type="button" className="button-secondary" disabled={busy} onClick={() => { setCancelling(null); setReason(""); actionTrigger.current?.focus(); }}>Manter conta</button>
         </div>
       </form> : null}
+      </FormSheet>
     </> : null}
-    {state === "ready" ? <form className="side-card" onSubmit={event => void create(event)} noValidate aria-labelledby="expense-form-title">
-      <h2 id="expense-form-title" ref={formTitleRef} tabIndex={-1}>Registrar conta</h2>
+    <FormSheet open={state === "ready" && creating} onOpenChange={setCreating} titleId="expense-form-title" title="Registrar conta" busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
+    <form onSubmit={event => void create(event)} noValidate aria-labelledby="expense-form-title">
       {field("description", "Descrição", <input id="expense-description" disabled={busy} value={draft.description} maxLength={400} autoComplete="off" onChange={event => set("description", event.target.value)} aria-invalid={errors.description ? true : undefined} aria-describedby={described("description")} />)}
       {field("supplier", "Fornecedor (opcional)", <input id="expense-supplier" disabled={busy} value={draft.supplier} maxLength={240} autoComplete="off" onChange={event => set("supplier", event.target.value)} aria-invalid={errors.supplier ? true : undefined} aria-describedby={described("supplier")} />)}
       {field("documentNumber", "Número do documento (opcional)", <input id="expense-documentNumber" disabled={busy} value={draft.documentNumber} maxLength={80} autoComplete="off" onChange={event => set("documentNumber", event.target.value)} aria-invalid={errors.documentNumber ? true : undefined} aria-describedby={described("documentNumber", true)} />, "Duplicata, boleto ou nota, para conferir depois.")}
@@ -356,6 +356,7 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
         </> : null}
       </> : null}
       <div className="form-actions"><button type="submit" disabled={busy}>{busy ? "Registrando…" : split ? `Registrar ${count} parcelas` : "Registrar conta"}</button></div>
-    </form> : null}
+    </form>
+    </FormSheet>
   </section>;
 }

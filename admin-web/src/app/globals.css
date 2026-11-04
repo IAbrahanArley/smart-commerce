@@ -171,6 +171,14 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .page-header h1 { margin: var(--sc-space-2) 0 0; }
 .page-description { margin: var(--sc-space-2) 0 0; color: var(--sc-color-text-secondary); overflow-wrap: anywhere; }
 .page-header-action { flex-shrink: 0; }
+.page-header-action > .form-actions { margin-top: 0; }
+/* Form sheets (2026-11-04): fixed header with the title, scrolling body with the form. */
+.form-sheet-header { padding: var(--sc-space-6) 3.5rem var(--sc-space-4) var(--sc-space-6); border-bottom: 1px solid var(--sc-color-divider); }
+.form-sheet-header h2 { margin: 0; font-size: 1.125rem; font-weight: 600; }
+.form-sheet-header p { margin: var(--sc-space-2) 0 0; color: var(--sc-color-text-secondary); font-size: .875rem; }
+.form-sheet-body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--sc-space-2) var(--sc-space-6) var(--sc-space-6); }
+.form-sheet-body > .feedback { margin-top: var(--sc-space-4); }
+.form-sheet-body > form > p:first-child { margin-top: var(--sc-space-4); }
 .page h2 { font-size: 1.25rem; line-height: 1.2; margin-block: 0 var(--sc-space-4); }
 
 .status-badge { display: inline-flex; align-items: center; gap: var(--sc-space-2); max-width: 100%; padding: var(--sc-space-1) var(--sc-space-2); border-radius: var(--sc-radius-control); font-size: .875rem; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }

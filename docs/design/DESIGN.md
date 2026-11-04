@@ -223,6 +223,16 @@ Aprovado pelo responsável em 2026-10-26. O pedido foi uma interface de "nível 
 - `touch-action: manipulation` e destaque de toque intencional no admin;
 - links isolados com alvo de pelo menos 24px.
 
+### Formulários em sheet (2026-11-04)
+
+Pedido do responsável: telas do admin que mostram uma lista ou um conteúdo deixam só a consulta na página; o formulário de criação ou de ação sobre um item abre num sheet lateral à direita. O botão fica no cabeçalho da página (`PageHeader`, área de ação), com o ícone "+" decorativo e um rótulo específico ("Nova conta", "Nova marca", "Nova venda", "Convidar funcionário"); ações secundárias usam o botão contornado ("Transferir", "Importar planilha", "Configurações"). Ações de uma linha (pagar, cancelar, abrir ou fechar o caixa) continuam no item e abrem o mesmo sheet.
+
+- Componente local `FormSheet` (`admin-web/src/components/form-sheet.tsx`), sobre o `Dialog` Radix já aprovado, com `side="right"`; sem dependência nova.
+- O título do sheet é o `h2` e rotula o formulário. Foco preso no sheet; Escape e o botão Fechar fecham; enquanto a requisição roda, o sheet não fecha.
+- Erros ficam dentro do sheet; no sucesso o sheet fecha e o retorno aparece na página, recebendo o foco. Sem retorno, o foco volta ao botão que abriu.
+- O rascunho fica no estado da tela: fechar e reabrir mantém o que foi digitado (exceto "Criar minha loja", que usa campos não controlados).
+- Edições em linha (renomear marca, editar categoria) e telas que são só configuração (dados da loja, entrega, pagamentos, aparência) continuam como estão.
+
 ## Plataforma e temas futuros das lojas
 
 Admin e autenticação usam identidade e tokens `--sc-`. A vitrine é aplicação separada, conforme arquitetura. Sua personalização futura terá contrato próprio de tokens permitidos, por exemplo `--store-`, com fallback e validação de contraste; não adotar CSS arbitrário do cliente ou vazamento de estilos entre aplicações.
