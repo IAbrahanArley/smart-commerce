@@ -165,6 +165,44 @@ class ExpenseIT {
   }
 
   @Test
+  void payablesPageInDueOrderWithTotalsOverEveryBill() throws Exception {
+    Browser a = login("despesas-a@example.test");
+    for (int i = 0; i < 52; i++)
+      assertThat(
+              a.post(
+                      path(tenantA),
+                      expense(
+                          UUID.randomUUID().toString(),
+                          "RENT",
+                          "FIXED",
+                          "10.00",
+                          "2026-10-01",
+                          null))
+                  .statusCode())
+          .isEqualTo(200);
+    String october = path(tenantA) + "?month=2026-10";
+    JsonNode first = JSON.readTree(a.get(october).body());
+    assertThat(first.get("expenses")).hasSize(50);
+    assertThat(first.get("toPay").asText()).isEqualTo("520.00");
+    String cursor = first.get("nextCursor").asText();
+    String after =
+        "&after=" + java.net.URLEncoder.encode(cursor, java.nio.charset.StandardCharsets.UTF_8);
+    JsonNode second = JSON.readTree(a.get(october + after).body());
+    assertThat(second.get("expenses")).hasSize(2);
+    assertThat(second.get("nextCursor").isNull()).isTrue();
+    var ids = new java.util.HashSet<String>();
+    for (JsonNode page : List.of(first, second))
+      for (JsonNode item : page.get("expenses")) ids.add(item.get("id").asText());
+    assertThat(ids).hasSize(52);
+    // The situation filter runs in the database: every October bill is past due, none is open.
+    JsonNode overdue = JSON.readTree(a.get(october + "&situation=OVERDUE").body());
+    assertThat(overdue.get("expenses")).hasSize(50);
+    assertThat(overdue.get("overdueCount").asLong()).isEqualTo(52);
+    assertThat(JSON.readTree(a.get(october + "&situation=OPEN").body()).get("expenses")).isEmpty();
+    assertThat(a.get(october + "&after=2026-10-01_junk").statusCode()).isEqualTo(400);
+  }
+
+  @Test
   void invalidDataCsrfSessionAndOtherStoresAreRefused() throws Exception {
     Browser a = login("despesas-a@example.test");
     Browser b = login("despesas-b@example.test");

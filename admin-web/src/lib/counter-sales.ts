@@ -11,7 +11,7 @@ export type CounterSale = {
   // SC-054: the day an imported sale happened (null for sales registered live).
   soldOn: string | null;
 };
-export type CounterOverview = { role: "OWNER" | "STAFF"; staffDiscountLimit: string; pixAccountName: string | null; sessions: { id: string; accountName: string }[]; sales: CounterSale[] };
+export type CounterOverview = { role: "OWNER" | "STAFF"; staffDiscountLimit: string; pixAccountName: string | null; sessions: { id: string; accountName: string }[]; sales: CounterSale[]; nextCursor: string | null };
 export type CounterSettings = { staffDiscountLimit: string; pixAccountId: string | null; debitFeePercent: string | null; debitReleaseDays: number | null; creditFeePercent: string | null; creditReleaseDays: number | null };
 export type CartLine = { product: CounterProduct; quantity: number };
 

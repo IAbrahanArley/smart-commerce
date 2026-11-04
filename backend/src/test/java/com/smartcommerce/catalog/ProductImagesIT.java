@@ -328,7 +328,7 @@ class ProductImagesIT {
     for (JsonNode item : JSON.readTree(a.get(base + "/images").body()).get("images"))
       ids.add(item.get("id").asText());
 
-    JsonNode list = JSON.readTree(a.get(path(tenantA)).body());
+    JsonNode list = JSON.readTree(a.get(path(tenantA)).body()).get("products");
     JsonNode bare = find(list, withoutPhotos);
     assertThat(bare.get("coverImageId").isNull()).isTrue();
     assertThat(bare.get("imageCount").asInt()).isZero();
@@ -345,7 +345,9 @@ class ProductImagesIT {
                 .statusCode())
         .isEqualTo(200);
     assertThat(
-            find(JSON.readTree(a.get(path(tenantA)).body()), product).get("coverImageId").asText())
+            find(JSON.readTree(a.get(path(tenantA)).body()).get("products"), product)
+                .get("coverImageId")
+                .asText())
         .isEqualTo(ids.get(1));
     assertThat(JSON.readTree(a.get(base).body()).get("coverImageId").asText())
         .isEqualTo(ids.get(1));

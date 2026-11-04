@@ -3,6 +3,7 @@ package com.smartcommerce.orders.services;
 import com.smartcommerce.finance.services.CounterSaleMoneyService;
 import com.smartcommerce.inventory.domain.ReservationLine;
 import com.smartcommerce.inventory.services.InventoryReservationService;
+import com.smartcommerce.orders.domain.CounterSaleCursor;
 import com.smartcommerce.orders.domain.CounterSaleException;
 import com.smartcommerce.orders.domain.CounterSaleInput;
 import com.smartcommerce.orders.domain.CounterSaleRecords;
@@ -46,7 +47,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class CounterSaleService {
   static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
   static final int SEARCH_LIMIT = 20;
-  static final int RECENT = 50;
   private static final String REASON = "Venda na loja";
 
   private final CounterSaleRepository sales;
@@ -70,13 +70,20 @@ public class CounterSaleService {
       CounterSaleRecords.Settings settings,
       String pixAccountName,
       List<CounterSaleMoneyService.OpenSession> sessions,
-      List<CounterSaleRecords.Sale> sales) {}
+      List<CounterSaleRecords.Sale> sales,
+      CounterSaleCursor nextCursor) {}
 
-  /** The counter screen: the viewer's role, what can be sold with and the latest sales. */
+  /**
+   * The counter screen: the viewer's role, what can be sold with and one page of sales, newest
+   * first, after {@code cursor} when given; {@code nextCursor} is null on the last page.
+   */
   @Transactional
-  public Overview overview(UUID actor, UUID tenant) {
+  public Overview overview(UUID actor, UUID tenant, CounterSaleCursor cursor) {
     String role = member(actor, tenant, false);
     var settings = settings(tenant);
+    var page = sales.page(tenant, cursor, CounterSaleCursor.PAGE_SIZE + 1);
+    boolean more = page.size() > CounterSaleCursor.PAGE_SIZE;
+    var shown = more ? page.subList(0, CounterSaleCursor.PAGE_SIZE) : page;
     return new Overview(
         role,
         settings,
@@ -84,7 +91,8 @@ public class CounterSaleService {
             ? null
             : money.bankAccountName(tenant, settings.pixAccountId()).orElse(null),
         money.openSessions(tenant),
-        sales.recent(tenant, RECENT));
+        shown,
+        more ? new CounterSaleCursor(shown.getLast().createdAt(), shown.getLast().id()) : null);
   }
 
   /** The stock search of "Adicionar produto do estoque": name or SKU, at least 2 characters. */

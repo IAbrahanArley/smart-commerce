@@ -20,8 +20,9 @@ interface ProductJpaRepository extends Repository<Product, UUID> {
  WHERE p.tenant_id = :tenant
  """;
 
-  @Query(value = OWNED + " ORDER BY p.created_at,p.id", nativeQuery = true)
-  List<Product> listOwned(@Param("actor") UUID actor, @Param("tenant") UUID tenant);
+  @Query(value = OWNED + " AND p.id IN (:ids)", nativeQuery = true)
+  List<Product> findOwnedIn(
+      @Param("actor") UUID actor, @Param("tenant") UUID tenant, @Param("ids") Collection<UUID> ids);
 
   @Query(value = OWNED + " AND p.id = :product", nativeQuery = true)
   Optional<Product> findOwned(

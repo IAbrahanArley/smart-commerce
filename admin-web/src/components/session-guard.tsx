@@ -6,7 +6,7 @@ import { apiRequest } from "@/lib/auth-api";
 import { isProtectedPath, SESSION_INVALIDATED } from "@/lib/session-events";
 
 type Session = { id: string; email: string };
-type Check = { pathname: string; session: Session | null; error: boolean };
+type Check = { session: Session | null; error: boolean };
 const SessionContext = createContext<Session | null>(null);
 
 export function useAdminSession() { return useContext(SessionContext); }
@@ -15,8 +15,11 @@ export function useAdminSession() { return useContext(SessionContext); }
 export default function SessionGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   if (!isProtectedPath(pathname)) return children;
-  // A fresh instance prevents a previously verified route from being reused after public login/navigation.
-  return <ProtectedSession key={pathname} pathname={pathname}>{children}</ProtectedSession>;
+  // Leaving the protected area unmounts the gate, so coming back (after a public login or navigation)
+  // always starts a fresh, unverified instance. Between protected pages the instance stays: the
+  // verified session keeps the page on screen while each navigation revalidates it in the
+  // background, and a 401 or another identity still sends the user to the login (2026-11-04).
+  return <ProtectedSession pathname={pathname}>{children}</ProtectedSession>;
 }
 
 function ProtectedSession({ pathname, children }: { pathname: string; children: ReactNode }) {
@@ -58,11 +61,11 @@ function ProtectedSession({ pathname, children }: { pathname: string; children: 
         if (!isSession(session)) throw new Error();
         if (identity.current !== null && identity.current !== session.id) { invalidate(); return; }
         identity.current = session.id;
-        setCheck({ pathname, session, error: false });
+        setCheck({ session, error: false });
         if (root.current) root.current.hidden = false;
       } catch {
         if (!active || current !== request || controller.signal.aborted) return;
-        setCheck(previous => ({ pathname, session: previous?.pathname === pathname ? previous.session : null, error: true }));
+        setCheck(previous => ({ session: previous?.session ?? null, error: true }));
         if (root.current) root.current.hidden = false;
       } finally {
         if (active && current === request) setRetrying(false);
@@ -100,7 +103,7 @@ function ProtectedSession({ pathname, children }: { pathname: string; children: 
     };
   }, [pathname, attempt]);
 
-  const current = check?.pathname === pathname ? check : null;
+  const current = check;
   const ErrorContainer = current?.session ? "div" : "main";
   return <div ref={root}>
     {!current ? <main id="conteudo" className="site-main" tabIndex={-1}><section className="page-panel" aria-labelledby="session-title">

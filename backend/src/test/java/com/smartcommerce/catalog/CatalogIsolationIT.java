@@ -156,9 +156,61 @@ class CatalogIsolationIT {
   }
 
   @Test
+  void theProductListFiltersOrdersAndPagesInTheDatabase() throws Exception {
+    Browser a = login("catalog-a@example.test");
+    // 26 items (even ones selected for the storefront) plus one with accents, all with a variant.
+    jdbc.update(
+        "INSERT INTO catalog_product(id,tenant_id,store_id,name,sku,price,currency,created_at,"
+            + "updated_at,published,kind) SELECT gen_random_uuid(),?,id,'Item '||lpad(g::text,2,'0'),"
+            + "'ITEM-'||g,g,'BRL',now()+g*interval '1 second',now()+g*interval '1 second',g%2=0,'SIMPLE'"
+            + " FROM store, generate_series(1,26) g WHERE tenant_id=?",
+        tenantA, tenantA);
+    jdbc.update(
+        "INSERT INTO catalog_product(id,tenant_id,store_id,name,sku,price,currency,created_at,"
+            + "updated_at,published,kind) SELECT gen_random_uuid(),?,id,'Pão de Queijo','PDQ-1',"
+            + "99,'BRL',now()+interval '1 minute',now()+interval '1 minute',false,'SIMPLE' FROM store WHERE tenant_id=?",
+        tenantA,
+        tenantA);
+    jdbc.update(
+        "INSERT INTO catalog_variant(id,tenant_id,product_id,sku,price,currency,options_json,"
+            + "combination_key) SELECT id,tenant_id,id,sku,price,'BRL','[]',id::text"
+            + " FROM catalog_product WHERE tenant_id=?",
+        tenantA);
+    JsonNode first = JSON.readTree(a.get(path(tenantA)).body());
+    assertThat(first.get("products")).hasSize(25);
+    assertThat(first.get("matching").asLong()).isEqualTo(27);
+    assertThat(first.get("catalogTotal").asLong()).isEqualTo(27);
+    assertThat(first.get("publishedTotal").asLong()).isEqualTo(13);
+    assertThat(first.get("products").get(0).get("name").asText()).isEqualTo("Item 01");
+    JsonNode second = JSON.readTree(a.get(path(tenantA) + "?page=2").body());
+    assertThat(second.get("products")).hasSize(2);
+    assertThat(second.get("products").get(1).get("name").asText()).isEqualTo("Pão de Queijo");
+    // Search ignores case and accents; a LIKE wildcard is a literal, not "everything".
+    JsonNode bread = JSON.readTree(a.get(path(tenantA) + "?q=PAO%20queijo").body());
+    assertThat(bread.get("matching").asLong()).isEqualTo(1);
+    assertThat(JSON.readTree(a.get(path(tenantA) + "?q=%25").body()).get("matching").asLong())
+        .isZero();
+    assertThat(JSON.readTree(a.get(path(tenantA) + "?q=item-2").body()).get("matching").asLong())
+        .isEqualTo(8); // ITEM-2 and ITEM-20 to ITEM-26
+    JsonNode hidden =
+        JSON.readTree(a.get(path(tenantA) + "?visibility=hidden&sort=price-desc").body());
+    assertThat(hidden.get("matching").asLong()).isEqualTo(14);
+    assertThat(hidden.get("products").get(0).get("name").asText()).isEqualTo("Pão de Queijo");
+    assertThat(hidden.get("products").get(1).get("name").asText()).isEqualTo("Item 25");
+    assertThat(
+            JSON.readTree(a.get(path(tenantA) + "?category=none").body()).get("matching").asLong())
+        .isEqualTo(27);
+    assertThat(JSON.readTree(a.get(path(tenantA) + "?page=9").body()).get("products")).isEmpty();
+    for (String invalid : List.of("?sort=cheapest", "?page=0", "?visibility=x", "?category=abc"))
+      assertThat(a.get(path(tenantA) + invalid).statusCode()).as(invalid).isEqualTo(400);
+  }
+
+  @Test
   void createsListsReadsEditsAndPreservesExactMoneyAndOptionalCost() throws Exception {
     Browser a = login("catalog-a@example.test");
-    assertThat(JSON.readTree(a.get(path(tenantA)).body()).size()).isZero();
+    var empty = a.get(path(tenantA));
+    assertThat(empty.statusCode()).as(empty.body()).isEqualTo(200);
+    assertThat(JSON.readTree(empty.body()).get("products").size()).isZero();
     var created =
         a.post(path(tenantA), product(" Produto ç ", " Ref/01 ", "12345678901234567.89", null));
     assertThat(created.statusCode()).isEqualTo(201);
@@ -171,7 +223,8 @@ class CatalogIsolationIT {
     assertThat(initial.get("cost").isNull()).isTrue();
     assertThat(initial.get("currency").asText()).isEqualTo("BRL");
     assertThat(a.get(path(tenantA) + "/" + id).statusCode()).isEqualTo(200);
-    assertThat(JSON.readTree(a.get(path(tenantA)).body()).get(0)).isEqualTo(initial);
+    assertThat(JSON.readTree(a.get(path(tenantA)).body()).get("products").get(0))
+        .isEqualTo(initial);
     Map<String, Object> edit = product("Atualizado", "SKU-2", "0.01", "0.00");
     edit.put("version", initial.get("version").asLong());
     var updated = a.put(path(tenantA) + "/" + id, edit);
@@ -222,7 +275,7 @@ class CatalogIsolationIT {
     var own = a.post(path(tenantA), attack);
     assertThat(own.statusCode()).isEqualTo(201);
     assertThat(JSON.readTree(own.body()).get("currency").asText()).isEqualTo("BRL");
-    assertThat(JSON.readTree(b.get(path(tenantB)).body()).size()).isEqualTo(1);
+    assertThat(JSON.readTree(b.get(path(tenantB)).body()).get("products").size()).isEqualTo(1);
     jdbc.update(
         "DELETE FROM tenant_membership WHERE tenant_id = ? AND user_id = ?", tenantA, ownerA);
     assertThat(a.get(path(tenantA)).statusCode()).isEqualTo(404);
@@ -274,7 +327,7 @@ class CatalogIsolationIT {
       assertThat(a.post(path(tenantA), product("A", sku, "1.00", null)).statusCode())
           .isEqualTo(400);
     }
-    assertThat(JSON.readTree(a.get(path(tenantA)).body()).size()).isZero();
+    assertThat(JSON.readTree(a.get(path(tenantA)).body()).get("products").size()).isZero();
     assertThat(a.post(path(tenantA), product("A", "SKU", "1.00", null)).statusCode())
         .isEqualTo(201);
     assertThat(a.post(path(tenantA), product("B", "sku", "1", null)).statusCode()).isEqualTo(201);
@@ -307,7 +360,7 @@ class CatalogIsolationIT {
           .doesNotContain("INSERT", "duplicate", "constraint", "org.postgresql", "RACE");
       assertThat(JSON.readTree(conflict).get("code").asText()).isEqualTo("SKU_CONFLICT");
     }
-    assertThat(JSON.readTree(a.get(path(tenantA)).body()).size()).isEqualTo(1);
+    assertThat(JSON.readTree(a.get(path(tenantA)).body()).get("products").size()).isEqualTo(1);
     Browser b = login("catalog-b@example.test");
     assertThat(b.post(path(tenantB), product("Other tenant", "RACE", "3", null)).statusCode())
         .isEqualTo(201);

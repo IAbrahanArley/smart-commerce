@@ -251,4 +251,5 @@ Regras comuns a todas as decisões: tenant derivado da sessão e conferido no SQ
 - **LGPD (C9):** primeiro cadastro de cliente persistente da plataforma; minimização, acesso por papel, nenhum dado pessoal em log, CSV ou ferramenta do assistente.
 - **Taxas informadas (C8):** a margem fica "estimada pelo lojista" nessas vendas; o relatório precisa distinguir taxa do provedor de taxa informada.
 - **Assistente (Sprint 6):** não lê os dados de crediário. Ferramentas novas (contas a pagar, fluxo projetado) só depois da revisão integrada, com agregados.
+- **Paginação (2026-11-04):** vendas na loja, histórico do caixa, contas a pagar e extrato paginam no banco por cursor (50 por página), sem os cortes fixos anteriores de 50, 60 e 500 linhas; os totais continuam cobrindo todos os lançamentos. Detalhes em [ADMIN-PAGINATION.md](../../quality/ADMIN-PAGINATION.md).
 - **Fora:** PDV, emissão fiscal, boleto, conciliação bancária por extrato, cobrança automática, juros automáticos de crediário, comissão de vendedor e múltiplas lojas físicas por tenant.

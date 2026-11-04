@@ -2,6 +2,7 @@ package com.smartcommerce.finance.repositories;
 
 import com.smartcommerce.finance.domain.AccountMovement;
 import com.smartcommerce.finance.domain.FinanceAccount;
+import com.smartcommerce.finance.domain.PageCursor;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.ResultSet;
@@ -9,6 +10,8 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -321,10 +324,20 @@ public class AccountRepository {
   /**
    * The account's movements from {@code from} to {@code to}, newest first, each with the balance
    * right after it (counted over the whole history in day, creation and id order) and, for a
-   * transfer, the account on the other side. At most {@code limit} rows.
+   * transfer, the account on the other side. After {@code cursor} (the last movement of the
+   * previous page) when given, at most {@code limit} rows.
    */
   public List<AccountMovement> statement(
-      UUID tenant, UUID account, LocalDate from, LocalDate to, int limit) {
+      UUID tenant, UUID account, LocalDate from, LocalDate to, PageCursor cursor, int limit) {
+    List<Object> args =
+        new ArrayList<>(List.of(tenant, account, Date.valueOf(from), Date.valueOf(to)));
+    String after = "";
+    if (cursor != null) {
+      after = " AND (x.occurred_on,x.created_at,x.id)<(?,?,?)";
+      args.addAll(
+          List.of(Date.valueOf(cursor.day()), cursor.at().atOffset(ZoneOffset.UTC), cursor.id()));
+    }
+    args.add(limit);
     return jdbc.query(
         """
         SELECT x.* FROM (
@@ -335,9 +348,10 @@ public class AccountRepository {
           LEFT JOIN account_movement o
             ON o.transfer_id=m.transfer_id AND o.id<>m.id AND o.tenant_id=m.tenant_id
           WHERE m.tenant_id=? AND m.account_id=?) x
-        WHERE x.occurred_on BETWEEN ? AND ?
+        WHERE x.occurred_on BETWEEN ? AND ?%s
         ORDER BY x.occurred_on DESC, x.created_at DESC, x.id DESC LIMIT ?
-        """,
+        """
+            .formatted(after),
         (row, index) ->
             new AccountMovement(
                 row.getObject("id", UUID.class),
@@ -349,11 +363,7 @@ public class AccountRepository {
                 row.getObject("counterpart", UUID.class),
                 row.getTimestamp("created_at").toInstant(),
                 row.getBigDecimal("balance_after")),
-        tenant,
-        account,
-        Date.valueOf(from),
-        Date.valueOf(to),
-        limit);
+        args.toArray());
   }
 
   private static FinanceAccount account(ResultSet row, int index) throws SQLException {

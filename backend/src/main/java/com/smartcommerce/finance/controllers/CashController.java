@@ -2,13 +2,14 @@ package com.smartcommerce.finance.controllers;
 
 import com.smartcommerce.finance.domain.CashInput;
 import com.smartcommerce.finance.domain.ExpenseInput;
+import com.smartcommerce.finance.domain.PageCursor;
 import com.smartcommerce.finance.dto.request.CashRequests;
+import com.smartcommerce.finance.dto.response.CashHistoryView;
 import com.smartcommerce.finance.dto.response.CashOverviewView;
 import com.smartcommerce.finance.dto.response.CashSessionView;
 import com.smartcommerce.finance.services.CashSessionService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -38,12 +39,17 @@ public final class CashController {
   }
 
   @GetMapping("/sessions")
-  public ResponseEntity<List<CashSessionView>> history(
-      @PathVariable UUID tenantId, Authentication actor) {
+  public ResponseEntity<CashHistoryView> history(
+      @PathVariable UUID tenantId,
+      @RequestParam(required = false) String before,
+      Authentication actor) {
+    var history = cash.history(actor(actor), tenantId, PageCursor.parse(before, false));
     return fresh(
-        cash.history(actor(actor), tenantId).stream()
-            .map(session -> CashSessionView.of(session, true, null))
-            .toList());
+        new CashHistoryView(
+            history.sessions().stream()
+                .map(session -> CashSessionView.of(session, true, null))
+                .toList(),
+            history.nextCursor() == null ? null : history.nextCursor().text()));
   }
 
   @GetMapping("/sessions/{sessionId}")

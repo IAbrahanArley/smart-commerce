@@ -3,6 +3,7 @@ package com.smartcommerce.finance.repositories;
 import com.smartcommerce.finance.domain.Expense;
 import com.smartcommerce.finance.domain.ExpenseInput;
 import com.smartcommerce.finance.domain.ExpensePayment;
+import com.smartcommerce.finance.domain.PageCursor;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.ResultSet;
@@ -11,6 +12,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -137,29 +139,45 @@ public class ExpenseRepository {
         == 1;
   }
 
-  /** Expenses falling due in [from, to), soonest first, at most {@code limit}. */
-  public List<Expense> dueBetween(UUID tenant, LocalDate from, LocalDate to, int limit) {
-    return jdbc.query(
-        SELECT
-            + " WHERE x.tenant_id=? AND x.due_date>=? AND x.due_date<?"
-            + " ORDER BY x.due_date, x.created_at, x.id LIMIT ?",
-        ExpenseRepository::expense,
-        tenant,
-        Date.valueOf(from),
-        Date.valueOf(to),
-        limit);
-  }
-
-  /** Active, unpaid expenses due before {@code today}, oldest due first, at most {@code limit}. */
-  public List<Expense> overdue(UUID tenant, LocalDate today, int limit) {
-    return jdbc.query(
-        SELECT
-            + " WHERE x.tenant_id=? AND x.status='ACTIVE' AND x.paid_on IS NULL AND x.due_date<?"
-            + " ORDER BY x.due_date, x.created_at, x.id LIMIT ?",
-        ExpenseRepository::expense,
-        tenant,
-        Date.valueOf(today),
-        limit);
+  /**
+   * One page of the payables screen, soonest due first: bills due in [from, to), or with {@code
+   * situation} OVERDUE the past due bills of any month, optionally only one situation. After {@code
+   * cursor} (the last bill of the previous page) when given, at most {@code limit}.
+   */
+  public List<Expense> page(
+      UUID tenant,
+      LocalDate from,
+      LocalDate to,
+      Expense.Situation situation,
+      LocalDate today,
+      PageCursor cursor,
+      int limit) {
+    StringBuilder sql = new StringBuilder(SELECT).append(" WHERE x.tenant_id=?");
+    List<Object> args = new ArrayList<>(List.of(tenant));
+    if (situation != Expense.Situation.OVERDUE) {
+      sql.append(" AND x.due_date>=? AND x.due_date<?");
+      args.addAll(List.of(Date.valueOf(from), Date.valueOf(to)));
+    }
+    if (situation != null)
+      switch (situation) {
+        case CANCELLED -> sql.append(" AND x.status<>'ACTIVE'");
+        case PAID -> sql.append(" AND x.status='ACTIVE' AND x.paid_on IS NOT NULL");
+        case OVERDUE -> {
+          sql.append(" AND x.status='ACTIVE' AND x.paid_on IS NULL AND x.due_date<?");
+          args.add(Date.valueOf(today));
+        }
+        case OPEN -> {
+          sql.append(" AND x.status='ACTIVE' AND x.paid_on IS NULL AND x.due_date>=?");
+          args.add(Date.valueOf(today));
+        }
+      }
+    if (cursor != null) {
+      sql.append(" AND (x.due_date,x.created_at,x.id)>(?,?,?)");
+      args.addAll(List.of(Date.valueOf(cursor.day()), utc(cursor.at()), cursor.id()));
+    }
+    sql.append(" ORDER BY x.due_date, x.created_at, x.id LIMIT ?");
+    args.add(limit);
+    return jdbc.query(sql.toString(), ExpenseRepository::expense, args.toArray());
   }
 
   public record MonthTotals(BigDecimal toPay, BigDecimal paid) {}

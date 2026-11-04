@@ -7,6 +7,7 @@ import { accountRefusal, KIND_LABELS, lineError, parseAccounts, parseSignedAmoun
 import { formatBRL } from "@/lib/catalog";
 import { formatDay } from "@/lib/expenses";
 import PageHeader from "@/components/page-header";
+import ListPager from "@/components/list-pager";
 import { AddButton, FormSheet } from "@/components/form-sheet";
 import PageState from "@/components/page-state";
 import { Loading } from "@/components/ui/loading";
@@ -27,11 +28,15 @@ export default function AccountStatement({ tenantId, accountId }: { tenantId: st
   const [form, setForm] = useState({ amount: "", day: "", reason: "", request: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [adjusting, setAdjusting] = useState(false);
+  const [before, setBefore] = useState<string | null>(null);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    const query = period.from && period.to ? `?from=${period.from}&to=${period.to}` : "";
+    const params = new URLSearchParams();
+    if (period.from && period.to) { params.set("from", period.from); params.set("to", period.to); }
+    if (before) params.set("before", before);
+    const query = params.size ? `?${params}` : "";
     Promise.all([
       apiRequest(`${api}/accounts/${encodeURIComponent(accountId)}/statement${query}`, { signal: controller.signal }),
       apiRequest(`${api}/accounts`, { signal: controller.signal }),
@@ -46,7 +51,7 @@ export default function AccountStatement({ tenantId, accountId }: { tenantId: st
       setStatement(parsed); setState("ready");
     }).catch(() => { if (!controller.signal.aborted) setState("error"); });
     return () => controller.abort();
-  }, [api, accountId, period, attempt]);
+  }, [api, accountId, period, attempt, before]);
 
   useEffect(() => { if (feedback) feedbackRef.current?.focus(); }, [feedback]);
 
@@ -75,7 +80,7 @@ export default function AccountStatement({ tenantId, accountId }: { tenantId: st
         if (response.status === 409) setForm(current => ({ ...current, request: "" }));
         return;
       }
-      setForm({ amount: "", day: "", reason: "", request: "" }); setAdjusting(false);
+      setForm({ amount: "", day: "", reason: "", request: "" }); setAdjusting(false); setBefore(null);
       setFeedback({ text: "Ajuste registrado.", error: false }); setAttempt(current => current + 1);
     } catch { setFeedback({ text: "Não foi possível falar com o servidor. Tente novamente.", error: true }); }
     finally { setBusy(false); }
@@ -87,7 +92,7 @@ export default function AccountStatement({ tenantId, accountId }: { tenantId: st
     const from = String(data.get("from") ?? ""), to = String(data.get("to") ?? "");
     if (!from || !to) { setFeedback({ text: "Preencha as duas datas do período.", error: true }); return; }
     setFeedback(null);
-    setPeriod({ from, to });
+    setPeriod({ from, to }); setBefore(null);
   }
 
   const field = (key: string) => ({ id: `adjust-${key}`, "aria-invalid": errors[key] ? true : undefined, "aria-describedby": errors[key] ? `adjust-${key}-error` : undefined });
@@ -124,7 +129,9 @@ export default function AccountStatement({ tenantId, accountId }: { tenantId: st
           <td className="numeric tabular-nums">{formatBRL(item.balanceAfter)}</td>
         </tr>)}</tbody>
       </table></div>}
-      {statement.truncated ? <p className="field-help">Mostrando os 500 movimentos mais recentes do período. Escolha um período menor para ver os demais.</p> : null}
+      <ListPager label="Páginas do extrato" disabled={busy}
+        first={before ? { text: "Voltar aos mais recentes", onClick: () => setBefore(null) } : null}
+        next={statement.nextCursor ? { text: "Ver movimentos mais antigos", onClick: () => setBefore(statement.nextCursor) } : null} />
 
       {statement.account.systemKey === "MERCADO_PAGO" ? <p className="field-help">Esta conta segue os pagamentos do próprio Mercado Pago e não aceita ajustes nem transferências manuais.</p> :
       <FormSheet open={adjusting} onOpenChange={setAdjusting} titleId="adjust-title" title="Registrar ajuste" busy={busy} feedbackRef={feedbackRef}>{feedbackNode}

@@ -106,7 +106,8 @@ public final class CounterSaleViews {
       String staffDiscountLimit,
       String pixAccountName,
       List<Session> sessions,
-      List<Sale> sales) {
+      List<Sale> sales,
+      String nextCursor) {
     public static Overview of(CounterSaleService.Overview overview) {
       return new Overview(
           overview.role(),
@@ -119,7 +120,8 @@ public final class CounterSaleViews {
               .toList(),
           overview.sales().stream()
               .map(sale -> Sale.of(sale, "OWNER".equals(overview.role())))
-              .toList());
+              .toList(),
+          overview.nextCursor() == null ? null : overview.nextCursor().text());
     }
   }
 

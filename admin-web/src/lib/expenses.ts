@@ -34,7 +34,7 @@ export type Expense = {
 };
 
 // Payables falling due in one month: still to pay and paid among them, plus every past-due bill.
-export type ExpenseMonth = { month: string; situation: Situation | null; toPay: string; paid: string; overdueCount: number; overdueTotal: string; expenses: Expense[] };
+export type ExpenseMonth = { month: string; situation: Situation | null; toPay: string; paid: string; overdueCount: number; overdueTotal: string; expenses: Expense[]; nextCursor: string | null };
 
 export const SITUATION_LABELS: Record<Situation, string> = { OPEN: "Em aberto", OVERDUE: "Vencida", PAID: "Paga", CANCELLED: "Cancelada" };
 // The filter lives in the URL in Portuguese (?situacao=vencidas); the API takes the code.

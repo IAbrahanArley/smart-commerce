@@ -1,12 +1,14 @@
 package com.smartcommerce.finance.repositories;
 
 import com.smartcommerce.finance.domain.CashSession;
+import com.smartcommerce.finance.domain.PageCursor;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -158,12 +160,25 @@ public class CashSessionRepository {
         tenant);
   }
 
-  /** The store's sessions, newest first, at most {@code limit}. */
-  public List<CashSession> recent(UUID tenant, int limit) {
+  /**
+   * The store's sessions, newest first, after {@code cursor} (the last session of the previous
+   * page) when given, at most {@code limit}.
+   */
+  public List<CashSession> page(UUID tenant, PageCursor cursor, int limit) {
+    if (cursor == null)
+      return jdbc.query(
+          SELECT + " WHERE c.tenant_id=? ORDER BY c.opened_at DESC, c.id DESC LIMIT ?",
+          CashSessionRepository::session,
+          tenant,
+          limit);
     return jdbc.query(
-        SELECT + " WHERE c.tenant_id=? ORDER BY c.opened_at DESC, c.id DESC LIMIT ?",
+        SELECT
+            + " WHERE c.tenant_id=? AND (c.opened_at,c.id)<(?,?)"
+            + " ORDER BY c.opened_at DESC, c.id DESC LIMIT ?",
         CashSessionRepository::session,
         tenant,
+        cursor.at().atOffset(ZoneOffset.UTC),
+        cursor.id(),
         limit);
   }
 

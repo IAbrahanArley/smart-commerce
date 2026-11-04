@@ -278,6 +278,55 @@ class CounterSaleIT {
       assertThat(staff.post(path(tenantA, ""), invalid).statusCode()).as(invalid).isEqualTo(400);
   }
 
+  @Test
+  void theSaleListPagesNewestFirstWithoutRepeatingOrSkippingTies() throws Exception {
+    Browser staff = login("vendedor-balcao@example.test");
+    Browser other = login("dono-outro-balcao@example.test");
+    UUID seller =
+        jdbc.queryForObject(
+            "SELECT id FROM identity_user WHERE email_key='vendedor-balcao@example.test'",
+            UUID.class);
+    // 52 sales; the 50th, 51st and 52nd share the same instant, right on the page boundary.
+    jdbc.update(
+        "INSERT INTO counter_sale(id,tenant_id,request_id,payment_method,subtotal_amount,"
+            + "discount_amount,total_amount,status,created_by,created_at)"
+            + " SELECT gen_random_uuid(),?,gen_random_uuid(),'DEBIT',10,0,10,'ACTIVE',?,"
+            + " now() - LEAST(g,50) * interval '1 minute' FROM generate_series(1,52) g",
+        tenantA,
+        seller);
+    JsonNode first = json(staff.get(path(tenantA, "")));
+    assertThat(first.get("sales")).hasSize(50);
+    String cursor = first.get("nextCursor").asString();
+    JsonNode second =
+        json(
+            staff.get(
+                path(
+                    tenantA,
+                    "?before="
+                        + java.net.URLEncoder.encode(
+                            cursor, java.nio.charset.StandardCharsets.UTF_8))));
+    assertThat(second.get("sales")).hasSize(2);
+    assertThat(second.get("nextCursor").isNull()).isTrue();
+    var ids = new java.util.HashSet<String>();
+    for (JsonNode page : List.of(first, second))
+      for (JsonNode sale : page.get("sales")) ids.add(sale.get("id").asString());
+    assertThat(ids).hasSize(52);
+    // A cursor is only a position: another store reads its own (empty) list, and junk is a 400.
+    assertThat(
+            json(other.get(
+                    path(
+                        tenantB,
+                        "?before="
+                            + java.net.URLEncoder.encode(
+                                cursor, java.nio.charset.StandardCharsets.UTF_8))))
+                .get("sales"))
+        .isEmpty();
+    for (String invalid : List.of("x", "2026-01-01T00:00:00Z_nope", "1_" + UUID.randomUUID()))
+      assertThat(staff.get(path(tenantA, "?before=" + invalid)).statusCode())
+          .as(invalid)
+          .isEqualTo(400);
+  }
+
   private static String sale(
       Object request, String discount, String method, String session, Object... lines)
       throws Exception {

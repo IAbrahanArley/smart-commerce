@@ -1,6 +1,7 @@
 package com.smartcommerce.orders.controllers;
 
 import com.smartcommerce.finance.domain.ExpenseInput;
+import com.smartcommerce.orders.domain.CounterSaleCursor;
 import com.smartcommerce.orders.domain.CounterSaleInput;
 import com.smartcommerce.orders.dto.request.CounterSaleRequests;
 import com.smartcommerce.orders.dto.response.CounterSaleViews;
@@ -32,8 +33,12 @@ public final class CounterSaleController {
 
   @GetMapping
   public ResponseEntity<CounterSaleViews.Overview> overview(
-      @PathVariable UUID tenantId, Authentication actor) {
-    return fresh(CounterSaleViews.Overview.of(sales.overview(actor(actor), tenantId)));
+      @PathVariable UUID tenantId,
+      @RequestParam(required = false) String before,
+      Authentication actor) {
+    return fresh(
+        CounterSaleViews.Overview.of(
+            sales.overview(actor(actor), tenantId, CounterSaleCursor.parse(before))));
   }
 
   @GetMapping("/products")

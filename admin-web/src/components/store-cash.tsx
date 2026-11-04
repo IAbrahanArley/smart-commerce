@@ -7,6 +7,7 @@ import { formatBRL } from "@/lib/catalog";
 import { type CashOverview, type CashSession, type Drawer, MOVE_TITLES, MOVEMENT_LABELS, type MoveType, differenceText, formatDateTime, otherAccounts, parseCount } from "@/lib/cash";
 import { CATEGORIES, CATEGORY_LABELS, type ExpenseCategory, lineText, parseAmount } from "@/lib/expenses";
 import PageHeader from "@/components/page-header";
+import ListPager from "@/components/list-pager";
 import { FormSheet } from "@/components/form-sheet";
 import StatusBadge from "@/components/status-badge";
 import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
@@ -23,6 +24,8 @@ const EMPTY: Fields = { amount: "", reason: "", accountId: "", category: "" };
 export default function StoreCash({ tenantId }: { tenantId: string }) {
   const [data, setData] = useState<CashOverview | null>(null);
   const [history, setHistory] = useState<CashSession[] | null>(null);
+  const [historyBefore, setHistoryBefore] = useState<string | null>(null);
+  const [historyNext, setHistoryNext] = useState<string | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "signed-out" | "missing" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
   const [action, setAction] = useState<Action | null>(null);
@@ -46,16 +49,18 @@ export default function StoreCash({ tenantId }: { tenantId: string }) {
       if (!response.ok) throw new Error();
       const current: CashOverview = await response.json();
       let sessions: CashSession[] | null = null;
+      let next: string | null = null;
       if (current.role === "OWNER") {
-        const past = await apiRequest(`${api}/sessions`, { signal: controller.signal });
+        const past = await apiRequest(`${api}/sessions${historyBefore ? `?before=${encodeURIComponent(historyBefore)}` : ""}`, { signal: controller.signal });
         if (!past.ok) throw new Error();
-        sessions = await past.json();
+        const page: { sessions: CashSession[]; nextCursor: string | null } = await past.json();
+        sessions = page.sessions; next = page.nextCursor;
       }
       if (controller.signal.aborted) return;
-      setData(current); setHistory(sessions); setState("ready");
+      setData(current); setHistory(sessions); setHistoryNext(next); setState("ready");
     }).catch(() => { if (!controller.signal.aborted) setState("error"); });
     return () => controller.abort();
-  }, [api, attempt]);
+  }, [api, attempt, historyBefore]);
 
   useEffect(() => { if (feedback) feedbackRef.current?.focus(); }, [feedback]);
 
@@ -201,6 +206,9 @@ export default function StoreCash({ tenantId }: { tenantId: string }) {
             <td role="cell" data-label="Ações">{reopenable(session) ? <button type="button" className="button-secondary" disabled={busy} aria-label={`Reabrir ${session.accountName} fechado em ${formatDateTime(session.closedAt!)}`} onClick={event => start({ drawer: null, kind: "REOPEN", session }, event.currentTarget)}>Reabrir</button> : null}</td>
           </tr>)}</tbody>
         </table></div> : <p className="field-help">Nenhum caixa aberto até agora.</p>}
+        <ListPager label="Páginas do histórico de caixas" disabled={busy}
+          first={historyBefore ? { text: "Voltar aos mais recentes", onClick: () => setHistoryBefore(null) } : null}
+          next={historyNext ? { text: "Ver caixas mais antigos", onClick: () => setHistoryBefore(historyNext) } : null} />
         <p className="field-help">As diferenças entram no relatório financeiro como “Diferenças de caixa”, fora da margem de contribuição. <Link href={`/lojas/${encodeURIComponent(tenantId)}/financeiro`}>Ver financeiro</Link>.</p>
       </section> : null}
     </> : null}

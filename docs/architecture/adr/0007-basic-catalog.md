@@ -19,4 +19,4 @@ Módulo catalog no monólito existente, com Spring MVC, serviço transacional e 
 
 GET/POST /api/tenants/{tenantId}/products e GET/PUT /api/tenants/{tenantId}/products/{productId}. POST recebe name/sku/price/cost; PUT também version. DTO: id/name/sku/price/cost/currency/version. Sessão, CSRF, origem e limite de corpo existentes continuam obrigatórios.
 
-Listagem simples sem paginação nesta entrega; dimensionar paginação antes de volumes relevantes. Não inferir garantia de módulos futuros dos testes atuais. SEC-003 permanece aberta e inalterada, sem aceite de risco.
+Listagem simples sem paginação nesta entrega; dimensionar paginação antes de volumes relevantes. **Atualização 2026-11-04:** `GET /products` passou a filtrar, ordenar, contar e paginar no banco (25 por página; `q`, `category`, `visibility`, `sort`, `page`), respondendo `{products, page, pageSize, matching, catalogTotal, publishedTotal}`; detalhes em [ADMIN-PAGINATION.md](../../quality/ADMIN-PAGINATION.md). Não inferir garantia de módulos futuros dos testes atuais. SEC-003 permanece aberta e inalterada, sem aceite de risco.

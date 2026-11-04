@@ -10,13 +10,15 @@ assert.equal(parseAccounts([{ ...cash, type: "CARD" }]), null);
 assert.equal(parseAccounts([{ ...cash, systemKey: "OUTRO" }]), null);
 
 const statement = {
-  account: cash, from: "2026-08-04", to: "2026-11-01", openingBalance: "0.00", closingBalance: "100.00", truncated: false,
+  account: cash, from: "2026-08-04", to: "2026-11-01", openingBalance: "0.00", closingBalance: "100.00", nextCursor: null,
   movements: [
     { id: other, kind: "TRANSFER_OUT", amount: "-50.00", occurredOn: "2026-11-01", description: "Depósito", counterpartAccountId: id, balanceAfter: "100.00", transferId: other, createdAt: "2026-11-01T12:00:00Z" },
     { id, kind: "ADJUSTMENT", amount: "150.00", occurredOn: "2026-11-01", description: "Saldo inicial", counterpartAccountId: null, balanceAfter: "150.00", transferId: null, createdAt: "2026-11-01T11:00:00Z" },
   ],
 };
 assert.equal(parseStatement(statement)?.movements.length, 2);
+assert.equal(parseStatement({ ...statement, nextCursor: "2026-11-01_2026-11-01T11:00:00Z_" + id })?.nextCursor?.startsWith("2026-11-01_"), true);
+assert.equal(parseStatement({ ...statement, nextCursor: 7 }), null);
 assert.equal(parseStatement({ ...statement, closingBalance: "1e2" }), null);
 assert.equal(parseStatement({ ...statement, movements: [{ ...statement.movements[0], kind: "OUTRO" }] }), null);
 

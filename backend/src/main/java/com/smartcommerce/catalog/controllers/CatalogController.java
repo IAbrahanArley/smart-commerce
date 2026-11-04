@@ -1,14 +1,15 @@
 package com.smartcommerce.catalog.controllers;
 
+import com.smartcommerce.catalog.domain.ProductListQuery;
 import com.smartcommerce.catalog.dto.request.ProductPublicationRequest;
 import com.smartcommerce.catalog.dto.request.ProductRequest;
 import com.smartcommerce.catalog.dto.request.VariantRequest;
+import com.smartcommerce.catalog.dto.response.ProductPageView;
 import com.smartcommerce.catalog.dto.response.ProductView;
 import com.smartcommerce.catalog.services.CatalogService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @SecurityRequirement(name = "session")
@@ -32,9 +34,20 @@ public final class CatalogController {
     this.catalog = catalog;
   }
 
+  /** One page of the admin list (25 products), filtered, ordered and counted by the backend. */
   @GetMapping
-  public List<ProductView> list(@PathVariable UUID tenantId, Authentication actor) {
-    return catalog.list(UUID.fromString(actor.getName()), tenantId);
+  public ProductPageView list(
+      @PathVariable UUID tenantId,
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) String category,
+      @RequestParam(required = false) String visibility,
+      @RequestParam(required = false) String sort,
+      @RequestParam(required = false) String page,
+      Authentication actor) {
+    return catalog.page(
+        UUID.fromString(actor.getName()),
+        tenantId,
+        ProductListQuery.of(q, category, visibility, sort, page));
   }
 
   @GetMapping("/{productId}")

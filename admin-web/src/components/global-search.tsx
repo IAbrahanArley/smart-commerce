@@ -14,35 +14,32 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 
 type ProductHit = { id: string; name: string; sku: string };
 type OrderHit = { id: string; number: number; buyerName: string | null; total: string };
-type Results = { products: ProductHit[]; orders: OrderHit[] } | "loading" | "error" | null;
+type Results = { orders: OrderHit[] } | "loading" | "error" | null;
 
 const MAX_HITS = 20;
 const ITEM = "flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-3 text-sm text-foreground data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground";
 const HEADING = "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground";
 
 // Global search (Dashtail header search, cmdk): Ctrl/Cmd+K opens it anywhere in the admin. Pages and
-// actions come from the navigation; inside a store it also lists the store's products and its latest
-// orders, loaded only when the search opens. The backend authorizes every request.
+// actions come from the navigation; inside a store it also lists its latest orders, loaded when the
+// search opens, and the products matching what is typed, searched in the backend (the catalog is
+// paged there). The backend authorizes every request.
 export default function GlobalSearch({ groups, tenantId }: { groups: NavGroup[]; tenantId?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<Results>(null);
   const [search, setSearch] = useState("");
+  const [productHits, setProductHits] = useState<{ query: string; items: ProductHit[] } | null>(null);
   const loadedFor = useRef<string | null>(null);
 
   function load() {
     if (!tenantId || loadedFor.current === tenantId) return;
     loadedFor.current = tenantId;
     setResults("loading");
-    const api = `/api/tenants/${encodeURIComponent(tenantId)}`;
-    Promise.all([apiRequest(`${api}/products`), apiRequest(ordersApiPath(tenantId, null, null))]).then(async ([products, orders]) => {
-      if (!products.ok || !orders.ok) throw new Error();
-      const productList = (await products.json()) as ProductHit[];
+    apiRequest(ordersApiPath(tenantId, null, null)).then(async orders => {
+      if (!orders.ok) throw new Error();
       const orderPage = (await orders.json()) as OrderPage;
-      setResults({
-        products: productList.map(({ id, name, sku }) => ({ id, name, sku })),
-        orders: orderPage.orders.map(({ id, number, buyerName, total }) => ({ id, number, buyerName, total })),
-      });
+      setResults({ orders: orderPage.orders.map(({ id, number, buyerName, total }) => ({ id, number, buyerName, total })) });
     }).catch(() => { loadedFor.current = null; setResults("error"); });
   }
 
@@ -51,6 +48,22 @@ export default function GlobalSearch({ groups, tenantId }: { groups: NavGroup[];
     if (!next) setSearch("");
     if (next) load();
   }
+
+  // Products: the backend searches name, SKU and variant SKUs after a short pause in typing.
+  const term = search.trim();
+  useEffect(() => {
+    if (!open || !tenantId || term.length < 2) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      apiRequest(`/api/tenants/${encodeURIComponent(tenantId)}/products?q=${encodeURIComponent(term)}`, { signal: controller.signal })
+        .then(async response => {
+          if (!response.ok) return;
+          const page = (await response.json()) as { products: ProductHit[] };
+          if (!controller.signal.aborted) setProductHits({ query: term, items: page.products.map(({ id, name, sku }) => ({ id, name, sku })) });
+        }).catch(() => undefined);
+    }, 250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [open, tenantId, term]);
 
   const openFromShortcut = useEffectEvent(() => change(true));
   useEffect(() => {
@@ -71,7 +84,7 @@ export default function GlobalSearch({ groups, tenantId }: { groups: NavGroup[];
   // renders a long list (Web Interface Guidelines: virtualize or cap long lists).
   const data = results && typeof results === "object" && search.trim().length >= 2 ? results : null;
   const found = data ? {
-    products: data.products.filter(product => searchScore(`produto ${product.name} ${product.sku}`, search)).slice(0, MAX_HITS),
+    products: productHits?.query === term ? productHits.items.slice(0, MAX_HITS) : [],
     orders: data.orders.filter(order => searchScore(`pedido ${order.number} ${order.buyerName ?? ""}`, search)).slice(0, MAX_HITS),
   } : null;
   return <>

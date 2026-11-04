@@ -223,7 +223,10 @@ class CashIT {
     assertThat(seen.get("difference").asString()).isEqualTo("-5.00");
     assertThat(seen.get("movements").toString()).contains("CASH_DIFFERENCE");
     assertThat(seen.get("closedBy").asString()).isEqualTo("operador-caixa@example.test");
-    assertThat(json(owner.get(path(tenantA, "/sessions")))).hasSize(1);
+    JsonNode history = json(owner.get(path(tenantA, "/sessions")));
+    assertThat(history.get("sessions")).hasSize(1);
+    assertThat(history.get("nextCursor").isNull()).isTrue();
+    assertThat(owner.get(path(tenantA, "/sessions?before=junk")).statusCode()).isEqualTo(400);
     assertThat(
             json(owner.get("/api/tenants/" + tenantA + "/finance"))
                 .get("cashDifferences")

@@ -59,8 +59,9 @@ public final class AccountController {
       @PathVariable UUID accountId,
       @RequestParam(required = false) String from,
       @RequestParam(required = false) String to,
+      @RequestParam(required = false) String before,
       Authentication actor) {
-    return fresh(accounts.statement(actor(actor), tenantId, accountId, from, to));
+    return fresh(accounts.statement(actor(actor), tenantId, accountId, from, to, before));
   }
 
   @SecurityRequirement(name = "csrf")

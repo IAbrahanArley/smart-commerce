@@ -7,6 +7,7 @@ import { formatBRL } from "@/lib/catalog";
 import { type Account, manualAccounts, parseAccounts, todayInStore } from "@/lib/accounts";
 import { CATEGORIES, CATEGORY_LABELS, KIND_LABELS, MAX_INSTALLMENTS, SITUATION_FILTERS, SITUATION_LABELS, SITUATION_SLUGS, SITUATIONS, type Expense, type ExpenseCategory, type ExpenseKind, type ExpenseMonth, type Situation, expenseDateErrors, formatDay, installmentAmounts, lineText, monthLabel, monthOf, parseAmount, parseOptionalAmount, paymentTotal, shiftMonth } from "@/lib/expenses";
 import PageHeader from "@/components/page-header";
+import ListPager from "@/components/list-pager";
 import { AddButton, FormSheet } from "@/components/form-sheet";
 import StatusBadge from "@/components/status-badge";
 import { useConfirm } from "@/components/confirm-dialog";
@@ -52,6 +53,10 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
   const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
   const [busy, setBusy] = useState(false);
   const [creating, setCreating] = useState(false);
+  // The page cursor belongs to one month and filter; another month or filter starts on page one.
+  const listKey = `${month}|${situation ?? ""}`;
+  const [cursor, setCursor] = useState<{ key: string; after: string } | null>(null);
+  const after = cursor?.key === listKey ? cursor.after : null;
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
   const submitting = useRef(false);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
@@ -68,7 +73,7 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
 
   useEffect(() => {
     const controller = new AbortController();
-    const query = `${api}?month=${month}${situation ? `&situation=${situation}` : ""}`;
+    const query = `${api}?month=${month}${situation ? `&situation=${situation}` : ""}${after ? `&after=${encodeURIComponent(after)}` : ""}`;
     Promise.all([apiRequest(query, { signal: controller.signal }), apiRequest(`/api/tenants/${encodeURIComponent(tenantId)}/finance/accounts`, { signal: controller.signal })]).then(async ([response, accountResponse]) => {
       if (response.status === 401) { setState("signed-out"); return; }
       if (response.status === 403 || response.status === 404) { setState("missing"); return; }
@@ -80,7 +85,7 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
       setData(current); setAccounts(list); setState("ready");
     }).catch(() => { if (!controller.signal.aborted) setState("error"); });
     return () => controller.abort();
-  }, [api, tenantId, month, situation, attempt]);
+  }, [api, tenantId, month, situation, attempt, after]);
 
   useEffect(() => { if (feedback) feedbackRef.current?.focus(); }, [feedback]);
   useEffect(() => { if (cancelling) reasonRef.current?.focus(); }, [cancelling]);
@@ -297,7 +302,11 @@ export default function StoreExpenses({ tenantId, month, situation }: { tenantId
             <button type="button" className="button-secondary" disabled={busy} aria-label={`Cancelar ${expense.description}`} onClick={event => { actionTrigger.current = event.currentTarget; setFeedback(null); setPaying(null); setReason(""); setReasonError(""); setCancelling({ expense, correct: false }); }}>Cancelar</button>
           </div> : null}</td>
         </tr>)}</tbody>
-      </table></div> : <PageState icon="wallet" title={situation ? "Nenhuma conta nesta situação" : "Nenhuma conta neste mês"}>{situation === "OVERDUE" ? "Nenhuma conta vencida. Tudo em dia." : `Nenhuma conta ${situation ? SITUATION_FILTERS[situation].toLowerCase() : "registrada"} com vencimento em ${monthLabel(month)}.`}</PageState>}
+      </table></div> : null}
+      <ListPager label="Páginas de contas a pagar" disabled={busy}
+        first={after ? { text: "Voltar ao início", onClick: () => setCursor(null) } : null}
+        next={data.nextCursor ? { text: "Ver próximas contas", onClick: () => setCursor({ key: listKey, after: data.nextCursor! }) } : null} />
+      {data.expenses.length ? null : <PageState icon="wallet" title={situation ? "Nenhuma conta nesta situação" : "Nenhuma conta neste mês"}>{situation === "OVERDUE" ? "Nenhuma conta vencida. Tudo em dia." : `Nenhuma conta ${situation ? SITUATION_FILTERS[situation].toLowerCase() : "registrada"} com vencimento em ${monthLabel(month)}.`}</PageState>}
       <FormSheet open={Boolean(paying)} onOpenChange={open => { if (!open) setPaying(null); }} titleId="payment-title" title={paying ? `Pagar “${paying.description}”` : "Pagar"} busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
       {paying ? <form onSubmit={event => void pay(event)} noValidate aria-labelledby="payment-title">
         <p>Valor da conta: <strong>{formatBRL(paying.amount)}</strong>, com vencimento em {formatDay(paying.dueDate)}.{paying.recurrence === "MONTHLY" ? " Ao pagar, a conta do próximo mês será criada." : ""}</p>

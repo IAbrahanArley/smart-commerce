@@ -5,6 +5,7 @@ import com.smartcommerce.finance.domain.AccountMovement;
 import com.smartcommerce.finance.domain.FinanceAccount;
 import com.smartcommerce.finance.domain.FinanceException;
 import com.smartcommerce.finance.domain.MovementInput;
+import com.smartcommerce.finance.domain.PageCursor;
 import com.smartcommerce.finance.repositories.AccountRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -40,7 +41,6 @@ public class AccountService {
   static final int MAX_ACCOUNTS = 20;
   static final int STATEMENT_DAYS = 90;
   static final int MAX_STATEMENT_DAYS = 366;
-  static final int MAX_STATEMENT_ROWS = 500;
   private static final LocalDate FLOOR = LocalDate.of(2000, 1, 1);
 
   private final AccountRepository accounts;
@@ -88,14 +88,18 @@ public class AccountService {
       @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal openingBalance,
       @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal closingBalance,
       List<AccountMovement> movements,
-      boolean truncated) {}
+      String nextCursor) {}
 
   /**
-   * The movements of a period (the last 90 days by default, at most 366 days). Not read-only: the
-   * OWNER check locks the store FOR SHARE, which PostgreSQL refuses in a read-only transaction.
+   * The movements of a period (the last 90 days by default, at most 366 days), one page newest
+   * first, after {@code before} when given; {@code nextCursor} is null on the last page. Not
+   * read-only: the OWNER check locks the store FOR SHARE, which PostgreSQL refuses in a read-only
+   * transaction.
    */
   @Transactional
-  public Statement statement(UUID actor, UUID tenant, UUID account, String from, String to) {
+  public Statement statement(
+      UUID actor, UUID tenant, UUID account, String from, String to, String before) {
+    PageCursor cursor = PageCursor.parse(before, true);
     requireOwner(actor, tenant, false);
     FinanceAccount found = account(tenant, account);
     LocalDate end = to == null || to.isBlank() ? today() : parse(to);
@@ -109,16 +113,20 @@ public class AccountService {
     BigDecimal opening = accounts.balanceBefore(tenant, account, start).setScale(2);
     BigDecimal closing = accounts.balanceBefore(tenant, account, end.plusDays(1)).setScale(2);
     List<AccountMovement> rows =
-        accounts.statement(tenant, account, start, end, MAX_STATEMENT_ROWS + 1);
-    boolean truncated = rows.size() > MAX_STATEMENT_ROWS;
+        accounts.statement(tenant, account, start, end, cursor, PageCursor.PAGE_SIZE + 1);
+    boolean more = rows.size() > PageCursor.PAGE_SIZE;
+    List<AccountMovement> shown = more ? rows.subList(0, PageCursor.PAGE_SIZE) : rows;
+    AccountMovement last = more ? shown.getLast() : null;
     return new Statement(
         found,
         start,
         end,
         opening,
         closing,
-        truncated ? rows.subList(0, MAX_STATEMENT_ROWS) : rows,
-        truncated);
+        shown,
+        last == null
+            ? null
+            : new PageCursor(last.occurredOn(), last.createdAt(), last.id()).text());
   }
 
   /** A signed correction of the balance (the opening balance included), with its reason. */
