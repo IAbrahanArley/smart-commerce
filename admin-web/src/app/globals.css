@@ -280,7 +280,6 @@ textarea[aria-invalid="true"] { border: 2px solid var(--sc-color-danger); }
 .billing-price { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
 
 /* ADR-0014 H2: hosted test environment notice, approved tokens only. */
-.test-environment-banner { margin: 0; padding: var(--sc-space-2) var(--sc-space-4); text-align: center; color: var(--sc-color-text); background: var(--sc-color-info-background); border-bottom: 1px solid var(--sc-color-divider); overflow-wrap: anywhere; }
 
 /* Repaginação 2026-10 (DESIGN.md): cards with a subtle elevation, card headers, summary cards, table hover
    and the confirmation dialog. Only approved colour tokens; the shadow tokens are the new addition. */

@@ -1,15 +1,23 @@
 import assert from "node:assert/strict";
-import { accountItems, parseCollapsed, searchScore, storeItems } from "../src/lib/navigation.ts";
+import { accountItems, isModule, navPages, parseCollapsed, searchScore, storeItems } from "../src/lib/navigation.ts";
 import { EMPTY_FILTERS, filtersActive, filtersFromQuery, filtersQuery, NO_CATEGORY, pageCount, productsApiQuery, resultText } from "../src/lib/product-filters.ts";
 import { billingText, CYCLES, monthlyPrice, PLANS, priceText } from "../src/lib/plans.ts";
 
 // Design system Dashtail (phases 1, 3 and 5): pure helpers of the navigation, the global search and the
 // product list filters. Imported by smoke.mjs.
 // Design system Dashtail: navigation shared by the sidebar and the search; strict, accent-insensitive search.
-const navigation = storeItems("t 1", "/lojas/t%201/produtos/abc");
+const navigation = navPages(storeItems("t 1", "/lojas/t%201/produtos/abc"));
 assert.equal(navigation.length, 16); // SC-052 "Caixa", SC-053 "Vendas na loja"
 assert.ok(navigation.every(item => item.href.startsWith("/lojas/t%201")), "Links só do tenant da rota");
 assert.deepEqual(navigation.filter(item => item.current).map(item => item.label), ["Produtos"]);
+// 2026-11-04: the finance pages live in one "Financeiro" module, current while any of its pages is.
+const finance = storeItems("t", "/lojas/t/contas/abc").find(isModule);
+assert.equal(finance?.label, "Financeiro");
+assert.deepEqual(finance.children.map(item => item.label), ["Dashboard financeiro", "Contas a pagar", "Contas e extratos", "Caixa"]);
+assert.equal(finance.current, true);
+assert.deepEqual(finance.children.filter(item => item.current).map(item => item.label), ["Contas e extratos"]);
+assert.equal(storeItems("t", "/lojas/t/produtos").find(isModule)?.current, false);
+assert.equal(storeItems("t", "/lojas/t").filter(isModule).length, 1);
 assert.deepEqual(storeItems("t", "/lojas/t").filter(item => item.current).map(item => item.label), ["Visão geral"]);
 assert.deepEqual(storeItems("t", "/lojas/t/categorias").filter(item => item.current).map(item => item.label), ["Categorias"]);
 assert.deepEqual(storeItems("t", "/lojas/t/conteudo").filter(item => item.current).map(item => item.label), ["Aparência e conteúdo"]);

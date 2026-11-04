@@ -21,10 +21,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="pt-BR" className={manrope.variable}>
       <body>
         <a className="skip-link" href="#conteudo">Ir para o conteúdo</a>
-        {/* ADR-0014 H2: permanent notice in the hosted test environment. */}
-        {hostedTestEnvironment(process.env.DEPLOYMENT_ENVIRONMENT) ? (
-          <p className="test-environment-banner" role="note"><strong>Ambiente de teste.</strong> Dados fictícios e sem pagamentos reais. Não informe dados pessoais verdadeiros.</p>
-        ) : null}
         <div className="site-content">{children}</div>
         {/* The platform bar: the store's own footer (SC-044) sits above it on store pages. */}
         <footer className="site-footer" id="sobre-a-vitrine" aria-label="Sobre esta vitrine">

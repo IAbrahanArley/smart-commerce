@@ -1,23 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { Arrow } from "@/components/arrow";
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { type Banner, bannerHref, bannerImage } from "@/lib/home";
 
-const INTERVAL_MS = 7000;
+const SWIPE_PX = 40;
 
-// SC-043 (ADR-0018 V8): the home banners. One slide at a time with previous/next and a pause
-// control (WCAG 2.2.2). It only rotates by itself with more than one banner, never under reduced
-// motion, and stops while the pointer or the focus is inside it.
+// SC-043 (ADR-0018 V8), dots since 2026-11-04: one banner at a time and one dot per banner below the
+// image. The current dot fills up while its banner is shown (7 s, CSS) and the carousel moves on when
+// the fill ends, so the dots and the rotation never drift apart. Clicking a dot or swiping on a phone
+// changes the banner. Rotation only with more than one banner, never under reduced motion, and it
+// stops while the pointer or the focus is inside the carousel (the fill pauses where it is).
 export function BannerCarousel({ store, banners }: { store: string; banners: Banner[] }) {
   const [current, setCurrent] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [held, setHeld] = useState(false);
   const [reduced, setReduced] = useState(true);
   const root = useRef<HTMLElement>(null);
+  const swipeFrom = useRef<number | null>(null);
+  const swiped = useRef(false);
   const many = banners.length > 1;
-  const rotating = many && !paused && !held && !reduced;
+  const rotating = many && !held && !reduced;
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -27,14 +29,27 @@ export function BannerCarousel({ store, banners }: { store: string; banners: Ban
     return () => query.removeEventListener("change", update);
   }, []);
 
-  useEffect(() => {
-    if (!rotating) return;
-    const timer = window.setInterval(() => setCurrent(index => (index + 1) % banners.length), INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [rotating, banners.length]);
-
   if (banners.length === 0) return null;
   const go = (step: number) => setCurrent(index => (index + step + banners.length) % banners.length);
+
+  function swipeStart(event: PointerEvent) {
+    if (event.pointerType !== "mouse") swipeFrom.current = event.clientX;
+  }
+  function swipeEnd(event: PointerEvent) {
+    const from = swipeFrom.current;
+    swipeFrom.current = null;
+    if (from === null || !many) return;
+    const distance = event.clientX - from;
+    if (Math.abs(distance) < SWIPE_PX) return;
+    swiped.current = true;
+    go(distance < 0 ? 1 : -1);
+  }
+  // A swipe over a banner with a link changes the banner; it must not also open the link.
+  function skipClickAfterSwipe(event: MouseEvent) {
+    if (!swiped.current) return;
+    swiped.current = false;
+    event.preventDefault();
+  }
 
   return (
     <section
@@ -47,20 +62,8 @@ export function BannerCarousel({ store, banners }: { store: string; banners: Ban
       onFocus={() => setHeld(true)}
       onBlur={event => { if (!root.current?.contains(event.relatedTarget as Node | null)) setHeld(false); }}
     >
-      {many ? <div className="banner-controls">
-        {reduced ? null : <button type="button" className="banner-control" onClick={() => setPaused(value => !value)}>
-          {paused ? "Reproduzir" : "Pausar"}
-          <span className="visually-hidden"> a troca automática dos banners</span>
-        </button>}
-        <button type="button" className="banner-control banner-arrow" onClick={() => go(-1)}>
-          <Arrow back /><span className="visually-hidden">Banner anterior</span>
-        </button>
-        <span className="banner-position" aria-hidden="true">{current + 1} / {banners.length}</span>
-        <button type="button" className="banner-control banner-arrow" onClick={() => go(1)}>
-          <Arrow /><span className="visually-hidden">Próximo banner</span>
-        </button>
-      </div> : null}
-      <div className="banner-slides" aria-live={rotating ? "off" : "polite"}>
+      <div className="banner-slides" aria-live={rotating ? "off" : "polite"}
+        onPointerDown={event => { swiped.current = false; swipeStart(event); }} onPointerUp={swipeEnd} onClickCapture={skipClickAfterSwipe} onPointerCancel={() => { swipeFrom.current = null; }}>
         {banners.map((banner, index) => {
           const href = bannerHref(store, banner);
           const picture = <picture>
@@ -75,6 +78,7 @@ export function BannerCarousel({ store, banners }: { store: string; banners: Ban
               loading={index === 0 ? "eager" : "lazy"}
               fetchPriority={index === 0 ? "high" : "auto"}
               decoding="async"
+              draggable={false}
             />
           </picture>;
           return (
@@ -86,7 +90,7 @@ export function BannerCarousel({ store, banners }: { store: string; banners: Ban
               aria-label={`${index + 1} de ${banners.length}`}
               hidden={index !== current}
             >
-              {href ? <Link href={href} prefetch={false} className="banner-link">
+              {href ? <Link href={href} prefetch={false} className="banner-link" draggable={false}>
                 {picture}
                 {banner.title ? <span className="banner-title">{banner.title}</span> : null}
               </Link> : <>
@@ -97,6 +101,19 @@ export function BannerCarousel({ store, banners }: { store: string; banners: Ban
           );
         })}
       </div>
+      {many ? <div className="banner-dots" role="group" aria-label="Escolher banner">
+        {banners.map((banner, index) => (
+          <button key={banner.id} type="button" className="banner-dot" aria-current={index === current ? "true" : undefined}
+            onClick={() => setCurrent(index)}>
+            <span className="banner-dot-mark" aria-hidden="true">
+              {index === current && !reduced ? <span key={current} className="banner-dot-fill"
+                style={{ animationPlayState: rotating ? "running" : "paused" }}
+                onAnimationEnd={() => go(1)} /> : null}
+            </span>
+            <span className="visually-hidden">Banner {index + 1} de {banners.length}</span>
+          </button>
+        ))}
+      </div> : null}
     </section>
   );
 }

@@ -12,7 +12,7 @@ import { coverUrl, decimalInput, formatBRL, photoCountText } from "../src/lib/ca
 import { fulfillmentFields, fulfillmentPayload, fulfillmentText } from "../src/lib/fulfillment.ts";
 import { reservedStockMessage, wholeQuantity } from "../src/lib/inventory.ts";
 import { storefrontUrl } from "../src/lib/tenant-api.ts";
-import { backendOrigin, hostedTestEnvironment } from "../src/lib/deployment.ts";
+import { backendOrigin } from "../src/lib/deployment.ts";
 import { alertLink, alertText, parseAlerts } from "../src/lib/alerts.ts";
 import { MAX_EXCHANGES, askError, explainHref, explainQuestion, historyFor, outcomeText, parseAnswer, parseStatus, questionError, quotaText, sourceText } from "../src/lib/advisor.ts";
 import { authorizationTarget, callbackMessage, parseConnection } from "../src/lib/payments.ts";
@@ -63,8 +63,6 @@ assert.equal(backendOrigin(undefined), "http://127.0.0.1:8080");
 assert.equal(backendOrigin("https://api.example.test"), "https://api.example.test");
 assert.equal(backendOrigin(" https://api.example.test/ "), "https://api.example.test");
 for (const invalid of ["http://api.example.test", "https://user:pw@api.example.test", "https://api.example.test/v1", "https://api.example.test?x=1", "javascript:alert(1)", "not a url"]) assert.throws(() => backendOrigin(invalid), invalid);
-assert.equal(hostedTestEnvironment("hosted-test"), true);
-for (const value of [undefined, "", "production", "HOSTED-TEST"]) assert.equal(hostedTestEnvironment(value), false);
 import { cancelReason, formatDateTime, formatPhone, formatPostalCode, orderCursor, orderStatus, ordersApiPath, ordersPagePath, paymentDivergence } from "../src/lib/orders.ts";
 import { marginBreakdown, missingText, percentText, reportPeriod } from "../src/lib/finance.ts";
 import { optionsText, salesPoints, shortDay } from "../src/lib/dashboard.ts";

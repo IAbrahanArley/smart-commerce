@@ -109,7 +109,7 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 | --- | --- |
 | `ADMIN_API_ORIGIN` | URL do backend no Render (HTTPS, sem caminho); o build falha se for inválida |
 | `NEXT_PUBLIC_STOREFRONT_ORIGIN` | URL de produção da vitrine (passo 5); pode ser preenchida depois, com novo deploy |
-| `DEPLOYMENT_ENVIRONMENT` | `hosted-test` (mostra o aviso de ambiente de teste) |
+| `DEPLOYMENT_ENVIRONMENT` | `hosted-test` (desde 2026-11-04 o admin não usa mais esta variável; pode ficar) |
 
 3. Depois do deploy, copie a URL de **produção** do projeto e coloque em `IDENTITY_PUBLIC_ORIGIN` no Render, que reinicia o backend.
 4. **URLs de preview** da Vercel têm outra origem, então o login nelas é recusado pela verificação de origem. Isso é esperado; teste na URL de produção.
@@ -135,12 +135,11 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 1. `https://<backend>/actuator/health` responde 200. Se o serviço estava dormindo, a primeira chamada pode demorar minutos.
 2. **Admin:**
-   - o aviso "Ambiente de teste" aparece;
    - o cadastro envia o e-mail de confirmação;
    - o link abre `/confirmar-email`, você define a senha e entra.
 3. **Configuração da loja:** crie a loja, um produto com estoque e a entrega; publique produto e loja.
 4. **Vitrine:**
-   - aviso visível;
+   - o rodapé diz que os pedidos são de teste (a faixa do topo saiu em 2026-11-04);
    - adicione ao carrinho, finalize e veja a página do pedido com o prazo da reserva;
    - no admin, em Pedidos, o pedido aparece; cancele com um motivo.
 5. Se alguma etapa falhar, registre o horário e o passo. Os logs do Render e da Vercel não devem conter chave, token, senha ou e-mail de comprador.
