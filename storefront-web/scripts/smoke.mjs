@@ -45,7 +45,8 @@ try {
   const home = await page("/");
   assert.equal(home.response.status, 200);
   const catalogPage = await page("/lojas/loja-teste");
-  assert.match(catalogPage.html, /class="test-environment-banner" role="note"><strong>Ambiente de teste\.<\/strong>/, "Aviso de ambiente de teste em toda página.");
+  // 2026-11-04: the top "Ambiente de teste" strip was removed at the owner's request; the footer still says it.
+  assert.doesNotMatch(catalogPage.html, /test-environment-banner/, "Sem faixa de ambiente de teste no topo.");
   assert.match(catalogPage.html, /Pedidos feitos aqui são de teste/);
   assert.match(home.html, /Vitrines de lojas/);
   // MVP block 1d: shopper privacy notice, linked from every footer.

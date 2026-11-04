@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useSyncExternalStore, type ReactNode } from "react";
-import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useId, useState, useSyncExternalStore, type ComponentProps, type ReactNode } from "react";
+import { ChevronDown, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import AccountMenu from "@/components/account-menu";
 import BillingNotice from "@/components/billing-notice";
 import GlobalSearch from "@/components/global-search";
@@ -11,7 +11,7 @@ import NavIcon from "@/components/nav-icon";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { type NavGroup, parseCollapsed, SIDEBAR_KEY } from "@/lib/navigation";
+import { isModule, type NavGroup, type NavItem, type NavModule, navPages, parseCollapsed, SIDEBAR_KEY } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 export type { NavGroup, NavItem } from "@/lib/navigation";
@@ -76,6 +76,8 @@ export default function AppFrame({ navLabel, context, groups, tenantId, children
 function Sidebar({ navLabel, context, groups, collapsed, onNavigate }: {
   navLabel: string; context?: ReactNode; groups: NavGroup[]; collapsed: boolean; onNavigate?: () => void;
 }) {
+  // A module starts open while one of its pages is current; the person's toggle wins after that.
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
   return <div className="flex h-full flex-col">
     <div className={cn("flex h-16 shrink-0 items-center gap-3 border-b border-border", collapsed ? "justify-center px-2" : "px-5")}>
       <Link href="/lojas" onClick={onNavigate} className="flex min-w-0 items-center gap-3 rounded-md text-foreground no-underline hover:no-underline focus-visible:ring-2 focus-visible:ring-ring">
@@ -93,19 +95,46 @@ function Sidebar({ navLabel, context, groups, collapsed, onNavigate }: {
           ? (index > 0 ? <hr className="mx-2 mb-3 border-border" /> : null)
           : <p className="m-0 mb-1.5 px-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground" id={`nav-group-${index}`}>{group.label}</p>}
         <ul className="m-0 grid list-none gap-1 p-0" aria-labelledby={collapsed ? undefined : `nav-group-${index}`} aria-label={collapsed ? group.label : undefined}>
-          {group.items.map(item => {
-            const link = <Link href={item.href} onClick={onNavigate} aria-current={item.current ? "page" : undefined} className={cn(
-              "flex min-h-10 items-center gap-3 rounded-md text-sm font-medium text-muted-foreground no-underline transition-colors hover:bg-accent hover:text-accent-foreground hover:no-underline focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground",
-              collapsed ? "mx-auto size-11 justify-center" : "px-2.5")}>
-              <NavIcon name={item.icon} className="size-5 shrink-0" />
-              <span className={cn("truncate", collapsed && "sr-only")}>{item.label}</span>
-            </Link>;
-            return <li key={item.href}>{collapsed
-              ? <Tooltip><TooltipTrigger asChild>{link}</TooltipTrigger><TooltipContent side="right">{item.label}</TooltipContent></Tooltip>
-              : link}</li>;
-          })}
+          {/* Collapsed to icons, a module shows its pages directly; expanded, it opens and closes. */}
+          {collapsed
+            ? navPages(group.items).map(item => <li key={item.href}>
+              <Tooltip><TooltipTrigger asChild><NavLink item={item} collapsed onNavigate={onNavigate} /></TooltipTrigger><TooltipContent side="right">{item.label}</TooltipContent></Tooltip>
+            </li>)
+            : group.items.map(entry => <li key={entry.href}>{isModule(entry)
+              ? <NavModuleEntry module={entry} open={opened[entry.label] ?? entry.current} onToggle={open => setOpened(state => ({ ...state, [entry.label]: open }))} onNavigate={onNavigate} />
+              : <NavLink item={entry} onNavigate={onNavigate} />}</li>)}
         </ul>
       </div>)}
     </nav>
   </div>;
+}
+
+const LINK = "flex items-center gap-3 rounded-md text-sm font-medium text-muted-foreground no-underline transition-colors hover:bg-accent hover:text-accent-foreground hover:no-underline focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground";
+
+function NavLink({ item, collapsed = false, nested = false, onNavigate, ...rest }: {
+  item: NavItem; collapsed?: boolean; nested?: boolean; onNavigate?: () => void;
+} & Omit<ComponentProps<typeof Link>, "href">) {
+  return <Link {...rest} href={item.href} onClick={event => { rest.onClick?.(event); onNavigate?.(); }} aria-current={item.current ? "page" : undefined}
+    className={cn(LINK, collapsed ? "mx-auto size-11 justify-center" : nested ? "min-h-9 px-2.5" : "min-h-10 px-2.5")}>
+    <NavIcon name={item.icon} className={cn("shrink-0", nested ? "size-4" : "size-5")} />
+    <span className={cn("truncate", collapsed && "sr-only")}>{item.label}</span>
+  </Link>;
+}
+
+// Disclosure button (aria-expanded) over the module's own list of links.
+function NavModuleEntry({ module, open, onToggle, onNavigate }: {
+  module: NavModule; open: boolean; onToggle: (open: boolean) => void; onNavigate?: () => void;
+}) {
+  const listId = useId();
+  return <>
+    <button type="button" aria-expanded={open} aria-controls={listId} onClick={() => onToggle(!open)}
+      className={cn(LINK, "min-h-10 w-full border-0 bg-transparent px-2.5 text-left", module.current && "text-foreground")}>
+      <NavIcon name={module.icon} className="size-5 shrink-0" />
+      <span className="flex-1 truncate">{module.label}</span>
+      <ChevronDown className={cn("size-4 shrink-0 transition-transform motion-reduce:transition-none", open && "rotate-180")} aria-hidden="true" />
+    </button>
+    <ul id={listId} hidden={!open} className="m-0 ml-[1.375rem] mt-1 grid list-none gap-1 border-l border-border p-0 pl-2">
+      {module.children.map(child => <li key={child.href}><NavLink item={child} nested onNavigate={onNavigate} /></li>)}
+    </ul>
+  </>;
 }

@@ -1,15 +1,27 @@
 // Admin navigation shared by the sidebar and the global search. Pure, imported by the smoke test.
 // Links never prove authorization: the backend checks every request.
 
-export type NavIcon = "home" | "box" | "tags" | "award" | "palette" | "receipt" | "store" | "truck" | "card" | "chart" | "wallet" | "spark" | "stores" | "user" | "users" | "landmark";
+export type NavIcon = "home" | "box" | "tags" | "award" | "palette" | "receipt" | "store" | "truck" | "card" | "chart" | "wallet" | "spark" | "stores" | "user" | "users" | "landmark" | "bills" | "register";
 export type NavItem = { href: string; label: string; icon: NavIcon; current: boolean; keywords?: string };
-export type NavGroup = { label: string; items: NavItem[] };
+/** A sidebar module that opens into its pages (2026-11-04: "Financeiro"). Its href is the first page. */
+export type NavModule = NavItem & { children: NavItem[] };
+export type NavEntry = NavItem | NavModule;
+export type NavGroup = { label: string; items: NavEntry[] };
 
 export function storeBase(tenantId: string): string {
   return `/lojas/${encodeURIComponent(tenantId)}`;
 }
 
-export function storeItems(tenantId: string, pathname: string): NavItem[] {
+export function isModule(entry: NavEntry): entry is NavModule {
+  return "children" in entry;
+}
+
+/** Every page of the entries, modules opened into their pages (the global search lists pages). */
+export function navPages(entries: NavEntry[]): NavItem[] {
+  return entries.flatMap(entry => isModule(entry) ? entry.children : [entry]);
+}
+
+export function storeItems(tenantId: string, pathname: string): NavEntry[] {
   const base = storeBase(tenantId);
   const at = (path: string) => pathname === `${base}${path}`;
   const under = (path: string) => pathname === `${base}${path}` || pathname.startsWith(`${base}${path}/`);
@@ -23,14 +35,20 @@ export function storeItems(tenantId: string, pathname: string): NavItem[] {
     { href: `${base}/dados`, label: "Dados da loja", icon: "store", current: at("/dados"), keywords: "logo contatos whatsapp instagram nome" },
     { href: `${base}/entrega`, label: "Entrega", icon: "truck", current: at("/entrega"), keywords: "frete retirada" },
     { href: `${base}/pagamentos`, label: "Pagamentos", icon: "card", current: at("/pagamentos"), keywords: "mercado pago conectar" },
-    { href: `${base}/financeiro`, label: "Financeiro", icon: "chart", current: at("/financeiro"), keywords: "receita margem relatorio" },
     { href: `${base}/vendas-loja`, label: "Vendas na loja", icon: "receipt", current: at("/vendas-loja"), keywords: "balcao venda presencial loja fisica pdv pix cartao" },
-    { href: `${base}/caixa`, label: "Caixa", icon: "wallet", current: at("/caixa"), keywords: "abrir fechar sangria suprimento gaveta dinheiro troco" },
-    { href: `${base}/contas`, label: "Contas", icon: "landmark", current: under("/contas"), keywords: "caixa banco saldo extrato transferencia dinheiro" },
-    { href: `${base}/despesas`, label: "Contas a pagar", icon: "wallet", current: at("/despesas"), keywords: "despesas custos gastos duplicatas boletos" },
+    financeModule([
+      { href: `${base}/financeiro`, label: "Dashboard financeiro", icon: "chart", current: at("/financeiro"), keywords: "financeiro receita margem relatorio" },
+      { href: `${base}/despesas`, label: "Contas a pagar", icon: "bills", current: at("/despesas"), keywords: "financeiro despesas custos gastos duplicatas boletos" },
+      { href: `${base}/contas`, label: "Contas e extratos", icon: "landmark", current: under("/contas"), keywords: "financeiro caixa banco saldo extrato transferencia dinheiro" },
+      { href: `${base}/caixa`, label: "Caixa", icon: "register", current: at("/caixa"), keywords: "financeiro abrir fechar sangria suprimento gaveta dinheiro troco" },
+    ]),
     { href: `${base}/funcionarios`, label: "Funcionários", icon: "users", current: at("/funcionarios"), keywords: "equipe caixa operador convite staff" },
     { href: `${base}/assistente`, label: "Assistente", icon: "spark", current: at("/assistente"), keywords: "ia perguntas explicar" },
   ];
+}
+
+function financeModule(children: NavItem[]): NavModule {
+  return { href: children[0].href, label: "Financeiro", icon: "wallet", current: children.some(child => child.current), children };
 }
 
 /** SC-049, SC-052, SC-053: an employee reaches the store's home, the counter and the cash register. */

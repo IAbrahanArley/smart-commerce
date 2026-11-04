@@ -80,7 +80,7 @@ Regras comuns: loja resolvida só pelo slug publicado; toda consulta pública re
   - a de celular é opcional; sem ela, vale a principal;
   - banner sem imagem principal não aparece;
   - o período é gravado como instante; o admin converte a data digitada pelo fuso do navegador do lojista;
-  - a troca automática acontece a cada 7 s, para com o ponteiro ou o foco dentro do carrossel, tem botão "Pausar" e não acontece com `prefers-reduced-motion`.
+  - a troca automática acontece a cada 7 s, para com o ponteiro ou o foco dentro do carrossel, não acontece com `prefers-reduced-motion`. Desde 2026-11-04, a navegação é por bolinhas (uma por banner, a atual preenche durante os 7 s) e o botão "Pausar" foi removido a pedido do responsável; a pausa fica no ponteiro ou foco dentro do carrossel (DESIGN.md).
 - **Seções:**
   - até 8, cada uma com até 8 produtos;
   - seção de categoria oculta não aparece, e seção sem produtos também não;

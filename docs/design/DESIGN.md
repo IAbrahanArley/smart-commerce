@@ -233,6 +233,15 @@ Pedido do responsável: telas do admin que mostram uma lista ou um conteúdo dei
 - O rascunho fica no estado da tela: fechar e reabrir mantém o que foi digitado (exceto "Criar minha loja", que usa campos não controlados).
 - Edições em linha (renomear marca, editar categoria) e telas que são só configuração (dados da loja, entrega, pagamentos, aparência) continuam como estão.
 
+### Módulo Financeiro na sidebar (2026-11-04)
+
+Pedido do responsável: as páginas financeiras ficam num módulo "Financeiro" da sidebar, com subitens "Dashboard financeiro", "Contas a pagar", "Contas e extratos" e "Caixa". "Vendas na loja" e "Pagamentos" (conexão com o Mercado Pago) continuam como itens próprios; a equipe (STAFF) continua com a lista curta, sem módulo.
+
+- O módulo é um botão de divulgação (`aria-expanded`/`aria-controls`) com seta; os subitens são links recuados com linha guia à esquerda e ícones de 16px.
+- Começa aberto quando a página atual é dele; depois disso vale o que a pessoa escolheu, enquanto a moldura estiver montada.
+- Na sidebar recolhida, os subitens aparecem direto como ícones com tooltip; na gaveta do celular, o módulo funciona como no desktop.
+- A busca global (Ctrl+K) lista os subitens como páginas. Tipos em `lib/navigation.ts` (`NavModule`, `navPages`).
+
 ## Plataforma e temas futuros das lojas
 
 Admin e autenticação usam identidade e tokens `--sc-`. A vitrine é aplicação separada, conforme arquitetura. Sua personalização futura terá contrato próprio de tokens permitidos, por exemplo `--store-`, com fallback e validação de contraste; não adotar CSS arbitrário do cliente ou vazamento de estilos entre aplicações.
@@ -360,7 +369,7 @@ A proposta começou com `#A9B0BA` nas bordas de controle (2,2:1, abaixo do 3:1 e
 
 **Composição:**
 - **Global:** faixa de aviso opcional (preto), cabeçalho branco com nome/logo, busca em pílula, "Acompanhar pedido" e carrinho com contador; menu de categorias logo abaixo, com a página atual sublinhada (`aria-current`). Rodapé claro em quatro colunas (sobre, categorias, ajuda/institucional, atendimento) e linha final com razão social, CNPJ e "Loja criada com Smart Commerce". Botão flutuante de WhatsApp, sem cobrir conteúdo no celular.
-- **Home:** banner com anterior/pausar/próximo (sem troca automática com `prefers-reduced-motion`), faixa de vantagens com textos vindos da configuração da loja, atalhos de categoria e seções de produtos com "Ver todos".
+- **Home:** banner com bolinhas de navegação (desde 2026-11-04; sem troca automática com `prefers-reduced-motion`), faixa de vantagens com textos vindos da configuração da loja, atalhos de categoria e seções de produtos com "Ver todos".
 - **Card de produto:** foto, selo de desconto ou "Esgotado", marca, nome, preço "de" riscado + preço, e "em até N× de R$ X no Mercado Pago" (nunca "sem juros", ADR-0018 V4).
 - **Categoria/busca:** breadcrumb, título e contagem, ordenação em `<select>` rotulado, chips dos filtros aplicados com "Limpar filtros", filtros em `<fieldset>` com contagem (painel no celular) e paginação numerada.
 - **Produto:** miniaturas verticais + foto principal com zoom; marca, nome, preço, parcelamento; variantes em botões com `aria-pressed`; quantidade e "Adicionar ao carrinho" em pílula; quadro de entrega, trocas e pagamento; descrição; relacionados.
@@ -377,7 +386,7 @@ A proposta começou com `#A9B0BA` nas bordas de controle (2,2:1, abaixo do 3:1 e
 - **Produto:** caminho pelas categorias, marca, preço "de" com selo, parcelamento, notas de entrega e pagamento, descrição e "Você também pode gostar".
 - **Conteúdo da loja (SC-043):**
   - faixa de aviso no topo;
-  - carrossel de banners: um slide por vez, anterior, próximo e "Pausar"; troca sozinho a cada 7 s, mas nunca com `prefers-reduced-motion` nem com o ponteiro ou o foco dentro dele;
+  - carrossel de banners: um slide por vez e uma bolinha por banner abaixo da imagem (desde 2026-11-04, no lugar de anterior, próximo, "Pausar" e "1 / 2"). A bolinha atual se alarga e preenche durante os 7 s do banner; o fim do preenchimento troca o banner, então as bolinhas acompanham o loop. Clicar numa bolinha ou deslizar o dedo no celular troca o banner; deslizar sobre um banner com link não abre o link. Área de toque de 24×32px por bolinha. Nunca troca sozinho com `prefers-reduced-motion` nem com o ponteiro ou o foco dentro dele (o preenchimento pausa onde está);
   - seções configuráveis da home;
   - páginas institucionais em "Ajuda" e dados legais no rodapé.
 
@@ -406,4 +415,4 @@ Na evolução do catálogo de 2026-10-17, fotos reais enviadas pelo lojista pode
 
 Organizar o formulário em identificação, descrição, preços/variações, imagens e publicação, com instruções e erros associados aos campos. Descrição permite apenas a formatação sanitizada do ADR-0011; nunca executar HTML de entrada bruta no preview. Opções como cor/tamanho devem usar rótulos textuais e controles nativos, sem depender de amostras de cor. Selecionar uma combinação exibe seu preço/disponibilidade real; não sugerir compra ou reserva inexistente. Limites de upload, necessidade de salvar antes de editar fotos e conflitos de versão precisam ser claros sem perder rascunhos.
 
-**Aviso de ambiente de teste (ADR-0014 H2).** No ambiente de teste hospedado, o admin e a vitrine mostram no topo de todas as páginas uma faixa de texto, "Ambiente de teste. Dados fictícios e sem pagamentos reais. Não informe dados pessoais verdadeiros.", com `role="note"`, fundo informativo e borda divisória dos tokens existentes. A informação está no texto, não só na cor.
+**Aviso de ambiente de teste (ADR-0014 H2) — faixa removida em 2026-11-04.** A faixa do topo ("Ambiente de teste. Dados fictícios e sem pagamentos reais. Não informe dados pessoais verdadeiros.") saiu do admin e da vitrine por decisão do responsável, para apresentações a clientes. No ambiente de teste, a vitrine continua dizendo no rodapé que os pedidos são de teste.

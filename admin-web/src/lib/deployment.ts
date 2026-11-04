@@ -18,8 +18,3 @@ export function backendOrigin(value: string | undefined): string {
     throw new Error("ADMIN_API_ORIGIN must be an HTTPS origin (HTTP only on loopback), without path");
   return url.origin;
 }
-
-// ADR-0014 H2: the hosted test environment shows a permanent notice on every page.
-export function hostedTestEnvironment(value: string | undefined): boolean {
-  return value === "hosted-test";
-}

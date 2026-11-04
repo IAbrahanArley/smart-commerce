@@ -257,7 +257,6 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
 }
 
 /* ADR-0014 H2: hosted test environment notice, existing tokens only. */
-.test-environment-banner { margin: 0; padding: var(--store-space-2) var(--store-space-4); text-align: center; color: var(--store-text); background: var(--store-muted-background); border-bottom: 1px solid var(--store-divider); overflow-wrap: anywhere; }
 
 /* Repaginação 2026-10 (DESIGN.md): surfaces with a subtle elevation, sticky header with the cart count,
    order steps and status timeline. Approved colour tokens only; shadows are the new tokens. */
@@ -422,21 +421,29 @@ button:disabled { background: var(--store-muted-background); color: var(--store-
 @media (prefers-reduced-motion: reduce) { .catalog-card-media .product-cover img { transition: none; } .catalog-card-link:hover .product-cover img { transform: none; } }
 
 .store-home { padding-block: var(--store-space-8) var(--store-space-4); }
-/* SC-043: home banners. The image keeps its own proportion; controls sit below it, never over it. */
+/* SC-043: home banners. The image keeps its own proportion; the dots sit below it, never over it.
+   Dots since 2026-11-04: the current one widens and fills while its banner is shown (7 s); the end of
+   the fill moves the carousel on, so the time lives here and in no timer. */
 .banner-carousel { margin-top: var(--store-space-4); }
-.banner-slides { position: relative; }
+.banner-slides { position: relative; touch-action: pan-y; }
 .banner-slide { position: relative; }
 .banner-slide[hidden] { display: none; }
-.banner-slide picture, .banner-slide img { display: block; width: 100%; height: auto; max-height: min(70vh, 36rem); object-fit: cover; border-radius: var(--store-radius-large); background: var(--store-muted-background); }
+.banner-slide picture, .banner-slide img { display: block; width: 100%; height: auto; max-height: min(70vh, 36rem); object-fit: cover; border-radius: var(--store-radius-large); background: var(--store-muted-background); user-select: none; -webkit-user-drag: none; }
 .banner-link { display: block; color: inherit; text-decoration: none; border-radius: var(--store-radius-large); }
 .banner-link:focus-visible { outline: 3px solid var(--store-focus); outline-offset: 4px; }
 .banner-title { display: block; margin-top: var(--store-space-2); font-weight: 700; font-size: 1.0625rem; color: var(--store-text); }
 .banner-link:hover .banner-title { color: var(--store-link-hover); text-decoration: underline; }
-.banner-controls { display: flex; align-items: center; justify-content: flex-end; gap: var(--store-space-2); margin-bottom: var(--store-space-2); }
-.banner-control { min-height: 44px; min-width: 44px; padding: 0 var(--store-space-4); border: 1px solid var(--store-control-border); border-radius: var(--store-radius-pill); background: var(--store-surface); color: var(--store-text); font: inherit; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-.banner-control:hover { background: var(--store-muted-background); }
-.banner-arrow { padding: 0; }
-.banner-position { min-width: 3.5rem; text-align: center; font-variant-numeric: tabular-nums; color: var(--store-secondary); font-weight: 600; }
+.banner-dots { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; margin-top: var(--store-space-2); }
+.banner-dot, .banner-dot:hover, .banner-dot:active { min-height: 0; min-width: 0; height: 2rem; padding: 0 0.4375rem; background: transparent; border-radius: var(--store-radius-pill); }
+.banner-dot:focus-visible { outline: 3px solid var(--store-focus); outline-offset: 0; }
+.banner-dot-mark { position: relative; display: block; width: 0.625rem; height: 0.625rem; overflow: hidden; border-radius: var(--store-radius-pill); background: var(--store-control-border); transition: width 300ms ease, background-color 300ms ease; }
+.banner-dot:hover .banner-dot-mark { background: var(--store-secondary); }
+.banner-dot[aria-current="true"] .banner-dot-mark { width: 2rem; background: var(--store-control-border); }
+.banner-dot-fill { position: absolute; inset: 0; background: var(--store-action); transform-origin: left center; animation: banner-dot-fill 7s linear forwards; }
+@keyframes banner-dot-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: no-preference) { .banner-slide:not([hidden]) { animation: banner-in 400ms ease; } }
+@keyframes banner-in { from { opacity: 0.4; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .banner-dot-mark { transition: none; } .banner-dot[aria-current="true"] .banner-dot-mark { background: var(--store-action); } }
 
 .home-section { margin-top: var(--store-space-12); }
 .home-section:first-of-type { margin-top: var(--store-space-4); }

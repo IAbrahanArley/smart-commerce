@@ -6,7 +6,7 @@ import { Command } from "cmdk";
 import { Package, Plus, ReceiptText, Search } from "lucide-react";
 import { apiRequest } from "@/lib/auth-api";
 import { formatBRL } from "@/lib/catalog";
-import { type NavGroup, searchScore, storeBase } from "@/lib/navigation";
+import { type NavGroup, navPages, searchScore, storeBase } from "@/lib/navigation";
 import { type OrderPage, ordersApiPath } from "@/lib/orders";
 import NavIcon from "@/components/nav-icon";
 import { Kbd } from "@/components/ui/badge";
@@ -109,7 +109,7 @@ export default function GlobalSearch({ groups, tenantId }: { groups: NavGroup[];
               <Command.Item className={ITEM} value="novo produto cadastrar" onSelect={() => go(`${base}/produtos/novo`)}><Plus aria-hidden="true" /> Novo produto</Command.Item>
             </Command.Group> : null}
             {groups.map(group => <Command.Group key={group.label} heading={group.label}>
-              {group.items.map(item => <Command.Item key={item.href} className={ITEM} value={`${item.label} ${item.keywords ?? ""}`} onSelect={() => go(item.href)}>
+              {navPages(group.items).map(item => <Command.Item key={item.href} className={ITEM} value={`${item.label} ${item.keywords ?? ""}`} onSelect={() => go(item.href)}>
                 <NavIcon name={item.icon} /> {item.label}
               </Command.Item>)}
             </Command.Group>)}

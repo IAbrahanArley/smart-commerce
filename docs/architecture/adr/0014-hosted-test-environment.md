@@ -74,7 +74,8 @@ Em 2026-10-19 o responsável aprovou:
 - **Imagem:** `backend/Dockerfile` multi-stage, com usuário sem privilégios, heap limitado e `PORT` do provedor.
 - **Medição local com o limite do free (0,1 CPU, 512 MB):** a aplicação ficou pronta em **~4 min**, aplicando 16 migrações, e usou ~230 MB.
 - **Admin:** `ADMIN_API_ORIGIN` é validado no build.
-- **Ambiente de teste:** `DEPLOYMENT_ENVIRONMENT=hosted-test` nas três aplicações. No backend, o checkout fora de `dev` exige esse valor, e o D6 passou a ser verificado em código. Nos frontends, o aviso aparece em todas as páginas e a vitrine só mostra o checkout com esse valor.
+- **Ambiente de teste:** `DEPLOYMENT_ENVIRONMENT=hosted-test` nas três aplicações. No backend, o checkout fora de `dev` exige esse valor, e o D6 passou a ser verificado em código. Nos frontends, o aviso aparecia em todas as páginas e a vitrine só mostra o checkout com esse valor.
+- **Revisão de 2026-11-04 (responsável):** a faixa "Ambiente de teste" do topo foi removida do admin e da vitrine para apresentações a clientes. O checkout continua restrito a `hosted-test` e o rodapé da vitrine continua avisando que os pedidos são de teste. Isso afrouxa a condição "aviso visível em todas as páginas" da exceção H2: o ambiente segue só com dados sintéticos e a exceção continua tendo de sair antes de qualquer uso real.
 - **Guia:** [HOSTED-TEST-ENVIRONMENT.md](../../deploy/HOSTED-TEST-ENVIRONMENT.md).
 
 ## Decisões (aprovadas em 2026-10-19)
