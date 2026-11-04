@@ -5,6 +5,7 @@ import "./smoke-staff.mjs";
 import "./smoke-accounts.mjs";
 import "./smoke-cash.mjs";
 import "./smoke-counter.mjs";
+import "./smoke-credit.mjs";
 import "./smoke-sprint8.mjs";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";

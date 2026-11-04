@@ -344,6 +344,21 @@ public class BootstrapSecurityConfiguration {
                         "/api/tenants/*/cash/sessions/*/close",
                         "/api/tenants/*/cash/sessions/*/reopen")
                     .authenticated()
+                    // SC-055: store customers and store credit (OWNER or STAFF; editing a
+                    // customer and the credit list OWNER only, checked in the service).
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/tenants/*/customers",
+                        "/api/tenants/*/customers/search",
+                        "/api/tenants/*/credit/customers/*/receipts")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.PUT, "/api/tenants/*/customers/*")
+                    .authenticated()
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/tenants/*/credit",
+                        "/api/tenants/*/credit/customers/*")
+                    .authenticated()
                     .requestMatchers(
                         HttpMethod.GET, "/api/tenants/*/products", "/api/tenants/*/products/*")
                     .authenticated()

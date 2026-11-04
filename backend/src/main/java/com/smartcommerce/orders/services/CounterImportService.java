@@ -295,7 +295,10 @@ public class CounterImportService {
             null,
             null,
             items,
-            parsed.date());
+            parsed.date(),
+            null,
+            null,
+            null);
     if (!sales.insert(tenant, sale, actor, now, importId, parsed.importKey(), parsed.date()))
       throw new CounterSaleException(CounterSaleException.Reason.REQUEST_CONFLICT);
     if (!inventory.sellAtCounter(

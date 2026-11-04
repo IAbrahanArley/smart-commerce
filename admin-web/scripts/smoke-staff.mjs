@@ -38,7 +38,7 @@ assert.equal(staffRefusal(500, null), null);
 
 // Navigation: the OWNER manages the team; an employee only reaches the store's home.
 assert.ok(storeItems(id, `/lojas/${id}/funcionarios`).find(item => item.href.endsWith("/funcionarios"))?.current);
-assert.deepEqual(staffItems(id, `/lojas/${id}`).map(item => item.label), ["Visão geral", "Vendas na loja", "Caixa"]);
+assert.deepEqual(staffItems(id, `/lojas/${id}`).map(item => item.label), ["Visão geral", "Vendas na loja", "Caixa", "Crediário"]);
 
 // The billing notice is for owners: an account without stores (an employee) sees none.
 const expired = { status: "TRIAL_EXPIRED", plan: null, cycle: null, trialEndsAt: "2026-10-01T00:00:00Z", currentPeriodEnd: null, enforced: true, limits: { companies: 2, productsPerStore: 2000, monthlyQuestions: 60 }, companies: 0 };

@@ -31,7 +31,7 @@ Status: **adotado** em 2026-10-26 para C1–C13, aprovadas pelo responsável na 
 | C6 | Venda presencial | **Registro de venda de balcão sem PDV**, a partir do livro de vendas ("Registrar venda presencial"). Cada item entra por um campo de busca **"Adicionar produto do estoque"** (nome, SKU ou variante, mostrando o disponível); não existe item fora do catálogo. Tabela própria `counter_sale` no módulo `orders`: itens do catálogo (variante, quantidade, preço snapshot, custo snapshot), desconto opcional em valor, forma de pagamento (dinheiro, Pix, cartão crédito, cartão débito, crediário) e conta de entrada. Baixa o estoque na hora (movimento `SALE` com origem balcão), sem reserva. Gera no livro `SALE` e `COGS` na mesma transação. Cancelamento só pelo OWNER, com motivo, no mesmo dia ou com estorno explícito (`REFUND`, `COGS_REVERSAL`, devolução ao estoque opcional) | Reaproveitar `sales_order` com canal `STORE` (exigiria afrouxar várias restrições pensadas para a vitrine) | SC-053 |
 | C7 | Livro aceita venda presencial | **`finance_entry` ganha `counter_sale_id`**; a regra "fato de venda tem origem" passa a ser "tem exatamente um entre `order_id` e `counter_sale_id`". Migração aditiva, sem tocar lançamentos existentes | Tabela de lançamentos separada para balcão (dois livros) | SC-053 |
 | C8 | Taxa de cartão na maquininha | **Taxa por forma de pagamento informada pelo OWNER**, gravada como snapshot na venda e lançada como `FEE` com marca **"informada pelo lojista"**. Sem taxa informada: "taxa indisponível", como no F2. Liberação do cartão de crédito: data informada ou "a receber, data desconhecida" | Ignorar taxa de maquininha (margem superestimada) | SC-053 |
-| C9 | Crediário (fiado) | **Cliente de crediário mínimo** por loja: nome, telefone e observação; sem CPF no MVP. Venda no crediário gera conta a receber em 1 a 12 parcelas. **Baixa parcial permitida** (é como o fiado funciona), cada recebimento é um movimento na conta escolhida; a parcela liquida quando o saldo chega a zero. Limite de crédito opcional por cliente, conferido na venda. Dados pessoais: só OWNER e STAFF da loja veem; anonimização quando não houver saldo em aberto há 5 anos (prazo a confirmar com orientação jurídica) | Crediário sem cadastro, só texto livre na venda (não dá para somar o que cada cliente deve) | SC-055 |
+| C9 | Crediário (fiado) | **Cliente de crediário mínimo** por loja: nome, telefone e observação; sem CPF no MVP. Venda no crediário gera conta a receber em 1 a 12 parcelas. **Baixa parcial permitida** (é como o fiado funciona), cada recebimento é um movimento na conta escolhida; a parcela liquida quando o saldo chega a zero. Limite de crédito opcional por cliente, conferido na venda. Dados pessoais: só OWNER e STAFF da loja veem; anonimização quando não houver saldo em aberto há 5 anos (prazo a confirmar com orientação jurídica). O cliente é a `store_customer` do ADR-0021 (R2), decidido em 2026-11-04 | Crediário sem cadastro, só texto livre na venda (não dá para somar o que cada cliente deve) | SC-055 |
 | C10 | Contas a receber | **Uma visão única** de: pagamentos do Mercado Pago não liberados (SC-018), cartão de crédito presencial não liberado (C8) e parcelas de crediário. Situação: a vencer, vencida, recebida parcialmente, recebida | Telas separadas por origem | SC-055, SC-057 |
 | C11 | Livro de vendas | **Relatório por dia** com canal (online/presencial), forma de pagamento, bruto, desconto, taxa, líquido, reembolso e quem registrou. É também a porta de entrada da venda presencial (C6) e da importação (C14). Lê só o livro e `counter_sale`/`sales_order` para o rótulo. Exportação CSV sem dados pessoais de compradores. Só OWNER vê os totais; STAFF só registra | Livro editável à parte (perde a trilha) | SC-056 |
 | C12 | Fluxo de caixa projetado | **Saldo atual das contas + a receber − a pagar por vencimento**, nos próximos 30, 60 e 90 dias, com marcação de dias negativos. Sem previsão de vendas futuras | Projeção com vendas estimadas (inventa números) | SC-057 |
@@ -239,6 +239,53 @@ Regras comuns a todas as decisões: tenant derivado da sessão e conferido no SQ
 
   Depois de importar, a prévia do mesmo arquivo é refeita e mostra o que entrou e o que ficou de fora. Na lista, a venda importada mostra a data da venda.
 - **Fora desta tarefa:** `.xlsx` direto, que depende de aprovar uma biblioteca.
+
+## Implementação da SC-055 — crediário (2026-11-04), primeira parte
+
+- **Decisões do responsável (2026-11-04):**
+  - o cliente do crediário é a `store_customer` do [ADR-0021](0021-store-crm.md) (R2), no módulo novo `customers`, só com os campos do crediário;
+  - a retenção de 5 anos fica registrada como pendente de orientação jurídica, e a anonimização fica para a SC-074;
+  - o funcionário vê só o cliente que está atendendo;
+  - a entrega vem em duas partes. Esta traz clientes, venda no crediário e recebimentos; a segunda traz as contas a receber unificadas (C10), com a baixa do cartão e o Mercado Pago como "data desconhecida".
+- **Banco (V46):** `store_customer`, `credit_installment`, `credit_receipt`, `credit_allocation` e as colunas novas em `counter_sale` e `account_movement` ([DATA_MODEL.md](../DATA_MODEL.md)).
+- **Cliente:**
+  - a busca vai no corpo de um `POST`, nunca na URL. O dono busca por nome, e-mail ou parte do telefone (4 dígitos ou mais);
+  - o funcionário busca só por nome ou pelo telefone completo, para não descobrir dígito a dígito o telefone mascarado nem o e-mail que não vê;
+  - o funcionário cadastra só nome e telefone e vê o telefone mascarado (`•••• 4321`). Na lista de vendas na loja, ele não vê o nome do cliente do crediário; vê só na venda que acabou de registrar;
+  - só o dono informa e-mail, observação e limite, e só ele edita;
+  - um e-mail é de um só cliente na loja (409 `EMAIL_TAKEN`).
+- **Venda no crediário (forma `STORE_CREDIT`):**
+  - escolhe o cliente, de 1 a 12 parcelas e o primeiro vencimento (de hoje até um ano à frente). As outras parcelas vencem nos meses seguintes;
+  - o total é dividido em centavos iguais, e a última parcela absorve a diferença;
+  - acima do limite do cliente, contando o que ele já deve, a venda é recusada (409 `CREDIT_LIMIT`);
+  - o livro recebe `SALE` e `COGS` sem liquidação, e nenhum dinheiro se move;
+  - o cancelamento pelo dono anula as parcelas e gera o `REFUND`, também sem liquidação. Se a venda já recebeu algum pagamento, ele é recusado (409 `CREDIT_RECEIVED`, também barrado no banco).
+- **Recebimento (dono ou funcionário):**
+  - qualquer valor até o que o cliente deve; acima disso, 409 `OVERPAYMENT`;
+  - entra na gaveta de uma sessão de caixa aberta ou numa conta bancária. Gaveta sem sessão e Mercado Pago dão 409 `ACCOUNT_NOT_ALLOWED`;
+  - quita primeiro as parcelas mais antigas (`credit_allocation`) e gera o movimento `CREDIT_RECEIPT`;
+  - quando todas as parcelas de uma venda são recebidas, o `SALE` dela é liquidado no livro;
+  - o `requestId` torna a repetição o mesmo recebimento; o mesmo pedido com outro conteúdo dá 409.
+
+  Recebimentos simultâneos passam pela trava da loja, então nunca pagam além do saldo.
+- **API:**
+  - `POST /api/tenants/{id}/customers/search`, `POST /customers` (dono ou funcionário), `PUT /customers/{customerId}` (só o dono);
+  - `GET /credit?filter=ALL|OPEN|OVERDUE&before=` (só o dono): totais em aberto e vencido e clientes por página;
+  - `GET /credit/customers/{customerId}?before=`: o dono recebe ficha, limite e histórico paginado; o funcionário recebe só parcelas em aberto e destinos;
+  - `POST /credit/customers/{customerId}/receipts`;
+  - `POST /counter-sales` aceita `STORE_CREDIT` com `customerId`, `installments` e `firstDueOn`.
+
+  Qualquer outra pessoa recebe 404, e a matriz do `StaffIT` continua sem sucesso para o funcionário com corpo vazio.
+- **Admin:**
+  - "Crediário" no menu do dono e do funcionário; a página inicial do funcionário leva até lá;
+  - **dono:** lista com abas (todos, com saldo, vencidos), ficha com parcelas, recebimento, histórico e edição;
+  - **funcionário:** busca do cliente, parcelas em aberto e recebimento;
+  - em "Vendas na loja", a forma "Crediário" pede cliente (busca ou cadastro na hora), parcelas e primeiro vencimento, com prévia das parcelas.
+- **Limitações:**
+  - o relatório financeiro conta o crediário como recebido só quando a venda é quitada: recebimentos parciais aparecem nas contas (movimentos), mas não no "caixa do período" até a quitação. Isso se resolve quando o relatório ler os movimentos (C3);
+  - um recebimento não pode ser estornado nesta parte;
+  - sem juros nem multa automáticos (fora do escopo);
+  - a retenção e a anonimização aguardam a orientação jurídica (C9).
 
 ## Consequências e riscos
 

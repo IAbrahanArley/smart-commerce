@@ -1,7 +1,7 @@
 // SC-053 (ADR-0019 C6, C8): sales at the physical store. Pure helpers, free of React and Next
 // imports for the smoke test. The backend decides prices, stock and limits; this only previews.
 
-export type PaymentMethod = "CASH" | "PIX" | "DEBIT" | "CREDIT";
+export type PaymentMethod = "CASH" | "PIX" | "DEBIT" | "CREDIT" | "STORE_CREDIT";
 export type CounterProduct = { variantId: string; name: string; options: string; sku: string; price: string; available: number };
 export type CounterItem = { variantId: string; name: string; options: string; sku: string; unitPrice: string; quantity: number; lineTotal: string };
 export type CounterSale = {
@@ -10,12 +10,14 @@ export type CounterSale = {
   cancelledBy: string | null; cancelledAt: string | null; cancelReason: string | null; restocked: boolean | null; items: CounterItem[];
   // SC-054: the day an imported sale happened (null for sales registered live).
   soldOn: string | null;
+  // SC-055: a store credit sale names its customer and its number of installments.
+  customerName: string | null; installmentCount: number | null;
 };
 export type CounterOverview = { role: "OWNER" | "STAFF"; staffDiscountLimit: string; pixAccountName: string | null; sessions: { id: string; accountName: string }[]; sales: CounterSale[]; nextCursor: string | null };
 export type CounterSettings = { staffDiscountLimit: string; pixAccountId: string | null; debitFeePercent: string | null; debitReleaseDays: number | null; creditFeePercent: string | null; creditReleaseDays: number | null };
 export type CartLine = { product: CounterProduct; quantity: number };
 
-export const METHOD_LABELS: Record<PaymentMethod, string> = { CASH: "Dinheiro", PIX: "Pix", DEBIT: "Cartão de débito", CREDIT: "Cartão de crédito" };
+export const METHOD_LABELS: Record<PaymentMethod, string> = { CASH: "Dinheiro", PIX: "Pix", DEBIT: "Cartão de débito", CREDIT: "Cartão de crédito", STORE_CREDIT: "Crediário" };
 export const METHODS = Object.keys(METHOD_LABELS) as PaymentMethod[];
 
 const cents = (amount: string) => BigInt(amount.replace(".", ""));

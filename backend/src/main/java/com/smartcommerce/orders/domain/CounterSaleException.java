@@ -20,7 +20,11 @@ public final class CounterSaleException extends RuntimeException {
     /** An import with cash sales needs the drawer or bank account they went into (SC-054). */
     CASH_ACCOUNT_REQUIRED,
     /** The stock changed between the preview and the confirmation: nothing was imported. */
-    STALE_IMPORT
+    STALE_IMPORT,
+    /** A store credit sale above the customer's limit, counting what they owe (SC-055). */
+    CREDIT_LIMIT,
+    /** A store credit sale already paid in part cannot be cancelled (SC-055). */
+    CREDIT_RECEIVED
   }
 
   private final Reason reason;

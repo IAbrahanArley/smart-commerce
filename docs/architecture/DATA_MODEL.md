@@ -141,6 +141,16 @@ V40 (SC-049, ADR-0019 C1, 2026-11-01), aditiva:
 - `staff_invitation`: um convite por linha, com todo o ciclo de vida (enviado, aceito ou cancelado, acesso revogado). Guarda só o hash SHA-256 do token de uso único, o e-mail convidado (chave de comparação e grafia original, o mínimo para casar com a conta e mostrar ao OWNER), quem convidou, validade de 7 dias, quem aceitou e quem revogou. Um índice único parcial deixa no máximo um convite em aberto por e-mail e empresa.
 - **Dado pessoal:** o e-mail do convite fica guardado também depois de aceito, cancelado ou expirado, para o histórico da equipe. A retenção segue a mesma validação jurídica pendente do D2.
 
+V46 (SC-055, ADR-0019 C9, ADR-0021 R2, 2026-11-04), aditiva:
+- `store_customer` (módulo `customers`): cliente da loja, uma tabela para o crediário agora e para o CRM depois. Nome, telefone só com dígitos (`+` opcional), e-mail opcional (grafia original e chave em minúsculas, única por loja por índice parcial), observação de até 500 caracteres e limite de crédito opcional. Sem CPF. `request_id` único por loja.
+- `counter_sale` ganha `customer_id` (FK composta) e `installment_count` (1 a 12), presentes só na forma `STORE_CREDIT`, que nunca vem de importação. `payment_method` passa a `VARCHAR(16)`.
+- `credit_installment`: as parcelas da venda, gravadas com ela; `UNIQUE (counter_sale_id, number)`. Parcela de venda cancelada não conta.
+- `credit_receipt`: o pagamento do cliente, com conta e, no dinheiro, a sessão de caixa; `request_id` único por loja.
+- `credit_allocation`: quanto de cada recebimento foi para cada parcela.
+- As três são só de acréscimo (trigger). O banco recusa pagar além da parcela, pagar parcela de venda cancelada ou de outro cliente e cancelar venda no crediário que já recebeu pagamento.
+- `account_movement` ganha `credit_receipt_id` e o tipo `CREDIT_RECEIPT` (entrada).
+- **Dado pessoal:** nome, telefone, e-mail e observação do cliente. Só o dono e os funcionários da loja veem; o funcionário vê o telefone mascarado. A retenção de 5 anos depois do último saldo em aberto (C9) aguarda orientação jurídica, e a anonimização fica para a SC-074.
+
 V45 (SC-054, ADR-0019 C14, 2026-11-03), aditiva:
 - `counter_sale_import`: cada importação confirmada guarda quem fez, quando, o SHA-256 do arquivo (nunca o conteúdo), quantas linhas e vendas tinha e a conta que recebeu o dinheiro das vendas à vista.
 - `counter_sale` ganha três colunas:

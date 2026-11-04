@@ -36,6 +36,7 @@ export function storeItems(tenantId: string, pathname: string): NavEntry[] {
     { href: `${base}/entrega`, label: "Entrega", icon: "truck", current: at("/entrega"), keywords: "frete retirada" },
     { href: `${base}/pagamentos`, label: "Pagamentos", icon: "card", current: at("/pagamentos"), keywords: "mercado pago conectar" },
     { href: `${base}/vendas-loja`, label: "Vendas na loja", icon: "receipt", current: at("/vendas-loja"), keywords: "balcao venda presencial loja fisica pdv pix cartao" },
+    { href: `${base}/crediario`, label: "Crediário", icon: "users", current: at("/crediario"), keywords: "fiado clientes parcelas receber contas a receber vencidas" },
     financeModule([
       { href: `${base}/financeiro`, label: "Dashboard financeiro", icon: "chart", current: at("/financeiro"), keywords: "financeiro receita margem relatorio" },
       { href: `${base}/despesas`, label: "Contas a pagar", icon: "bills", current: at("/despesas"), keywords: "financeiro despesas custos gastos duplicatas boletos" },
@@ -51,13 +52,14 @@ function financeModule(children: NavItem[]): NavModule {
   return { href: children[0].href, label: "Financeiro", icon: "wallet", current: children.some(child => child.current), children };
 }
 
-/** SC-049, SC-052, SC-053: an employee reaches the store's home, the counter and the cash register. */
+/** SC-049, SC-052, SC-053, SC-055: an employee reaches the store's home, the counter, the cash register and store credit. */
 export function staffItems(tenantId: string, pathname: string): NavItem[] {
   const base = storeBase(tenantId);
   return [
     { href: base, label: "Visão geral", icon: "home", current: pathname === base, keywords: "inicio" },
     { href: `${base}/vendas-loja`, label: "Vendas na loja", icon: "receipt", current: pathname === `${base}/vendas-loja`, keywords: "balcao venda presencial pix cartao" },
     { href: `${base}/caixa`, label: "Caixa", icon: "wallet", current: pathname === `${base}/caixa`, keywords: "abrir fechar sangria suprimento gaveta dinheiro troco" },
+    { href: `${base}/crediario`, label: "Crediário", icon: "users", current: pathname === `${base}/crediario`, keywords: "fiado clientes parcelas receber" },
   ];
 }
 

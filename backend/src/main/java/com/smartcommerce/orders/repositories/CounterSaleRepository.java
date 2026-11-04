@@ -229,8 +229,9 @@ public class CounterSaleRepository {
                 """
                 INSERT INTO counter_sale(id,tenant_id,request_id,payment_method,subtotal_amount,
                   discount_amount,total_amount,fee_percent,fee_amount,account_id,cash_session_id,
-                  expected_release_on,status,created_by,created_at,import_id,import_key,sold_on)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'ACTIVE',?,?,?,?,?)
+                  expected_release_on,status,created_by,created_at,import_id,import_key,sold_on,
+                  customer_id,installment_count)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'ACTIVE',?,?,?,?,?,?,?)
                 ON CONFLICT (tenant_id, request_id) DO NOTHING
                 """,
                 sale.id(),
@@ -249,7 +250,9 @@ public class CounterSaleRepository {
                 Timestamp.from(now),
                 importId,
                 importKey,
-                soldOn == null ? null : Date.valueOf(soldOn))
+                soldOn == null ? null : Date.valueOf(soldOn),
+                sale.customerId(),
+                sale.installmentCount())
             == 1;
     if (!created) return false;
     int position = 0;
@@ -375,7 +378,10 @@ public class CounterSaleRepository {
         sale.cancelReason(),
         sale.restocked(),
         items,
-        sale.soldOn());
+        sale.soldOn(),
+        sale.customerId(),
+        sale.customerName(),
+        sale.installmentCount());
   }
 
   private static final String SALE =
@@ -384,11 +390,12 @@ public class CounterSaleRepository {
         c.total_amount, c.fee_percent, c.fee_amount, c.account_id, a.name AS account_name,
         c.cash_session_id, c.expected_release_on, c.status, o.email_original AS created_by,
         c.created_at, k.email_original AS cancelled_by, c.cancelled_at, c.cancel_reason,
-        c.restocked, c.sold_on
+        c.restocked, c.sold_on, c.customer_id, s.name AS customer_name, c.installment_count
       FROM counter_sale c
       JOIN identity_user o ON o.id=c.created_by
       LEFT JOIN identity_user k ON k.id=c.cancelled_by
-      LEFT JOIN finance_account a ON a.id=c.account_id AND a.tenant_id=c.tenant_id""";
+      LEFT JOIN finance_account a ON a.id=c.account_id AND a.tenant_id=c.tenant_id
+      LEFT JOIN store_customer s ON s.id=c.customer_id AND s.tenant_id=c.tenant_id""";
 
   private static CounterSaleRecords.Sale sale(ResultSet row, int index) throws SQLException {
     Date release = row.getDate("expected_release_on");
@@ -414,7 +421,10 @@ public class CounterSaleRepository {
         row.getString("cancel_reason"),
         row.getObject("restocked", Boolean.class),
         List.of(),
-        soldOn == null ? null : soldOn.toLocalDate());
+        soldOn == null ? null : soldOn.toLocalDate(),
+        row.getObject("customer_id", UUID.class),
+        row.getString("customer_name"),
+        row.getObject("installment_count", Integer.class));
   }
 
   private static BigDecimal scaled(BigDecimal value) {

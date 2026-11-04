@@ -78,13 +78,26 @@ public final class CounterSaleRecords {
       String cancelReason,
       Boolean restocked,
       List<Item> items,
-      LocalDate soldOn) {
+      LocalDate soldOn,
+      UUID customerId,
+      String customerName,
+      Integer installmentCount) {
     public boolean active() {
       return "ACTIVE".equals(status);
     }
 
     public boolean card() {
       return "DEBIT".equals(paymentMethod) || "CREDIT".equals(paymentMethod);
+    }
+
+    /** Store credit (SC-055): the customer pays in installments. */
+    public boolean storeCredit() {
+      return "STORE_CREDIT".equals(paymentMethod);
+    }
+
+    /** Cards and store credit settle later; cash and Pix at once. */
+    public boolean receivable() {
+      return card() || storeCredit();
     }
   }
 }
