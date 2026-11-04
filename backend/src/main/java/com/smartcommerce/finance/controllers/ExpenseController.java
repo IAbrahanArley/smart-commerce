@@ -3,6 +3,7 @@ package com.smartcommerce.finance.controllers;
 import com.smartcommerce.finance.domain.Expense;
 import com.smartcommerce.finance.domain.ExpenseInput;
 import com.smartcommerce.finance.domain.ExpensePayment;
+import com.smartcommerce.finance.domain.PageCursor;
 import com.smartcommerce.finance.dto.request.CancelExpenseRequest;
 import com.smartcommerce.finance.dto.request.ExpenseRequest;
 import com.smartcommerce.finance.dto.request.PayExpenseRequest;
@@ -43,14 +44,16 @@ public final class ExpenseController {
       @PathVariable UUID tenantId,
       @RequestParam(required = false) String month,
       @RequestParam(required = false) String situation,
+      @RequestParam(required = false) String after,
       Authentication actor) {
     YearMonth period = month(month);
     Expense.Situation filter = situation(situation);
+    PageCursor cursor = PageCursor.parse(after, true);
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
         .body(
             ExpenseMonthView.of(
-                expenses.month(UUID.fromString(actor.getName()), tenantId, period, filter),
+                expenses.month(UUID.fromString(actor.getName()), tenantId, period, filter, cursor),
                 filter));
   }
 

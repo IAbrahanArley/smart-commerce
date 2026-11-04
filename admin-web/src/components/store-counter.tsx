@@ -10,6 +10,7 @@ import { type CartLine, type CounterOverview, type CounterProduct, type CounterS
 import { formatDay, lineText, parseOptionalAmount } from "@/lib/expenses";
 import CounterImport from "@/components/counter-import";
 import PageHeader from "@/components/page-header";
+import ListPager from "@/components/list-pager";
 import { AddButton, FormSheet } from "@/components/form-sheet";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/status-badge";
@@ -42,6 +43,7 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [settingsErrors, setSettingsErrors] = useState<Partial<Record<keyof SettingsDraft, string>>>({});
   const [busy, setBusy] = useState(false);
+  const [before, setBefore] = useState<string | null>(null);
   const [sheet, setSheet] = useState<"sale" | "import" | "settings" | null>(null);
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
   const submitting = useRef(false);
@@ -54,7 +56,7 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    apiRequest(api, { signal: controller.signal }).then(async response => {
+    apiRequest(`${api}${before ? `?before=${encodeURIComponent(before)}` : ""}`, { signal: controller.signal }).then(async response => {
       if (response.status === 401) { setState("signed-out"); return; }
       if (response.status === 403 || response.status === 404) { setState("missing"); return; }
       if (!response.ok) throw new Error();
@@ -75,7 +77,7 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
       setSession(currentSession => current.sessions.some(item => item.id === currentSession) ? currentSession : current.sessions[0]?.id ?? "");
     }).catch(() => { if (!controller.signal.aborted) setState("error"); });
     return () => controller.abort();
-  }, [api, tenantId, attempt]);
+  }, [api, tenantId, attempt, before]);
 
   // The stock search runs a moment after typing stops; two characters at least, like the backend.
   useEffect(() => {
@@ -132,7 +134,7 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
         discount: "amount" in off ? off.amount : null, paymentMethod: method, cashSessionId: method === "CASH" ? session : null } });
       if (response.ok) {
         const sale: CounterSale = await response.json();
-        setCart([]); setDiscount(""); setRequestId(crypto.randomUUID()); setAttempt(current => current + 1); setSheet(null);
+        setCart([]); setDiscount(""); setRequestId(crypto.randomUUID()); setAttempt(current => current + 1); setSheet(null); setBefore(null);
         setFeedback({ text: `Venda registrada: ${formatBRL(sale.total)} em ${METHOD_LABELS[sale.paymentMethod].toLowerCase()}.${sale.expectedReleaseOn ? ` Previsão de recebimento: ${formatDay(sale.expectedReleaseOn)}.` : ""}`, error: false });
         return;
       }
@@ -296,7 +298,7 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
       <section aria-labelledby="counter-sales-title">
         <h2 id="counter-sales-title">Últimas vendas na loja</h2>
         {data.sales.length ? <div className="data-table-wrap"><table className="data-table data-table-wrapping" role="table">
-          <caption>As 50 vendas mais recentes registradas na loja</caption>
+          <caption>{before ? "Vendas mais antigas registradas na loja" : "Vendas mais recentes registradas na loja"}</caption>
           <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Venda</th><th role="columnheader" scope="col">Pagamento</th><th role="columnheader" scope="col" className="numeric">Total</th><th role="columnheader" scope="col">Situação</th>{owner ? <th role="columnheader" scope="col">Ações</th> : null}</tr></thead>
           <tbody role="rowgroup">{data.sales.map(sale => <tr role="row" key={sale.id}>
             <th role="rowheader" scope="row">{sale.items.map(item => `${item.quantity}× ${itemLabel(item)}`).join(", ")}<span className="cell-hint">{sale.soldOn ? `Venda de ${formatDay(sale.soldOn)}, importada em ${formatDateTime(sale.createdAt)}` : formatDateTime(sale.createdAt)} · por {sale.createdBy}</span></th>
@@ -306,6 +308,9 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
             {owner ? <td role="cell" data-label="Ações">{sale.status === "ACTIVE" ? <button type="button" className="button-secondary" disabled={busy} aria-label={`Cancelar venda de ${formatBRL(sale.total)} de ${formatDateTime(sale.createdAt)}`} onClick={() => { setFeedback(null); setReason(""); setReasonError(""); setRestock(true); setCancelling(sale); }}>Cancelar</button> : null}</td> : null}
           </tr>)}</tbody>
         </table></div> : <p className="field-help">Nenhuma venda registrada na loja ainda.</p>}
+        <ListPager label="Páginas de vendas na loja" disabled={busy}
+          first={before ? { text: "Voltar às mais recentes", onClick: () => setBefore(null) } : null}
+          next={data.nextCursor ? { text: "Ver vendas mais antigas", onClick: () => setBefore(data.nextCursor) } : null} />
       </section>
       {owner && settings ? <FormSheet open={sheet === "settings"} onOpenChange={next => setSheet(next ? "settings" : null)} busy={busy} feedbackRef={feedbackRef} titleId="counter-settings-title" title="Configurações das vendas na loja">{feedbackNode}
       <form onSubmit={event => void saveSettings(event)} noValidate aria-labelledby="counter-settings-title">

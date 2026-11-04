@@ -17,21 +17,26 @@ import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import { type Category, categoryPath, parseCategories } from "@/lib/categories";
-import { EMPTY_FILTERS, filterProducts, filtersActive, filtersQuery, NO_CATEGORY, type ProductFilters, type ProductSort, resultText, type Visibility } from "@/lib/product-filters";
+import { EMPTY_FILTERS, filtersActive, filtersQuery, NO_CATEGORY, pageCount, productsApiQuery, type ProductFilters, type ProductPage, type ProductSort, resultText, type Visibility } from "@/lib/product-filters";
+import ListPager from "@/components/list-pager";
 
 export default function Catalog({ tenantId, productId, view, created = false, initialFilters = EMPTY_FILTERS }: { tenantId: string; productId?: string; view: "list" | "new" | "edit"; created?: boolean; initialFilters?: ProductFilters }) {
   const router = useRouter();
   const [state, setState] = useState<"loading" | "ready" | "missing" | "signed-out" | "error">("loading");
   const [store, setStore] = useState<TenantStore | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [list, setList] = useState<ProductPage | null>(null);
   const [product, setProduct] = useState<Product | undefined>();
   const [attempt, setAttempt] = useState(0);
   const [notice, setNotice] = useState(created ? "Produto cadastrado no catálogo interno. Ele começa oculto na vitrine. Inclua fotos e registre o estoque quando quiser." : "");
   const [draftDirty, setDraftDirty] = useState(false);
   const [filters, setFilterState] = useState<ProductFilters>(initialFilters);
-  // The URL reflects the filters, so a reload or a shared link keeps them (Next keeps its router in sync).
+  // The search box waits for a pause in typing before asking the backend again.
+  const [searchQuery, setSearchQuery] = useState(initialFilters.query);
+  // The URL reflects the filters and the page, so a reload or a shared link keeps them (Next keeps
+  // its router in sync). Any filter change goes back to the first page.
   function setFilters(update: ProductFilters | ((current: ProductFilters) => ProductFilters)) {
-    const next = typeof update === "function" ? update(filters) : update;
+    let next = typeof update === "function" ? update(filters) : update;
+    if (next.page === filters.page && (next.query !== filters.query || next.category !== filters.category || next.visibility !== filters.visibility || next.sort !== filters.sort)) next = { ...next, page: 1 };
     setFilterState(next);
     window.history.replaceState(null, "", `${window.location.pathname}${filtersQuery(next)}`);
   }
@@ -40,10 +45,16 @@ export default function Catalog({ tenantId, productId, view, created = false, in
   const storePath = `/lojas/${encodeURIComponent(tenantId)}`;
   const apiPath = `/api/tenants/${encodeURIComponent(tenantId)}`;
   const title = view === "edit" ? product?.name ?? "Editar produto" : view === "new" ? "Novo produto" : "Produtos";
+  const listQuery = productsApiQuery({ ...filters, query: searchQuery });
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(filters.query), 300);
+    return () => clearTimeout(timer);
+  }, [filters.query]);
 
   useEffect(() => {
     const controller = new AbortController();
-    const productPath = view === "edit" && productId ? `${apiPath}/products/${encodeURIComponent(productId)}` : view === "list" ? `${apiPath}/products` : null;
+    const productPath = view === "edit" && productId ? `${apiPath}/products/${encodeURIComponent(productId)}` : view === "list" ? `${apiPath}/products${listQuery}` : null;
     Promise.all([apiRequest(apiPath, { signal: controller.signal }), productPath ? apiRequest(productPath, { signal: controller.signal }) : Promise.resolve(null)])
       .then(async ([storeResponse, productResponse]) => {
         const responses = productResponse ? [storeResponse, productResponse] : [storeResponse];
@@ -53,11 +64,11 @@ export default function Catalog({ tenantId, productId, view, created = false, in
         const [storeData, productData] = await Promise.all([storeResponse.json(), productResponse?.json()]);
         if (controller.signal.aborted) return;
         setStore(storeData);
-        if (view === "edit") setProduct(productData); else if (view === "list") setProducts(productData);
+        if (view === "edit") setProduct(productData); else if (view === "list") setList(productData);
         setState("ready");
       }).catch(() => { if (!controller.signal.aborted) setState("error"); });
     return () => controller.abort();
-  }, [apiPath, productId, view, attempt]);
+  }, [apiPath, productId, view, attempt, listQuery]);
 
   // Categories only feed the list filter; without them the filter is simply not offered.
   useEffect(() => {
@@ -91,7 +102,8 @@ export default function Catalog({ tenantId, productId, view, created = false, in
     return store?.store.status === "PUBLISHED" ? <StatusBadge tone="positive">Visível na vitrine</StatusBadge> : <StatusBadge tone="neutral">Selecionado · Loja oculta</StatusBadge>;
   }
 
-  const shown = filterProducts(products, filters);
+  const shown = list?.products ?? [];
+  const pages = list ? pageCount(list.matching, list.pageSize) : 1;
   return <section className="page" aria-labelledby="catalog-title">
     <PageHeader id="catalog-title" title={title}
       breadcrumbs={view === "list" ? undefined : [{ href: `${storePath}/produtos`, label: "Produtos" }]}
@@ -120,7 +132,7 @@ export default function Catalog({ tenantId, productId, view, created = false, in
       </div> : null}
       {view === "list" ? <>
         <p className="notice">{store.store.status === "PUBLISHED" ? "Sua vitrine está publicada. Somente os produtos selecionados individualmente ficam visíveis para consulta pública." : "Sua vitrine está oculta. Você pode selecionar produtos agora; eles só ficarão visíveis quando publicar a loja."}</p>
-        {products.length ? <div className="table-toolbar" role="search" aria-label="Filtrar produtos">
+        {list?.catalogTotal ? <div className="table-toolbar" role="search" aria-label="Filtrar produtos">
           <SearchInput className="min-w-[min(100%,16rem)] flex-[2_1_16rem]" value={filters.query} onChange={event => setFilters(current => ({ ...current, query: event.target.value }))} placeholder="Buscar por nome ou SKU…" aria-label="Buscar por nome ou SKU" />
           {categories.length ? <Select className="flex-[1_1_11rem]" aria-label="Categoria" value={filters.category} onChange={event => setFilters(current => ({ ...current, category: event.target.value }))}>
             <option value="">Todas as categorias</option>
@@ -140,9 +152,9 @@ export default function Catalog({ tenantId, productId, view, created = false, in
           </Select>
           {filtersActive(filters) ? <Button variant="ghost" size="sm" onClick={() => setFilters(EMPTY_FILTERS)}>Limpar filtros</Button> : null}
         </div> : null}
-        {products.length && !shown.length ? <div className="empty-panel" role="status"><h2>Nenhum produto encontrado</h2><p>Nenhum produto corresponde aos filtros escolhidos.</p><Button variant="outline" onClick={() => setFilters(EMPTY_FILTERS)}>Limpar filtros</Button></div> : null}
+        {list?.catalogTotal && !shown.length ? <div className="empty-panel" role="status"><h2>Nenhum produto encontrado</h2><p>{list.matching ? "Esta página não tem produtos. Volte para a primeira." : "Nenhum produto corresponde aos filtros escolhidos."}</p><Button variant="outline" onClick={() => setFilters(list.matching ? { ...filters, page: 1 } : EMPTY_FILTERS)}>{list.matching ? "Ir para a primeira página" : "Limpar filtros"}</Button></div> : null}
         {shown.length ? <div className="data-table-wrap"><table className="data-table data-table-wrapping" role="table">
-          <caption><span aria-live="polite">Produtos cadastrados ({resultText(shown.length, products.length)})</span></caption>
+          <caption><span aria-live="polite">Produtos cadastrados ({resultText(list?.matching ?? 0, list?.catalogTotal ?? 0)})</span></caption>
           <thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Produto</th><th role="columnheader" scope="col">SKU</th><th role="columnheader" scope="col" className="numeric">Preço</th><th role="columnheader" scope="col" className="numeric">Custo</th><th role="columnheader" scope="col">Vitrine</th><th role="columnheader" scope="col">Estoque</th></tr></thead>
           <tbody role="rowgroup">{shown.map(item => <tr role="row" key={item.id}>
             <th role="rowheader" scope="row"><span className="product-cell">{cover(item, 48)}<span className="product-cell-text"><Link href={`${storePath}/produtos/${encodeURIComponent(item.id)}`}>{item.name}</Link>{item.imageCount > 0 ? <span className="cell-hint">{photoCountText(item.imageCount)}</span> : null}</span></span></th>
@@ -153,7 +165,11 @@ export default function Catalog({ tenantId, productId, view, created = false, in
             <td role="cell" data-label="Estoque"><Link href={`${storePath}/produtos/${encodeURIComponent(item.id)}/estoque`} aria-label={`Estoque de ${item.name}`}>Estoque</Link></td>
           </tr>)}</tbody>
         </table></div> : null}
-        {!products.length ? <div className="empty-panel"><h2>Nenhum produto cadastrado</h2><p>Cadastre o primeiro produto para montar o catálogo e escolher o que aparece na vitrine.</p><Link className="button-link" href={`${storePath}/produtos/novo`}>Cadastrar primeiro produto</Link></div> : null}
+        {shown.length ? <ListPager label="Páginas de produtos"
+          previous={filters.page > 1 ? { text: "Página anterior", onClick: () => setFilters({ ...filters, page: filters.page - 1 }) } : null}
+          next={filters.page < pages ? { text: "Próxima página", onClick: () => setFilters({ ...filters, page: filters.page + 1 }) } : null}
+          position={pages > 1 ? `Página ${filters.page} de ${pages}` : undefined} /> : null}
+        {list && !list.catalogTotal ? <div className="empty-panel"><h2>Nenhum produto cadastrado</h2><p>Cadastre o primeiro produto para montar o catálogo e escolher o que aparece na vitrine.</p><Link className="button-link" href={`${storePath}/produtos/novo`}>Cadastrar primeiro produto</Link></div> : null}
       </> : null}
     </> : null}
   </section>;

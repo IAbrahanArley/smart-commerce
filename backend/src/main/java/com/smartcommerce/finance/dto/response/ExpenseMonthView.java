@@ -16,7 +16,8 @@ public record ExpenseMonthView(
     String paid,
     long overdueCount,
     String overdueTotal,
-    List<ExpenseView> expenses) {
+    List<ExpenseView> expenses,
+    String nextCursor) {
   public static ExpenseMonthView of(ExpenseService.Payables payables, Expense.Situation situation) {
     return new ExpenseMonthView(
         payables.month().toString(),
@@ -25,6 +26,7 @@ public record ExpenseMonthView(
         ExpenseView.money(payables.totals().paid()),
         payables.overdue().count(),
         ExpenseView.money(payables.overdue().total()),
-        payables.shown().stream().map(item -> ExpenseView.of(item, payables.today())).toList());
+        payables.shown().stream().map(item -> ExpenseView.of(item, payables.today())).toList(),
+        payables.nextCursor() == null ? null : payables.nextCursor().text());
   }
 }

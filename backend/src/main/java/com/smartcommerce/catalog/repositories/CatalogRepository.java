@@ -1,6 +1,8 @@
 package com.smartcommerce.catalog.repositories;
 
 import com.smartcommerce.catalog.domain.ProductDetails;
+import com.smartcommerce.catalog.domain.ProductListQuery;
+import com.smartcommerce.catalog.domain.ProductPageResult;
 import com.smartcommerce.catalog.domain.ProductValues;
 import com.smartcommerce.catalog.entities.Product;
 import com.smartcommerce.catalog.exceptions.CatalogPersistenceException;
@@ -14,12 +16,17 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class CatalogRepository {
   private final ProductJpaRepository products;
+  private final ProductListRepository pages;
   private final TenantAccessRepository access;
   private final EntityManager entities;
 
   public CatalogRepository(
-      ProductJpaRepository products, TenantAccessRepository access, EntityManager entities) {
+      ProductJpaRepository products,
+      ProductListRepository pages,
+      TenantAccessRepository access,
+      EntityManager entities) {
     this.products = products;
+    this.pages = pages;
     this.access = access;
     this.entities = entities;
   }
@@ -30,9 +37,17 @@ public class CatalogRepository {
         .orElseThrow(() -> new CatalogPersistenceException(Reason.MISSING));
   }
 
-  public List<Product> list(UUID actor, UUID tenant) {
-    return products.listOwned(actor, tenant);
+  /** One page of the admin list: the matching products in list order, with the counts. */
+  public Page page(UUID actor, UUID tenant, ProductListQuery query) {
+    ProductPageResult result = pages.page(actor, tenant, query);
+    Map<UUID, Product> found = new HashMap<>();
+    if (!result.ids().isEmpty())
+      products.findOwnedIn(actor, tenant, result.ids()).forEach(p -> found.put(p.id(), p));
+    return new Page(
+        result.ids().stream().map(found::get).filter(Objects::nonNull).toList(), result);
   }
+
+  public record Page(List<Product> products, ProductPageResult counts) {}
 
   public Optional<Product> find(UUID actor, UUID tenant, UUID product) {
     return products.findOwned(actor, tenant, product);

@@ -9,7 +9,7 @@ export type Movement = {
   id: string; kind: "ADJUSTMENT" | "TRANSFER_OUT" | "TRANSFER_IN" | "EXPENSE_PAYMENT" | "EXPENSE_REFUND" | "CASH_DIFFERENCE" | "OWNER_WITHDRAWAL" | "OWNER_CONTRIBUTION" | "COUNTER_SALE" | "COUNTER_SALE_REFUND"; amount: string; occurredOn: string;
   description: string | null; counterpartAccountId: string | null; balanceAfter: string;
 };
-export type Statement = { account: Account; from: string; to: string; openingBalance: string; closingBalance: string; movements: Movement[]; truncated: boolean };
+export type Statement = { account: Account; from: string; to: string; openingBalance: string; closingBalance: string; movements: Movement[]; nextCursor: string | null };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MONEY = /^-?\d{1,16}\.\d{2}$/;
@@ -63,8 +63,8 @@ export function parseStatement(raw: unknown): Statement | null {
   const movements = Array.isArray(value.movements) ? value.movements.map(parseMovement) : null;
   const ok = (field: unknown) => typeof field === "string" && BALANCE.test(field);
   const day = (field: unknown) => typeof field === "string" && DAY.test(field);
-  if (!account || !movements || movements.some(item => !item) || !ok(value.openingBalance) || !ok(value.closingBalance) || !day(value.from) || !day(value.to) || typeof value.truncated !== "boolean") return null;
-  return { account, from: value.from as string, to: value.to as string, openingBalance: value.openingBalance as string, closingBalance: value.closingBalance as string, movements: movements as Movement[], truncated: value.truncated };
+  if (!account || !movements || movements.some(item => !item) || !ok(value.openingBalance) || !ok(value.closingBalance) || !day(value.from) || !day(value.to) || (value.nextCursor !== null && typeof value.nextCursor !== "string")) return null;
+  return { account, from: value.from as string, to: value.to as string, openingBalance: value.openingBalance as string, closingBalance: value.closingBalance as string, movements: movements as Movement[], nextCursor: value.nextCursor as string | null };
 }
 
 /** A typed amount in reais ("1.234,56", "-20", "15,5") as the decimal text the API takes, or an error. */

@@ -116,24 +116,36 @@ public class CatalogService {
         });
   }
 
+  /** One page of the admin product list, filtered, ordered and counted in the database. */
   @Transactional
-  public List<ProductView> list(UUID actor, UUID tenant) {
+  public ProductPageView page(UUID actor, UUID tenant, ProductListQuery query) {
     return execute(
         () -> {
           products.requireAccess(actor, tenant);
-          var list = products.list(actor, tenant);
-          var ids = list.stream().map(Product::id).toList();
-          var summaries = images.summaries(tenant, ids);
-          var additional = categories.additional(tenant, ids);
-          return list.stream()
-              .map(
-                  p ->
-                      view(
-                          p,
-                          summaries.getOrDefault(p.id(), ProductImageSummary.NONE),
-                          additional.getOrDefault(p.id(), List.of())))
-              .toList();
+          var page = products.page(actor, tenant, query);
+          var counts = page.counts();
+          return new ProductPageView(
+              views(tenant, page.products()),
+              query.page(),
+              ProductListQuery.PAGE_SIZE,
+              counts.matching(),
+              counts.catalog(),
+              counts.published());
         });
+  }
+
+  private List<ProductView> views(UUID tenant, List<Product> list) {
+    var ids = list.stream().map(Product::id).toList();
+    var summaries = images.summaries(tenant, ids);
+    var additional = categories.additional(tenant, ids);
+    return list.stream()
+        .map(
+            p ->
+                view(
+                    p,
+                    summaries.getOrDefault(p.id(), ProductImageSummary.NONE),
+                    additional.getOrDefault(p.id(), List.of())))
+        .toList();
   }
 
   @Transactional

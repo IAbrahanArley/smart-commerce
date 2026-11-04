@@ -5,6 +5,7 @@ import com.smartcommerce.finance.domain.ExpenseInput;
 import com.smartcommerce.finance.domain.ExpensePayment;
 import com.smartcommerce.finance.domain.FinanceAccount;
 import com.smartcommerce.finance.domain.FinanceException;
+import com.smartcommerce.finance.domain.PageCursor;
 import com.smartcommerce.finance.repositories.AccountRepository;
 import com.smartcommerce.finance.repositories.ExpenseRepository;
 import com.smartcommerce.finance.repositories.FinanceLedgerRepository;
@@ -45,8 +46,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ExpenseService {
   /** Calendar of the stores (ADR-0015 F1): days start at midnight in São Paulo. */
   public static final ZoneId ZONE = ZoneId.of("America/Sao_Paulo");
-
-  static final int MAX_PER_MONTH = 500;
 
   /** account_movement keeps |amount| below 10^15 (V41). */
   private static final BigDecimal MAX_MOVEMENT = new BigDecimal("1000000000000000");
@@ -249,30 +248,32 @@ public class ExpenseService {
       LocalDate today,
       List<Expense> shown,
       ExpenseRepository.MonthTotals totals,
-      ExpenseRepository.Overdue overdue) {}
+      ExpenseRepository.Overdue overdue,
+      PageCursor nextCursor) {}
 
+  /**
+   * One page of the payables screen (after {@code cursor} when given) with the month's totals and
+   * the store's past-due totals, which always cover every bill, not just the page.
+   */
   @Transactional(readOnly = true)
-  public Payables month(UUID actor, UUID tenant, YearMonth month, Expense.Situation situation) {
+  public Payables month(
+      UUID actor, UUID tenant, YearMonth month, Expense.Situation situation, PageCursor cursor) {
     requireOwner(actor, tenant);
     LocalDate today = today();
     LocalDate from = month.atDay(1);
     LocalDate to = month.plusMonths(1).atDay(1);
-    List<Expense> shown;
-    if (situation == Expense.Situation.OVERDUE)
-      shown = expenses.overdue(tenant, today, MAX_PER_MONTH);
-    else {
-      List<Expense> due = expenses.dueBetween(tenant, from, to, MAX_PER_MONTH);
-      shown =
-          situation == null
-              ? due
-              : due.stream().filter(item -> item.situation(today) == situation).toList();
-    }
+    List<Expense> page =
+        expenses.page(tenant, from, to, situation, today, cursor, PageCursor.PAGE_SIZE + 1);
+    boolean more = page.size() > PageCursor.PAGE_SIZE;
+    List<Expense> shown = more ? page.subList(0, PageCursor.PAGE_SIZE) : page;
+    Expense last = more ? shown.getLast() : null;
     return new Payables(
         month,
         today,
         shown,
         expenses.monthTotals(tenant, from, to),
-        expenses.overdueTotals(tenant, today));
+        expenses.overdueTotals(tenant, today),
+        last == null ? null : new PageCursor(last.dueDate(), last.createdAt(), last.id()));
   }
 
   private void settle(

@@ -1,5 +1,6 @@
 package com.smartcommerce.orders.repositories;
 
+import com.smartcommerce.orders.domain.CounterSaleCursor;
 import com.smartcommerce.orders.domain.CounterSaleInput;
 import com.smartcommerce.orders.domain.CounterSaleRecords;
 import java.math.BigDecimal;
@@ -304,14 +305,24 @@ public class CounterSaleRepository {
     return one(tenant, " WHERE c.tenant_id=? AND c.id=? FOR UPDATE OF c", id);
   }
 
-  /** The store's latest sales, newest first, at most {@code limit}, with their items. */
-  public List<CounterSaleRecords.Sale> recent(UUID tenant, int limit) {
+  /**
+   * The store's sales, newest first, after {@code cursor} (the last sale of the previous page) when
+   * given, at most {@code limit}, with their items.
+   */
+  public List<CounterSaleRecords.Sale> page(UUID tenant, CounterSaleCursor cursor, int limit) {
+    String where =
+        cursor == null
+            ? " WHERE c.tenant_id=?"
+            : " WHERE c.tenant_id=? AND (c.created_at,c.id)<(?,?)";
+    Object[] args =
+        cursor == null
+            ? new Object[] {tenant, limit}
+            : new Object[] {tenant, utc(cursor.createdAt()), cursor.id(), limit};
     return jdbc
         .query(
-            SALE + " WHERE c.tenant_id=? ORDER BY c.created_at DESC, c.id DESC LIMIT ?",
+            SALE + where + " ORDER BY c.created_at DESC, c.id DESC LIMIT ?",
             CounterSaleRepository::sale,
-            tenant,
-            limit)
+            args)
         .stream()
         .map(sale -> withItems(tenant, sale))
         .toList();

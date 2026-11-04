@@ -4,6 +4,7 @@ import com.smartcommerce.finance.domain.CashInput;
 import com.smartcommerce.finance.domain.CashSession;
 import com.smartcommerce.finance.domain.ExpenseInput;
 import com.smartcommerce.finance.domain.FinanceException;
+import com.smartcommerce.finance.domain.PageCursor;
 import com.smartcommerce.finance.repositories.AccountRepository;
 import com.smartcommerce.finance.repositories.CashSessionRepository;
 import com.smartcommerce.finance.repositories.FinanceLedgerRepository;
@@ -40,7 +41,6 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class CashSessionService {
-  static final int HISTORY = 60;
   private final CashSessionRepository sessions;
   private final AccountRepository accounts;
   private final FinanceLedgerRepository ledger;
@@ -100,11 +100,20 @@ public class CashSessionService {
     return detail(tenant, found, owner);
   }
 
-  /** The OWNER's history: the latest sessions, with expected amounts and differences. */
+  public record History(List<CashSession> sessions, PageCursor nextCursor) {}
+
+  /**
+   * The OWNER's history, one page of sessions newest first (after {@code cursor} when given), with
+   * expected amounts and differences; {@code nextCursor} is null on the last page.
+   */
   @Transactional
-  public List<CashSession> history(UUID actor, UUID tenant) {
+  public History history(UUID actor, UUID tenant, PageCursor cursor) {
     requireOwner(member(actor, tenant, false));
-    return sessions.recent(tenant, HISTORY);
+    var page = sessions.page(tenant, cursor, PageCursor.PAGE_SIZE + 1);
+    if (page.size() <= PageCursor.PAGE_SIZE) return new History(page, null);
+    var shown = page.subList(0, PageCursor.PAGE_SIZE);
+    var last = shown.getLast();
+    return new History(shown, new PageCursor(null, last.openedAt(), last.id()));
   }
 
   @Transactional(isolation = Isolation.READ_COMMITTED)

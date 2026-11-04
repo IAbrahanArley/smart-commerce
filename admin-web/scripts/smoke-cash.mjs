@@ -14,4 +14,4 @@ assert.deepEqual(otherAccounts([{ id: drawer, name: "Caixa", type: "CASH" }, { i
 // The drawer statement keeps reading the movements the cash register writes.
 const account = { id: drawer, type: "CASH", name: "Caixa da loja", systemKey: "DEFAULT_CASH", balance: "95.00" };
 const movement = kind => ({ id: bank, kind, amount: "-5.00", occurredOn: "2026-11-03", description: "Fechamento", counterpartAccountId: null, balanceAfter: "95.00" });
-for (const kind of ["CASH_DIFFERENCE", "OWNER_WITHDRAWAL"]) assert.equal(parseStatement({ account, from: "2026-11-01", to: "2026-11-03", openingBalance: "100.00", closingBalance: "95.00", truncated: false, movements: [movement(kind)] })?.movements[0].kind, kind);
+for (const kind of ["CASH_DIFFERENCE", "OWNER_WITHDRAWAL"]) assert.equal(parseStatement({ account, from: "2026-11-01", to: "2026-11-03", openingBalance: "100.00", closingBalance: "95.00", nextCursor: null, movements: [movement(kind)] })?.movements[0].kind, kind);

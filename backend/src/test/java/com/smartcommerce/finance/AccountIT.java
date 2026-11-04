@@ -200,6 +200,39 @@ class AccountIT {
   }
 
   @Test
+  void theStatementPagesNewestFirstWithTheRightBalances() throws Exception {
+    String cash = json(owner.get(path("/accounts"))).get(0).get("id").asText();
+    // 52 adjustments of 1.00 on the same day: the pages split a run of equal days.
+    for (int i = 1; i <= 52; i++)
+      assertThat(
+              owner
+                  .send(
+                      "POST",
+                      path("/accounts/" + cash + "/adjustments"),
+                      adjustment("1", "Ajuste " + i))
+                  .statusCode())
+          .isEqualTo(200);
+    String statement = path("/accounts/" + cash + "/statement");
+    JsonNode first = json(owner.get(statement));
+    assertThat(first.get("movements")).hasSize(50);
+    assertThat(first.get("movements").get(0).get("balanceAfter").asText()).isEqualTo("52.00");
+    assertThat(first.get("closingBalance").asText()).isEqualTo("52.00");
+    String cursor = first.get("nextCursor").asText();
+    JsonNode second =
+        json(
+            owner.get(
+                statement
+                    + "?before="
+                    + java.net.URLEncoder.encode(cursor, java.nio.charset.StandardCharsets.UTF_8)));
+    assertThat(second.get("movements")).hasSize(2);
+    assertThat(second.get("nextCursor").isNull()).isTrue();
+    // The running balance continues across the page boundary: 2.00 then 1.00.
+    assertThat(second.get("movements").get(0).get("balanceAfter").asText()).isEqualTo("2.00");
+    assertThat(second.get("movements").get(1).get("balanceAfter").asText()).isEqualTo("1.00");
+    assertThat(owner.get(statement + "?before=junk").statusCode()).isEqualTo(400);
+  }
+
+  @Test
   void invalidMoneyDatesAndTooManyAccountsAreRefused() throws Exception {
     String cash = json(owner.get(path("/accounts"))).get(0).get("id").asText();
     for (String amount : List.of("1.234", "1e3", "0", "0.00", "abc", ""))
