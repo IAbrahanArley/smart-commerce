@@ -6,21 +6,24 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Adapted from Dashtail's dialog and sheet (shadcn/ui, Radix): focus trap, Escape, focus return and
-// an inert page behind. "side" turns the dialog into a drawer (the mobile navigation).
+// an inert page behind. "side" turns the dialog into a drawer: left for the mobile navigation,
+// right for the form sheets.
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
 const DialogClose = DialogPrimitive.Close;
 const DialogTitle = DialogPrimitive.Title;
 const DialogDescription = DialogPrimitive.Description;
 
-function DialogContent({ className, children, side, closeLabel = "Fechar", ...props }: React.ComponentProps<typeof DialogPrimitive.Content> & { side?: "left"; closeLabel?: string }) {
+function DialogContent({ className, children, side, closeLabel = "Fechar", ...props }: React.ComponentProps<typeof DialogPrimitive.Content> & { side?: "left" | "right"; closeLabel?: string }) {
   return <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-foreground/40" />
     <DialogPrimitive.Content className={cn(
       "fixed z-50 bg-card text-card-foreground shadow-overlay outline-none",
       side === "left"
         ? "inset-y-0 left-0 flex h-full w-[min(18rem,85vw)] flex-col overscroll-contain border-r border-border"
-        : "left-1/2 top-[12vh] w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-border",
+        : side === "right"
+          ? "inset-y-0 right-0 flex h-full w-[min(34rem,100vw)] flex-col overscroll-contain border-l border-border"
+          : "left-1/2 top-[12vh] w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-border",
       className)} {...props}>
       {children}
       <DialogPrimitive.Close className="absolute right-3 top-3 inline-flex size-9 min-h-0 items-center justify-center rounded-md bg-transparent p-0 text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring" aria-label={closeLabel}>

@@ -10,6 +10,8 @@ import { type CartLine, type CounterOverview, type CounterProduct, type CounterS
 import { formatDay, lineText, parseOptionalAmount } from "@/lib/expenses";
 import CounterImport from "@/components/counter-import";
 import PageHeader from "@/components/page-header";
+import { AddButton, FormSheet } from "@/components/form-sheet";
+import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/status-badge";
 import { useUnsavedChanges } from "@/lib/use-unsaved-changes";
 import PageState from "@/components/page-state";
@@ -40,6 +42,7 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [settingsErrors, setSettingsErrors] = useState<Partial<Record<keyof SettingsDraft, string>>>({});
   const [busy, setBusy] = useState(false);
+  const [sheet, setSheet] = useState<"sale" | "import" | "settings" | null>(null);
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
   const submitting = useRef(false);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
@@ -129,7 +132,7 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
         discount: "amount" in off ? off.amount : null, paymentMethod: method, cashSessionId: method === "CASH" ? session : null } });
       if (response.ok) {
         const sale: CounterSale = await response.json();
-        setCart([]); setDiscount(""); setRequestId(crypto.randomUUID()); setAttempt(current => current + 1);
+        setCart([]); setDiscount(""); setRequestId(crypto.randomUUID()); setAttempt(current => current + 1); setSheet(null);
         setFeedback({ text: `Venda registrada: ${formatBRL(sale.total)} em ${METHOD_LABELS[sale.paymentMethod].toLowerCase()}.${sale.expectedReleaseOn ? ` Previsão de recebimento: ${formatDay(sale.expectedReleaseOn)}.` : ""}`, error: false });
         return;
       }
@@ -191,7 +194,7 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
         staffDiscountLimit: "percent" in limit ? limit.percent ?? "0.00" : "0.00", pixAccountId: settings.pix || null,
         debitFeePercent: "percent" in debitFee ? debitFee.percent : null, debitReleaseDays: "days" in debitDays ? debitDays.days : null,
         creditFeePercent: "percent" in creditFee ? creditFee.percent : null, creditReleaseDays: "days" in creditDays ? creditDays.days : null } });
-      if (response.ok) { setAttempt(current => current + 1); setFeedback({ text: "Configurações das vendas na loja salvas.", error: false }); return; }
+      if (response.ok) { setAttempt(current => current + 1); setSheet(null); setFeedback({ text: "Configurações das vendas na loja salvas.", error: false }); return; }
       const answer = await response.json().catch(() => null) as { message?: string } | null;
       setFeedback({ text: answer?.message ?? requestError(response.status), error: true });
     } catch {
@@ -208,16 +211,24 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
     {settingsErrors[name] ? <p id={`settings-${name}-error`} className="field-error">{settingsErrors[name]}</p> : null}
   </div> : null;
 
+  const open = (next: "sale" | "import" | "settings") => { setFeedback(null); setCancelling(null); setSheet(next); };
+  const feedbackNode = feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback ${feedback.error ? "feedback-error" : "feedback-success"}`}>{feedback.text}</p> : null;
+
   return <section className="page" aria-labelledby="counter-title">
-    <PageHeader id="counter-title" title="Vendas na loja" description="Registre as vendas da loja física. Cada produto sai do mesmo estoque da vitrine." />
-    {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback ${feedback.error ? "feedback-error" : "feedback-success"}`}>{feedback.text}</p> : null}
+    <PageHeader id="counter-title" title="Vendas na loja" description="Registre as vendas da loja física. Cada produto sai do mesmo estoque da vitrine."
+      action={state === "ready" && data ? <span className="form-actions">
+        {owner && settings ? <Button type="button" variant="outline" onClick={() => open("settings")}>Configurações</Button> : null}
+        {owner ? <Button type="button" variant="outline" onClick={() => open("import")}>Importar planilha</Button> : null}
+        <AddButton onClick={() => open("sale")}>Nova venda</AddButton>
+      </span> : undefined} />
+    {sheet || cancelling ? null : feedbackNode}
     {state === "loading" ? <Loading context="vendas na loja" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para registrar vendas.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Escolha uma loja à qual você tem acesso.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="receipt" title="Não foi possível consultar as vendas na loja" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar novamente">Confira a conexão e tente novamente.</PageState> : null}
     {state === "ready" && data ? <>
-      <form className="side-card" onSubmit={event => void register(event)} noValidate aria-labelledby="counter-form-title">
-        <h2 id="counter-form-title">Registrar venda</h2>
+      <FormSheet open={sheet === "sale"} onOpenChange={next => setSheet(next ? "sale" : null)} busy={busy} feedbackRef={feedbackRef} titleId="counter-form-title" title="Registrar venda">{feedbackNode}
+      <form onSubmit={event => void register(event)} noValidate aria-labelledby="counter-form-title">
         <div className="form-field">
           <label htmlFor="counter-search">Adicionar produto do estoque</label>
           <p id="counter-search-help" className="field-help">Busque pelo nome ou pelo SKU. Só aparecem produtos do catálogo, com o disponível de agora.</p>
@@ -264,8 +275,9 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
         <p aria-live="polite">Total da venda: <strong>{cart.length && !final.startsWith("-") ? formatBRL(final) : "—"}</strong></p>
         <div className="form-actions"><button type="submit" disabled={busy}>{busy ? "Registrando…" : "Registrar venda"}</button></div>
       </form>
-      {cancelling ? <form className="side-card" onSubmit={event => void cancel(event)} noValidate aria-labelledby="counter-cancel-title">
-        <h2 id="counter-cancel-title">Cancelar venda de {formatBRL(cancelling.total)}</h2>
+      </FormSheet>
+      <FormSheet open={Boolean(cancelling)} onOpenChange={next => { if (!next) { setCancelling(null); setReason(""); } }} titleId="counter-cancel-title" title={cancelling ? `Cancelar venda de ${formatBRL(cancelling.total)}` : "Cancelar venda"} busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
+      {cancelling ? <form onSubmit={event => void cancel(event)} noValidate aria-labelledby="counter-cancel-title">
         <label htmlFor="counter-cancel-reason">Motivo</label>
         <p id="counter-cancel-help" className="field-help">Fica registrado. De 3 a 300 caracteres.</p>
         <input ref={reasonRef} id="counter-cancel-reason" disabled={busy} value={reason} maxLength={600} autoComplete="off" onChange={event => { setReason(event.target.value); setReasonError(""); }}
@@ -277,7 +289,10 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
           <button type="button" className="button-secondary" disabled={busy} onClick={() => { setCancelling(null); setReason(""); }}>Manter venda</button>
         </div>
       </form> : null}
-      {owner ? <CounterImport tenantId={tenantId} onImported={() => setAttempt(current => current + 1)} /> : null}
+      </FormSheet>
+      {owner ? <FormSheet open={sheet === "import"} onOpenChange={next => setSheet(next ? "import" : null)} titleId="import-title" title="Importar vendas de uma planilha">
+        <CounterImport tenantId={tenantId} onImported={() => setAttempt(current => current + 1)} />
+      </FormSheet> : null}
       <section aria-labelledby="counter-sales-title">
         <h2 id="counter-sales-title">Últimas vendas na loja</h2>
         {data.sales.length ? <div className="data-table-wrap"><table className="data-table data-table-wrapping" role="table">
@@ -292,8 +307,8 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
           </tr>)}</tbody>
         </table></div> : <p className="field-help">Nenhuma venda registrada na loja ainda.</p>}
       </section>
-      {owner && settings ? <form className="side-card" onSubmit={event => void saveSettings(event)} noValidate aria-labelledby="counter-settings-title">
-        <h2 id="counter-settings-title">Configurações das vendas na loja</h2>
+      {owner && settings ? <FormSheet open={sheet === "settings"} onOpenChange={next => setSheet(next ? "settings" : null)} busy={busy} feedbackRef={feedbackRef} titleId="counter-settings-title" title="Configurações das vendas na loja">{feedbackNode}
+      <form onSubmit={event => void saveSettings(event)} noValidate aria-labelledby="counter-settings-title">
         {settingsField("limit", "Desconto máximo do funcionário (%)", "Percentual do total que um funcionário pode descontar. Zero: nenhum desconto. Você não tem limite.")}
         <div className="form-field">
           <label htmlFor="settings-pix">Conta que recebe o Pix</label>
@@ -306,7 +321,8 @@ export default function StoreCounter({ tenantId }: { tenantId: string }) {
         {settingsField("creditFee", "Taxa do cartão de crédito (%)", "Como cobrada pela sua maquininha. Em branco: taxa não informada, e a margem fica parcial.")}
         {settingsField("creditDays", "Prazo de recebimento do crédito (dias)", "Em branco: data de recebimento desconhecida.")}
         <div className="form-actions"><button type="submit" disabled={busy}>{busy ? "Salvando…" : "Salvar configurações"}</button></div>
-      </form> : null}
+      </form>
+      </FormSheet> : null}
     </> : null}
   </section>;
 }

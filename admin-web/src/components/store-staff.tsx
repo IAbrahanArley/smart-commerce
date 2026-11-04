@@ -6,6 +6,7 @@ import { apiRequest, requestError } from "@/lib/auth-api";
 import { dateText } from "@/lib/billing";
 import { inviteEmailError, parseStaff, staffLimitText, staffRefusal, type StaffOverview } from "@/lib/staff";
 import PageHeader from "@/components/page-header";
+import { AddButton, FormSheet } from "@/components/form-sheet";
 import PageState from "@/components/page-state";
 import { useConfirm } from "@/components/confirm-dialog";
 import { Loading } from "@/components/ui/loading";
@@ -21,6 +22,7 @@ export default function StoreStaff({ tenantId }: { tenantId: string }) {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; error: boolean } | null>(null);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -63,7 +65,7 @@ export default function StoreStaff({ tenantId }: { tenantId: string }) {
     const problem = inviteEmailError(email);
     if (problem) { setEmailError(problem); emailRef.current?.focus(); return; }
     const value = email.trim();
-    if (await mutate(() => apiRequest(`${api}/invitations`, { method: "POST", body: { email: value } }), `Convite enviado para ${value}. Ele vale por 7 dias.`)) setEmail("");
+    if (await mutate(() => apiRequest(`${api}/invitations`, { method: "POST", body: { email: value } }), `Convite enviado para ${value}. Ele vale por 7 dias.`)) { setEmail(""); setInviting(false); }
   }
 
   async function revoke(member: StaffOverview["members"][number]) {
@@ -77,14 +79,16 @@ export default function StoreStaff({ tenantId }: { tenantId: string }) {
   }
 
   const limit = overview ? staffLimitText(overview) : null;
+  const feedbackNode = feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null;
   return <section className="page store-categories" aria-labelledby="staff-title" aria-busy={state === "loading" || busy}>{dialog}
     <PageHeader id="staff-title" title="Funcionários"
-      description="Convide quem vai operar o caixa e registrar vendas presenciais. Funcionários não veem relatórios, custos, margens nem contas a pagar." />
+      description="Convide quem vai operar o caixa e registrar vendas presenciais. Funcionários não veem relatórios, custos, margens nem contas a pagar."
+      action={state === "ready" ? <AddButton onClick={() => { setFeedback(null); setInviting(true); }}>Convidar funcionário</AddButton> : undefined} />
     {state === "loading" ? <Loading context="a equipe" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para gerenciar a equipe.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Só o dono da loja gerencia a equipe.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="box" title="Não foi possível consultar a equipe" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar novamente">Confira a conexão e tente novamente.</PageState> : null}
-    {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}
+    {inviting ? null : feedbackNode}
     {state === "ready" && overview ? <>
       {limit ? <p className="field-help">{limit} <Link href="/conta/plano">Plano e cobrança</Link></p> : null}
       <h2>Equipe</h2>
@@ -103,8 +107,8 @@ export default function StoreStaff({ tenantId }: { tenantId: string }) {
           </li>)}
         </ul>
       </> : null}
-      <form className="side-card" onSubmit={event => void invite(event)} noValidate aria-labelledby="staff-invite-title">
-        <h2 id="staff-invite-title">Convidar funcionário</h2>
+      <FormSheet open={inviting} onOpenChange={setInviting} titleId="staff-invite-title" title="Convidar funcionário" busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
+      <form onSubmit={event => void invite(event)} noValidate aria-labelledby="staff-invite-title">
         <div className="form-field">
           <label htmlFor="staff-email">E-mail</label>
           <p id="staff-email-help" className="field-help">A pessoa recebe um link e aceita entrando com este e-mail. O convite vale por 7 dias.</p>
@@ -115,6 +119,7 @@ export default function StoreStaff({ tenantId }: { tenantId: string }) {
         </div>
         <button type="submit" disabled={busy}>{busy ? "Enviando…" : "Enviar convite"}</button>
       </form>
+      </FormSheet>
     </> : null}
   </section>;
 }

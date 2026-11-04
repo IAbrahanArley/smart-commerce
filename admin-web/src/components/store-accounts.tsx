@@ -7,6 +7,8 @@ import { apiRequest, requestError } from "@/lib/auth-api";
 import { accountRefusal, lineError, manualAccounts, parseAccounts, parseSignedAmount, todayInStore, TYPE_LABELS, type Account } from "@/lib/accounts";
 import { formatBRL } from "@/lib/catalog";
 import PageHeader from "@/components/page-header";
+import { AddButton, FormSheet } from "@/components/form-sheet";
+import { Button } from "@/components/ui/button";
 import PageState from "@/components/page-state";
 import { Loading } from "@/components/ui/loading";
 
@@ -25,6 +27,7 @@ export default function StoreAccounts({ tenantId }: { tenantId: string }) {
   const [account, setAccount] = useState({ type: "BANK", name: "", request: "" });
   const [transfer, setTransfer] = useState({ from: "", to: "", amount: "", day: "", note: "", request: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [sheet, setSheet] = useState<"account" | "transfer" | null>(null);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -67,7 +70,7 @@ export default function StoreAccounts({ tenantId }: { tenantId: string }) {
     const request = account.request || crypto.randomUUID();
     setAccount(current => ({ ...current, request }));
     const sent = await send(`${api}/accounts`, { requestId: request, type: account.type, name: account.name.trim() }, `Conta “${account.name.trim()}” criada.`);
-    if (sent === true) setAccount({ type: "BANK", name: "", request: "" });
+    if (sent === true) { setAccount({ type: "BANK", name: "", request: "" }); setSheet(null); }
     else if (sent === "conflict") setAccount(current => ({ ...current, request: "" }));
   }
 
@@ -88,22 +91,28 @@ export default function StoreAccounts({ tenantId }: { tenantId: string }) {
     const request = transfer.request || crypto.randomUUID();
     setTransfer(current => ({ ...current, request }));
     const sent = await send(`${api}/transfers`, { requestId: request, fromAccountId: transfer.from, toAccountId: transfer.to, amount: "amount" in amount ? amount.amount : "", occurredOn: day, note: transfer.note.trim() || null }, "Transferência registrada.");
-    if (sent === true) setTransfer({ from: "", to: "", amount: "", day: "", note: "", request: "" });
+    if (sent === true) { setTransfer({ from: "", to: "", amount: "", day: "", note: "", request: "" }); setSheet(null); }
     else if (sent === "conflict") setTransfer(current => ({ ...current, request: "" }));
   }
 
   const field = (id: string, key: string) => ({ id, "aria-invalid": errors[key] ? true : undefined, "aria-describedby": errors[key] ? `${id}-error` : undefined });
   const error = (id: string, key: string) => errors[key] ? <p id={`${id}-error`} className="field-error">{errors[key]}</p> : null;
   const storePath = `/lojas/${encodeURIComponent(tenantId)}`;
+  const open = (next: "account" | "transfer") => { setFeedback(null); setErrors({}); setSheet(next); };
+  const feedbackNode = feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null;
 
   return <section className="page store-categories" aria-labelledby="accounts-title" aria-busy={state === "loading" || busy}>
     <PageHeader id="accounts-title" title="Contas"
-      description="Onde está o dinheiro da loja: gaveta, banco e Mercado Pago. O saldo é a soma dos movimentos de cada conta; nada é apagado, uma correção é um novo ajuste." />
+      description="Onde está o dinheiro da loja: gaveta, banco e Mercado Pago. O saldo é a soma dos movimentos de cada conta; nada é apagado, uma correção é um novo ajuste."
+      action={state === "ready" ? <span className="form-actions">
+        <Button type="button" variant="outline" onClick={() => open("transfer")}><ArrowRightLeft aria-hidden="true" />Transferir</Button>
+        <AddButton onClick={() => open("account")}>Nova conta</AddButton>
+      </span> : undefined} />
     {state === "loading" ? <Loading context="as contas" /> : null}
     {state === "signed-out" ? <><p role="status">Sua sessão expirou. Entre novamente para ver as contas.</p><Link href="/entrar">Entrar</Link></> : null}
     {state === "missing" ? <PageState icon="store" title="Loja indisponível" href="/lojas" actionLabel="Voltar para minhas lojas">Só o dono da loja vê as contas.</PageState> : null}
     {state === "error" ? <PageState kind="error" icon="box" title="Não foi possível consultar as contas" action={() => { setState("loading"); setAttempt(current => current + 1); }} actionLabel="Consultar novamente">Confira a conexão e tente novamente.</PageState> : null}
-    {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback feedback-${feedback.error ? "error" : "success"}`}>{feedback.text}</p> : null}
+    {sheet ? null : feedbackNode}
     {state === "ready" && accounts ? <>
       <ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
         {accounts.map(item => { const Icon = ICON[item.type]; return <li key={item.id} className="flex items-start gap-4 rounded-lg border border-border bg-card p-5 shadow-card">
@@ -117,8 +126,8 @@ export default function StoreAccounts({ tenantId }: { tenantId: string }) {
       </ul>
       {accounts.some(item => item.type === "PAYMENT_PROVIDER") ? null : <p className="field-help">A conta do Mercado Pago aparece aqui quando você conectar o Mercado Pago em <Link href={`${storePath}/pagamentos`}>Pagamentos</Link>.</p>}
 
-      <form className="side-card" onSubmit={event => void sendTransfer(event)} noValidate aria-labelledby="transfer-title">
-        <h2 id="transfer-title" className="flex items-center gap-2"><ArrowRightLeft className="size-5" aria-hidden="true" />Transferir entre contas</h2>
+      <FormSheet open={sheet === "transfer"} onOpenChange={next => setSheet(next ? "transfer" : null)} titleId="transfer-title" title="Transferir entre contas" busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
+      <form onSubmit={event => void sendTransfer(event)} noValidate aria-labelledby="transfer-title">
         <p className="field-help">Por exemplo, o depósito do dinheiro da gaveta no banco. Os dois lados são registrados juntos. A conta do Mercado Pago não entra aqui: ela segue os pagamentos do próprio Mercado Pago.</p>
         <div className="form-field"><label htmlFor="transfer-from">De</label>
           <select {...field("transfer-from", "from")} value={transfer.from} disabled={busy} onChange={event => setTransfer(current => ({ ...current, from: event.target.value }))}>
@@ -136,9 +145,10 @@ export default function StoreAccounts({ tenantId }: { tenantId: string }) {
           <input {...field("transfer-note", "note")} maxLength={200} autoComplete="off" value={transfer.note} disabled={busy} onChange={event => setTransfer(current => ({ ...current, note: event.target.value }))} />{error("transfer-note", "note")}</div>
         <button type="submit" disabled={busy}>{busy ? "Registrando…" : "Registrar transferência"}</button>
       </form>
+      </FormSheet>
 
-      <form className="side-card" onSubmit={event => void createAccount(event)} noValidate aria-labelledby="account-create-title">
-        <h2 id="account-create-title">Nova conta</h2>
+      <FormSheet open={sheet === "account"} onOpenChange={next => setSheet(next ? "account" : null)} titleId="account-create-title" title="Nova conta" busy={busy} feedbackRef={feedbackRef}>{feedbackNode}
+      <form onSubmit={event => void createAccount(event)} noValidate aria-labelledby="account-create-title">
         <div className="form-field"><label htmlFor="account-type">Tipo</label>
           <select id="account-type" value={account.type} disabled={busy} onChange={event => setAccount(current => ({ ...current, type: event.target.value }))}>
             <option value="BANK">Banco</option><option value="CASH">Dinheiro (outra gaveta)</option>
@@ -150,6 +160,7 @@ export default function StoreAccounts({ tenantId }: { tenantId: string }) {
           {error("account-name", "name")}</div>
         <button type="submit" disabled={busy}>{busy ? "Criando…" : "Criar conta"}</button>
       </form>
+      </FormSheet>
     </> : null}
   </section>;
 }

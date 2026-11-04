@@ -83,8 +83,8 @@ export default function CounterImport({ tenantId, onImported }: { tenantId: stri
     } finally { setBusy(false); }
   }
 
-  return <section className="side-card" aria-labelledby="import-title">
-    <h2 id="import-title">Importar vendas de uma planilha</h2>
+  // Shown inside the "Importar planilha" sheet of the counter page, which carries the title.
+  return <div>
     <p className="field-help">Uma linha por item. Linhas com a mesma data e o mesmo código de venda formam uma venda; sem código, cada linha é uma venda. Uma venda já importada não se repete, nem corrigida: para mudar uma, cancele-a e registre de novo. Formas de pagamento: dinheiro, pix, débito ou crédito (crediário não é aceito). Até 500 linhas e 1 MB.</p>
     <div className="form-actions"><button type="button" className="button-secondary" onClick={download}>Baixar modelo</button></div>
     {feedback ? <p ref={feedbackRef} tabIndex={-1} role={feedback.error ? "alert" : "status"} className={`feedback ${feedback.error ? "feedback-error" : "feedback-success"}`}>{feedback.text}</p> : null}
@@ -126,5 +126,5 @@ export default function CounterImport({ tenantId, onImported }: { tenantId: stri
         <p className="field-help">As vendas com erro ficam de fora. Corrija a planilha e envie de novo: as já importadas não se repetem.</p>
       </> : null}
     </> : null}
-  </section>;
+  </div>;
 }
